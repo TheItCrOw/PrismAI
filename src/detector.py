@@ -1,5 +1,7 @@
 from causal_lm import CausalLM
 import random
+import traceback
+import sys
 import statistics
 
 class Detector():
@@ -16,11 +18,14 @@ class Detector():
                sample_sequence_length=12):
         '''A function that tries to detect AI sequences in a text'''
 
-        ensemble_avg = []
+        ensemble_results = []
         # We have an ensemble of models which we use to detect
         for model in self.llm_ensemble:
             print(f'Using {model.model_name} ===')
-            model_avg = []
+            model_result = {
+                'model': model.model_name,
+                'sample_results': []
+            }
 
             # Tokenize the text
             token_idx = model.tokenizer.encode(text, return_tensors='pt')
@@ -37,24 +42,33 @@ class Detector():
                     # We generate a random index from which we then take a sequence
                     random_idx = random.randint(16, len(cur_token_idx[0]) - sample_sequence_length)
                     sample_sequence_idx = cur_token_idx[:, random_idx: random_idx + sample_sequence_length]
+                    sample_sequence = model.tokenizer.decode(sample_sequence_idx[0])
                     context_idx = cur_token_idx[:, :random_idx]
                     context = model.tokenizer.decode(context_idx[0])
                     print(f'Context sample: {context}')
-                    print(f'Sampling sequence: {model.tokenizer.decode(sample_sequence_idx[0])}')
+                    print(f'Sampling sequence: {sample_sequence}')
 
                     # Now try to regenerate that sequence with the cur model
-                    output = model.generate_k_with_probs(context, sample_sequence_idx[0], max_length=sample_sequence_length)
-                    avg_prob = statistics.mean([s['target_prob'].item() for s in output['steps']])
-                    print(f"Predicted sequence: {output['generated_text']}")    
+                    output = model.generate_k_with_probs(context, sample_sequence_idx, max_length=sample_sequence_length)
+                    output['context'] = context
+                    output['sample_sequence'] = sample_sequence
+                    
+                    avg_prob = statistics.mean([s['target_prob'] for s in output['steps']])
+                    # print(f"Predicted sequence: {output['generated_text']}")    
                     print(f"Average target token probability {avg_prob}") 
-                    model_avg.append(avg_prob)      
+                    model_result['sample_results'].append({
+                        'avg_prob': avg_prob,
+                        'model_outputs': output
+                    })      
                 except Exception as ex:
                     print(f'Caught an exception in one sample round. Model: {model.model_name};')
                     print(ex)
+                    print(traceback.format_exc())
 
-            ensemble_avg.append(statistics.mean(model_avg))
-
-        return statistics.mean(ensemble_avg)     
+            model_result['avg_prob'] = statistics.mean(float(s['avg_prob']) for s in model_result['sample_results'])
+            ensemble_results.append(model_result)
+    
+        return ensemble_results     
             
 
 test_text = '''

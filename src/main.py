@@ -68,13 +68,13 @@ def preprocess_dataset():
 
 def test_detector():
     detector = Detector()
-    essays = get_essays(1, 100)
+    essays = get_essays(1, 10)
     # Let the detector do the work
     essays_avg = []
     for essay in essays:
-        avg = detector.detect(essay)
+        output = detector.detect(essay)
         print(f'\n========== AVG: {avg} ==========\n')
-        essays_avg.append(avg)
+        essays_avg.append(output[0]['avg_prob'])
     print(statistics.mean(essays_avg))
 
 

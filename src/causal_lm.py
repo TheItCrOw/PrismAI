@@ -1,5 +1,6 @@
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoModelForCausalLM, AutoTokenizer
 from IPython.display import display, Markdown, Latex
+import numpy as np
 import torch
 
 class CausalLM():
@@ -47,6 +48,9 @@ class CausalLM():
         steps = []
 
         for step in range(max_length):
+            # This the string context up to the token we predict here
+            context = self.tokenizer.decode(current_ids[0])
+
             # Generate the next token
             with torch.no_grad():
                 logits = self.model(current_ids).logits[:, -1, :] / temp
@@ -56,7 +60,7 @@ class CausalLM():
 
             # Use torch.multinomial to sample k tokens
             top_k_indices = torch.multinomial(softmaxed_logits, 5)
-            top_k_tokens = self.tokenizer.decode(top_k_indices[0])
+            top_k_tokens = self.tokenizer.decode(top_k_indices[0], skip_special_tokens=False)
 
             # Extract probabilities for all sampled tokens
             top_k_probs = softmaxed_logits[0][top_k_indices[0]]
@@ -67,22 +71,26 @@ class CausalLM():
 
             # If we have target tokens, we also want to know the prob of them
             # relative to the chosen token.
+            target = None
             target_prob = None
-            if len(target_idx > 0) and len(target_idx -1 >= step):
-                target_prob = softmaxed_logits[0][target_idx[step]]
+            if len(target_idx > 0) and len(target_idx[0] -1 >= step):
+                target = self.tokenizer.decode(target_idx[0][step])
+                target_prob = softmaxed_logits[0][target_idx[0][step]]
 
             # Concatenate the top 1 token to current_ids
-            current_ids = torch.cat([current_ids, top_1_index.reshape(1, -1)], dim=-1)
+            current_ids = torch.cat([current_ids, target_idx[:, step].unsqueeze(dim=1)], dim=-1)
 
             steps.append({
                 'step': step,
-                'token_id': top_1_index,
+                'context': context,
+                'token_id': top_1_index.item(),
                 'token': self.tokenizer.decode(top_1_index),
-                'token_prob': top_1_prob,
-                'top_k_tokens': top_k_tokens,
-                'top_k_token_ids': top_k_indices,
-                'top_k_probs': top_k_probs,
-                'target_prob': target_prob
+                'token_prob': top_1_prob.item(),
+                'top_k_tokens': top_k_tokens.split(),
+                'top_k_token_ids': top_k_indices.tolist()[0],
+                'top_k_probs': top_k_probs.tolist(),
+                'target_prob': target_prob.item(),
+                'target': target
             })
 
         return {

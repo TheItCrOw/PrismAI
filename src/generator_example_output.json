@@ -1,0 +1,1004 @@
+[
+  {
+    "model": "gpt2",
+    "sample_results": [
+      {
+        "avg_prob": 0.00131953140995833,
+        "model_outputs": {
+          "generated_text": " how to solve problems, they are often not asking for the",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 703,
+              "token": " how",
+              "token_prob": 0.3943787217140198,
+              "top_k_tokens": " something how leadership if making",
+              "top_k_token_ids": [1223, 703, 5531, 611, 1642],
+              "top_k_probs": [
+                0.03144439682364464, 0.3943787217140198, 0.00010834099521161988,
+                0.0002308201655978337, 0.003540015546604991
+              ],
+              "target_prob": 0.0090382294729352
+            },
+            {
+              "step": 1,
+              "token_id": 284,
+              "token": " to",
+              "token_prob": 0.9416177272796631,
+              "top_k_tokens": " to best they me one",
+              "top_k_token_ids": [284, 1266, 484, 502, 530],
+              "top_k_probs": [
+                0.9416177272796631, 0.007177721243351698, 0.027142327278852463,
+                1.0656938229658408e-6, 8.132174116326496e-5
+              ],
+              "target_prob": 0.00045311887515708804
+            },
+            {
+              "step": 2,
+              "token_id": 8494,
+              "token": " solve",
+              "token_prob": 0.3851676285266876,
+              "top_k_tokens": " solve get deal improve address",
+              "top_k_token_ids": [8494, 651, 1730, 2987, 2209],
+              "top_k_probs": [
+                0.3851676285266876, 0.07216794788837433, 0.029311049729585648,
+                0.0594843290746212, 0.0038346368819475174
+              ],
+              "target_prob": 0.00014109686890151352
+            },
+            {
+              "step": 3,
+              "token_id": 2761,
+              "token": " problems",
+              "token_prob": 0.33093953132629395,
+              "top_k_tokens": " a problems some an this",
+              "top_k_token_ids": [257, 2761, 617, 281, 428],
+              "top_k_probs": [
+                0.2612539827823639, 0.33093953132629395, 0.004588505253195763,
+                0.02749880775809288, 0.011160137131810188
+              ],
+              "target_prob": 0.0017382019432261586
+            },
+            {
+              "step": 4,
+              "token_id": 11,
+              "token": ",",
+              "token_prob": 0.7536149024963379,
+              "top_k_tokens": " with, there or in",
+              "top_k_token_ids": [351, 11, 612, 393, 287],
+              "top_k_probs": [
+                0.016260238364338875, 0.7536149024963379, 0.0011583352461457253,
+                0.02291417121887207, 0.029832636937499046
+              ],
+              "target_prob": 7.701087452005595e-5
+            },
+            {
+              "step": 5,
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.5411907434463501,
+              "top_k_tokens": " they two most here there",
+              "top_k_token_ids": [484, 734, 749, 994, 612],
+              "top_k_probs": [
+                0.5411907434463501, 8.286224328912795e-5, 0.016739290207624435,
+                0.0003981346089858562, 0.028161652386188507
+              ],
+              "target_prob": 6.794175078539411e-6
+            },
+            {
+              "step": 6,
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.29454219341278076,
+              "top_k_tokens": " spend tend are usually can",
+              "top_k_token_ids": [4341, 4327, 389, 3221, 460],
+              "top_k_probs": [
+                0.0004865722148679197, 0.06702157109975815, 0.29454219341278076,
+                0.11700357496738434, 0.013245951384305954
+              ],
+              "target_prob": 1.3539115570893046e-5
+            },
+            {
+              "step": 7,
+              "token_id": 1690,
+              "token": " often",
+              "token_prob": 0.269718736410141,
+              "top_k_tokens": " missing given often asked challenged",
+              "top_k_token_ids": [4814, 1813, 1690, 1965, 12827],
+              "top_k_probs": [
+                0.002864115172997117, 0.002188333310186863, 0.269718736410141,
+                0.014042707160115242, 0.00016821399913169444
+              ],
+              "target_prob": 4.16949461623517e-8
+            },
+            {
+              "step": 8,
+              "token_id": 407,
+              "token": " not",
+              "token_prob": 0.07529754936695099,
+              "top_k_tokens": " expecting not frustrated asked trying",
+              "top_k_token_ids": [12451, 407, 14718, 1965, 2111],
+              "top_k_probs": [
+                0.0023402106016874313, 0.07529754936695099,
+                0.010050967335700989, 0.06055869534611702, 0.013988923281431198
+              ],
+              "target_prob": 0.001298593939282
+            },
+            {
+              "step": 9,
+              "token_id": 4737,
+              "token": " asking",
+              "token_prob": 0.11211787164211273,
+              "top_k_tokens": " expressing doing usually asking able",
+              "top_k_token_ids": [16621, 1804, 3221, 4737, 1498],
+              "top_k_probs": [
+                0.0007620318210683763, 0.015297879464924335,
+                0.0007094793254509568, 0.11211787164211273, 0.0272227730602026
+              ],
+              "target_prob": 0.0009801267879083753
+            },
+            {
+              "step": 10,
+              "token_id": 329,
+              "token": " for",
+              "token_prob": 0.5610795617103577,
+              "top_k_tokens": " for what their them you",
+              "top_k_token_ids": [329, 644, 511, 606, 345],
+              "top_k_probs": [
+                0.5610795617103577, 0.012251632288098335, 0.028087519109249115,
+                0.00547041418030858, 0.016379306092858315
+              ],
+              "target_prob": 4.025001544505358e-6
+            },
+            {
+              "step": 11,
+              "token_id": 262,
+              "token": " the",
+              "token_prob": 0.09578872472047806,
+              "top_k_tokens": " one a fill the suggestions",
+              "top_k_token_ids": [530, 257, 6070, 262, 11776],
+              "top_k_probs": [
+                0.002083598170429468, 0.05754735693335533, 9.051133247339749e-7,
+                0.09578872472047806, 0.002938613062724471
+              ],
+              "target_prob": 0.002083598170429468
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on",
+          "sample_sequence": " solving a problem, often times they speak to more than one"
+        }
+      },
+      {
+        "avg_prob": 3.2763779977775724e-5,
+        "model_outputs": {
+          "generated_text": " different opinions.\n\nThe best way to solve a problem",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.7363173365592957,
+              "top_k_tokens": " different their more real something",
+              "top_k_token_ids": [1180, 511, 517, 1103, 1223],
+              "top_k_probs": [
+                0.7363173365592957, 0.0032398069743067026, 0.03677842393517494,
+                3.398420813027769e-5, 0.0006203787634149194
+              ],
+              "target_prob": 0.00031546904938295484
+            },
+            {
+              "step": 1,
+              "token_id": 9317,
+              "token": " opinions",
+              "token_prob": 0.49430009722709656,
+              "top_k_tokens": " opinions different case views viewpoints",
+              "top_k_token_ids": [9317, 1180, 1339, 5009, 42806],
+              "top_k_probs": [
+                0.49430009722709656, 0.00038241836591623724,
+                2.215072981925914e-6, 0.17720814049243927, 0.03682373836636543
+              ],
+              "target_prob": 7.120510417735204e-6
+            },
+            {
+              "step": 2,
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.4372301399707794,
+              "top_k_tokens": " on if at. than",
+              "top_k_token_ids": [319, 611, 379, 13, 621],
+              "top_k_probs": [
+                0.17367151379585266, 0.0018219216726720333,
+                0.0048750825226306915, 0.4372301399707794, 0.08318113535642624
+              ],
+              "target_prob": 9.86916077749811e-8
+            },
+            {
+              "step": 3,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.4517638087272644,
+              "top_k_tokens": "\n Therefore Go What If",
+              "top_k_token_ids": [198, 8447, 1514, 1867, 1002],
+              "top_k_probs": [
+                0.4517638087272644, 0.005598017014563084,
+                0.00017403670062776655, 0.005475018639117479,
+                0.03282969072461128
+              ],
+              "target_prob": 8.954357610946317e-8
+            },
+            {
+              "step": 4,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.9997881054878235,
+              "top_k_tokens": "\n2InThe.",
+              "top_k_token_ids": [198, 17, 818, 464, 13],
+              "top_k_probs": [
+                0.9997881054878235, 1.1355962215020554e-6, 6.369124548655236e-6,
+                1.7731215848471038e-5, 1.1064465070376173e-5
+              ],
+              "target_prob": 4.4895554288104655e-13
+            },
+            {
+              "step": 5,
+              "token_id": 464,
+              "token": "The",
+              "token_prob": 0.05291849002242088,
+              "top_k_tokens": "FinallyTheInNeedResearch",
+              "top_k_token_ids": [11158, 464, 818, 23037, 25104],
+              "top_k_probs": [
+                0.0014109403127804399, 0.05291849002242088, 0.03433241322636604,
+                0.00045173492981120944, 0.0026041206438094378
+              ],
+              "target_prob": 1.7539849750392023e-7
+            },
+            {
+              "step": 6,
+              "token_id": 1266,
+              "token": " best",
+              "token_prob": 0.08732007443904877,
+              "top_k_tokens": " sound most problem group best",
+              "top_k_token_ids": [2128, 749, 1917, 1448, 1266],
+              "top_k_probs": [
+                7.10098393028602e-5, 0.050241731107234955, 0.04708193242549896,
+                0.0004703054728452116, 0.08732007443904877
+              ],
+              "target_prob": 9.517325452179648e-6
+            },
+            {
+              "step": 7,
+              "token_id": 835,
+              "token": " way",
+              "token_prob": 0.5556000471115112,
+              "top_k_tokens": " way organization approach thing open",
+              "top_k_token_ids": [835, 4009, 3164, 1517, 1280],
+              "top_k_probs": [
+                0.5556000471115112, 2.9473885660991073e-5, 0.036125581711530685,
+                0.017794450744986534, 4.029155752505176e-5
+              ],
+              "target_prob": 8.597568921686616e-6
+            },
+            {
+              "step": 8,
+              "token_id": 284,
+              "token": " to",
+              "token_prob": 0.9691537022590637,
+              "top_k_tokens": " to is of for you",
+              "top_k_token_ids": [284, 318, 286, 329, 345],
+              "top_k_probs": [
+                0.9691537022590637, 0.0015028456691652536,
+                0.0036196361761540174, 0.015377460978925228, 0.00490184361115098
+              ],
+              "target_prob": 5.710656836299677e-8
+            },
+            {
+              "step": 9,
+              "token_id": 8494,
+              "token": " solve",
+              "token_prob": 0.12407234311103821,
+              "top_k_tokens": " solve play approach feel develop",
+              "top_k_token_ids": [8494, 711, 3164, 1254, 1205],
+              "top_k_probs": [
+                0.12407234311103821, 0.0007469247793778777,
+                0.009617636911571026, 0.0018001102143898606, 0.00250615575350821
+              ],
+              "target_prob": 3.231569644412957e-5
+            },
+            {
+              "step": 10,
+              "token_id": 257,
+              "token": " a",
+              "token_prob": 0.7263355851173401,
+              "top_k_tokens": " an a problems problem these",
+              "top_k_token_ids": [281, 257, 2761, 1917, 777],
+              "top_k_probs": [
+                0.024809883907437325, 0.7263355851173401, 0.09824260324239731,
+                0.002972900401800871, 0.0053865546360611916
+              ],
+              "target_prob": 1.8983151676366106e-5
+            },
+            {
+              "step": 11,
+              "token_id": 1917,
+              "token": " problem",
+              "token_prob": 0.8270957469940186,
+              "top_k_tokens": " social problem difficult life math",
+              "top_k_token_ids": [1919, 1917, 2408, 1204, 10688],
+              "top_k_probs": [
+                0.0004978168872185051, 0.8270957469940186, 0.08692751824855804,
+                0.00016982265515252948, 8.647856884635985e-5
+              ],
+              "target_prob": 7.413167395498022e-7
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have",
+          "sample_sequence": " experienced a problem like yours and may be able to help you"
+        }
+      },
+      {
+        "avg_prob": 0.002860642016968266,
+        "model_outputs": {
+          "generated_text": " they are asking for advice on how to solve it.\n",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.5195337533950806,
+              "top_k_tokens": " they people the it that",
+              "top_k_token_ids": [484, 661, 262, 340, 326],
+              "top_k_probs": [
+                0.5195337533950806, 0.024641867727041245, 0.09956485778093338,
+                0.1550135463476181, 0.008866733871400356
+              ],
+              "target_prob": 0.00798364169895649
+            },
+            {
+              "step": 1,
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.38724634051322937,
+              "top_k_tokens": " do are will don consider",
+              "top_k_token_ids": [466, 389, 481, 836, 2074],
+              "top_k_probs": [
+                0.025146447122097015, 0.38724634051322937, 0.07765887677669525,
+                0.05782488361001015, 0.000297050952212885
+              ],
+              "target_prob": 1.5489120414713398e-5
+            },
+            {
+              "step": 2,
+              "token_id": 4737,
+              "token": " asking",
+              "token_prob": 0.1926094889640808,
+              "top_k_tokens": " often asking staying talking trying",
+              "top_k_token_ids": [1690, 4737, 10589, 3375, 2111],
+              "top_k_probs": [
+                0.012360550463199615, 0.1926094889640808, 4.32286542491056e-5,
+                0.04522888734936714, 0.02381286397576332
+              ],
+              "target_prob": 4.701774400928116e-7
+            },
+            {
+              "step": 3,
+              "token_id": 329,
+              "token": " for",
+              "token_prob": 0.592124879360199,
+              "top_k_tokens": " for too their highly them",
+              "top_k_token_ids": [329, 1165, 511, 4047, 606],
+              "top_k_probs": [
+                0.592124879360199, 0.0048873950727283955, 0.011212309822440147,
+                4.6171669964678586e-5, 0.005543047562241554
+              ],
+              "target_prob": 0.011113516986370087
+            },
+            {
+              "step": 4,
+              "token_id": 5608,
+              "token": " advice",
+              "token_prob": 0.3008612394332886,
+              "top_k_tokens": " advice help'answers support",
+              "top_k_token_ids": [5608, 1037, 705, 7429, 1104],
+              "top_k_probs": [
+                0.3008612394332886, 0.1077733263373375, 0.0006431702058762312,
+                0.010403153486549854, 0.0038663153536617756
+              ],
+              "target_prob": 0.008797305636107922
+            },
+            {
+              "step": 5,
+              "token_id": 319,
+              "token": " on",
+              "token_prob": 0.5015193819999695,
+              "top_k_tokens": " that on from about which",
+              "top_k_token_ids": [326, 319, 422, 546, 543],
+              "top_k_probs": [
+                0.14074093103408813, 0.5015193819999695, 0.14727482199668884,
+                0.060753073543310165, 0.006294825114309788
+              ],
+              "target_prob": 1.0857023880816996e-5
+            },
+            {
+              "step": 6,
+              "token_id": 703,
+              "token": " how",
+              "token_prob": 0.33038419485092163,
+              "top_k_tokens": " getting a same how basic",
+              "top_k_token_ids": [1972, 257, 976, 703, 4096],
+              "top_k_probs": [
+                0.007307049352675676, 0.06071525067090988, 6.77530697430484e-5,
+                0.33038419485092163, 0.0003241702797822654
+              ],
+              "target_prob": 0.006261505652219057
+            },
+            {
+              "step": 7,
+              "token_id": 284,
+              "token": " to",
+              "token_prob": 0.8798238039016724,
+              "top_k_tokens": " to they you things best",
+              "top_k_token_ids": [284, 484, 345, 1243, 1266],
+              "top_k_probs": [
+                0.8798238039016724, 0.047616515308618546, 0.0173265989869833,
+                0.0012313701445236802, 0.011251046322286129
+              ],
+              "target_prob": 3.5505045161698945e-6
+            },
+            {
+              "step": 8,
+              "token_id": 8494,
+              "token": " solve",
+              "token_prob": 0.39316752552986145,
+              "top_k_tokens": " solve make get go leave",
+              "top_k_token_ids": [8494, 787, 651, 467, 2666],
+              "top_k_probs": [
+                0.39316752552986145, 0.047761451452970505, 0.07411787658929825,
+                0.005412264261394739, 0.00037306034937500954
+              ],
+              "target_prob": 0.00010186771396547556
+            },
+            {
+              "step": 9,
+              "token_id": 340,
+              "token": " it",
+              "token_prob": 0.37089163064956665,
+              "top_k_tokens": " it a anything problems the",
+              "top_k_token_ids": [340, 257, 1997, 2761, 262],
+              "top_k_probs": [
+                0.37089163064956665, 0.24953927099704742, 0.0008314243168570101,
+                0.01976661942899227, 0.17630301415920258
+              ],
+              "target_prob": 2.2491012430236879e-7
+            },
+            {
+              "step": 10,
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.5995977520942688,
+              "top_k_tokens": " better. correctly properly,",
+              "top_k_token_ids": [1365, 13, 9380, 6105, 11],
+              "top_k_probs": [
+                0.11309684067964554, 0.5995977520942688, 0.005122526083141565,
+                0.0054633524268865585, 0.09078577905893326
+              ],
+              "target_prob": 3.749718234757893e-5
+            },
+            {
+              "step": 11,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.22422271966934204,
+              "top_k_tokens": " Not But This\n Sometimes",
+              "top_k_token_ids": [1892, 887, 770, 198, 8975],
+              "top_k_probs": [
+                0.002472221851348877, 0.018202556297183037, 0.0625147745013237,
+                0.22422271966934204, 0.01688271574676037
+              ],
+              "target_prob": 1.777597276486631e-6
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often",
+          "sample_sequence": " times they speak to more than one person. This is because"
+        }
+      },
+      {
+        "avg_prob": 0.013698816109132017,
+        "model_outputs": {
+          "generated_text": " this before.\n\nA few of the most common reasons",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 428,
+              "token": " this",
+              "token_prob": 0.3294495940208435,
+              "top_k_tokens": " this many that you don",
+              "top_k_token_ids": [428, 867, 326, 345, 836],
+              "top_k_probs": [
+                0.3294495940208435, 0.0007842976483516395, 0.040543537586927414,
+                0.09291984885931015, 4.6983732318039984e-5
+              ],
+              "target_prob": 0.15357108414173126
+            },
+            {
+              "step": 1,
+              "token_id": 878,
+              "token": " before",
+              "token_prob": 0.351803183555603,
+              "top_k_tokens": ". and before too all",
+              "top_k_token_ids": [13, 290, 878, 1165, 477],
+              "top_k_probs": [
+                0.27153319120407104, 0.009300575591623783, 0.351803183555603,
+                0.08928156644105911, 0.0009719920926727355
+              ],
+              "target_prob": 0.009300575591623783
+            },
+            {
+              "step": 2,
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.8693122863769531,
+              "top_k_tokens": ". or, too while",
+              "top_k_token_ids": [13, 393, 11, 1165, 981],
+              "top_k_probs": [
+                0.8693122863769531, 0.017837656661868095, 0.0353035070002079,
+                0.005187451373785734, 0.0003629070124588907
+              ],
+              "target_prob": 9.013741873786785e-6
+            },
+            {
+              "step": 3,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.5231829881668091,
+              "top_k_tokens": "\n You For Generally It",
+              "top_k_token_ids": [198, 921, 1114, 23904, 632],
+              "top_k_probs": [
+                0.5231829881668091, 0.017984475940465927, 0.010172931477427483,
+                0.0003122002526652068, 0.02613573521375656
+              ],
+              "target_prob": 2.9144990776330815e-7
+            },
+            {
+              "step": 4,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.9996882677078247,
+              "top_k_tokens": "\nTheThereInI",
+              "top_k_token_ids": [198, 464, 1858, 818, 40],
+              "top_k_probs": [
+                0.9996882677078247, 2.997346018673852e-5, 5.556728865485638e-6,
+                1.0648949682945386e-5, 8.848518518789206e-6
+              ],
+              "target_prob": 1.4980387535914325e-15
+            },
+            {
+              "step": 5,
+              "token_id": 32,
+              "token": "A",
+              "token_prob": 0.02002626284956932,
+              "top_k_tokens": "AAre(FindingI",
+              "top_k_token_ids": [32, 8491, 7, 36276, 40],
+              "top_k_probs": [
+                0.02002626284956932, 0.0036246399395167828,
+                0.001422964152880013, 0.004210177343338728, 0.014059738256037235
+              ],
+              "target_prob": 2.4562273992501105e-8
+            },
+            {
+              "step": 6,
+              "token_id": 1178,
+              "token": " few",
+              "token_prob": 0.06239801272749901,
+              "top_k_tokens": " simple moving very couple few",
+              "top_k_token_ids": [2829, 3867, 845, 3155, 1178],
+              "top_k_probs": [
+                0.012817357666790485, 1.8829470718628727e-5,
+                0.005017511546611786, 0.00710514560341835, 0.06239801272749901
+              ],
+              "target_prob": 0.00012178718316135928
+            },
+            {
+              "step": 7,
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.10613185912370682,
+              "top_k_tokens": " common of different friends alternate",
+              "top_k_token_ids": [2219, 286, 1180, 2460, 13527],
+              "top_k_probs": [
+                0.1003212258219719, 0.10613185912370682, 0.01718534342944622,
+                0.0044562616385519505, 1.657766188145615e-5
+              ],
+              "target_prob": 0.00010891618876485154
+            },
+            {
+              "step": 8,
+              "token_id": 262,
+              "token": " the",
+              "token_prob": 0.6635698080062866,
+              "top_k_tokens": " my those the you us",
+              "top_k_token_ids": [616, 883, 262, 345, 514],
+              "top_k_probs": [
+                0.060426756739616394, 0.00851935613900423, 0.6635698080062866,
+                0.04748779535293579, 0.05010165274143219
+              ],
+              "target_prob": 4.635934601537883e-6
+            },
+            {
+              "step": 9,
+              "token_id": 749,
+              "token": " most",
+              "token_prob": 0.27768051624298096,
+              "top_k_tokens": " ways most possible best tips",
+              "top_k_token_ids": [2842, 749, 1744, 1266, 9040],
+              "top_k_probs": [
+                0.017780529335141182, 0.27768051624298096,
+                0.0009565014624968171, 0.1468350738286972, 0.013472125865519047
+              ],
+              "target_prob": 3.3425271794840228e-6
+            },
+            {
+              "step": 10,
+              "token_id": 2219,
+              "token": " common",
+              "token_prob": 0.8244109153747559,
+              "top_k_tokens": " sign common important popular commonly",
+              "top_k_token_ids": [1051, 2219, 1593, 2968, 8811],
+              "top_k_probs": [
+                1.106834929487377e-6, 0.8244109153747559, 0.03204352781176567,
+                0.07721993327140808, 0.006907728500664234
+              ],
+              "target_prob": 1.643326413613977e-6
+            },
+            {
+              "step": 11,
+              "token_id": 3840,
+              "token": " reasons",
+              "token_prob": 0.08550482988357544,
+              "top_k_tokens": " descript misconceptions reasons mistakes interactions",
+              "top_k_token_ids": [12145, 45679, 3840, 10135, 12213],
+              "top_k_probs": [
+                5.840082394570345e-6, 0.0757426768541336, 0.08550482988357544,
+                0.05967741832137108, 0.0006911875680088997
+              ],
+              "target_prob": 0.0012644786620512605
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like",
+          "sample_sequence": " yours and may be able to help you in making better decisions"
+        }
+      },
+      {
+        "avg_prob": 0.009972053292441515,
+        "model_outputs": {
+          "generated_text": " different experiences.\n\nIf you are struggling with a problem",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.2000872641801834,
+              "top_k_tokens": " great hot different some similar",
+              "top_k_token_ids": [1049, 3024, 1180, 617, 2092],
+              "top_k_probs": [
+                0.0014857754576951265, 1.9111366782453842e-5,
+                0.2000872641801834, 0.04240129142999649, 0.11802976578474045
+              ],
+              "target_prob": 0.11739929765462875
+            },
+            {
+              "step": 1,
+              "token_id": 6461,
+              "token": " experiences",
+              "token_prob": 0.36415186524391174,
+              "top_k_tokens": " experiences things emotions feelings situations",
+              "top_k_token_ids": [6461, 1243, 10825, 7666, 7445],
+              "top_k_probs": [
+                0.36415186524391174, 0.047948889434337616, 0.01197117194533348,
+                0.032490409910678864, 0.0197494775056839
+              ],
+              "target_prob": 0.00032112098415382206
+            },
+            {
+              "step": 2,
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.640087902545929,
+              "top_k_tokens": ". or, ( as",
+              "top_k_token_ids": [13, 393, 11, 357, 355],
+              "top_k_probs": [
+                0.640087902545929, 0.03127843141555786, 0.036104124039411545,
+                0.003979398403316736, 0.013183029368519783
+              ],
+              "target_prob": 0.0007588443695567548
+            },
+            {
+              "step": 3,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.47072136402130127,
+              "top_k_tokens": "\n Don One Here The",
+              "top_k_token_ids": [198, 2094, 1881, 3423, 383],
+              "top_k_probs": [
+                0.47072136402130127, 0.002400010358542204, 0.005711388308554888,
+                0.008523198775947094, 0.028377491980791092
+              ],
+              "target_prob": 4.1440180176266495e-9
+            },
+            {
+              "step": 4,
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.9998012185096741,
+              "top_k_tokens": "\nLooking\"<|endoftext|>Just",
+              "top_k_token_ids": [198, 15784, 1, 50256, 5703],
+              "top_k_probs": [
+                0.9998012185096741, 3.865503828137662e-8, 6.487301561719505e-6,
+                2.2169744624989107e-5, 3.5521571817298536e-7
+              ],
+              "target_prob": 5.478065645547758e-7
+            },
+            {
+              "step": 5,
+              "token_id": 1532,
+              "token": "If",
+              "token_prob": 0.055929671972990036,
+              "top_k_tokens": "ToLetIfInDo",
+              "top_k_token_ids": [2514, 5756, 1532, 818, 5211],
+              "top_k_probs": [
+                0.012326679192483425, 0.008157637901604176,
+                0.055929671972990036, 0.033939629793167114, 0.01820847950875759
+              ],
+              "target_prob": 2.185414071931291e-9
+            },
+            {
+              "step": 6,
+              "token_id": 345,
+              "token": " you",
+              "token_prob": 0.8326261043548584,
+              "top_k_tokens": " there you your a I",
+              "top_k_token_ids": [612, 345, 534, 257, 314],
+              "top_k_probs": [
+                0.015542556531727314, 0.8326261043548584, 0.034036241471767426,
+                0.020006736740469933, 0.003014303743839264
+              ],
+              "target_prob": 1.5964365047693718e-6
+            },
+            {
+              "step": 7,
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.3104470372200012,
+              "top_k_tokens": " are have thought're see",
+              "top_k_token_ids": [389, 423, 1807, 821, 766],
+              "top_k_probs": [
+                0.3104470372200012, 0.26605045795440674, 0.00022238049132283777,
+                0.040121667087078094, 0.011140025220811367
+              ],
+              "target_prob": 1.4628964208895923e-6
+            },
+            {
+              "step": 8,
+              "token_id": 9648,
+              "token": " struggling",
+              "token_prob": 0.16838747262954712,
+              "top_k_tokens": " not struggling in facing a",
+              "top_k_token_ids": [407, 9648, 287, 6476, 257],
+              "top_k_probs": [
+                0.037178248167037964, 0.16838747262954712, 0.03111007623374462,
+                0.008836403489112854, 0.05827045813202858
+              ],
+              "target_prob": 0.0004994141636416316
+            },
+            {
+              "step": 9,
+              "token_id": 351,
+              "token": " with",
+              "token_prob": 0.5043313503265381,
+              "top_k_tokens": " to with due, hard",
+              "top_k_token_ids": [284, 351, 2233, 11, 1327],
+              "top_k_probs": [
+                0.4188508987426758, 0.5043313503265381, 0.00024259855854324996,
+                0.025011884048581123, 7.212165655801073e-5
+              ],
+              "target_prob": 3.271860350650968e-6
+            },
+            {
+              "step": 10,
+              "token_id": 257,
+              "token": " a",
+              "token_prob": 0.4767630696296692,
+              "top_k_tokens": " a your dealing some difficult",
+              "top_k_token_ids": [257, 534, 7219, 617, 2408],
+              "top_k_probs": [
+                0.4767630696296692, 0.0614231713116169, 0.003951927646994591,
+                0.01035822369158268, 0.006385802291333675
+              ],
+              "target_prob": 0.0006727762520313263
+            },
+            {
+              "step": 11,
+              "token_id": 1917,
+              "token": " problem",
+              "token_prob": 0.5430921316146851,
+              "top_k_tokens": " difficult specific problem hard question",
+              "top_k_token_ids": [2408, 2176, 1917, 1327, 1808],
+              "top_k_probs": [
+                0.18474960327148438, 0.014926183968782425, 0.5430921316146851,
+                0.0328795500099659, 0.008750850334763527
+              ],
+              "target_prob": 6.300756012933562e-6
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced",
+          "sample_sequence": " a problem like yours and may be able to help you in"
+        }
+      },
+      {
+        "avg_prob": 0.14866213020227548,
+        "model_outputs": {
+          "generated_text": " problem, they are often more likely to give advice that is",
+          "steps": [
+            {
+              "step": 0,
+              "token_id": 1917,
+              "token": " problem",
+              "token_prob": 0.9618973731994629,
+              "top_k_tokens": " problem difficult puzzle serious particular",
+              "top_k_token_ids": [1917, 2408, 15027, 2726, 1948],
+              "top_k_probs": [
+                0.9618973731994629, 0.004672554321587086, 0.0029416419565677643,
+                0.0004923934466205537, 0.0028930767439305782
+              ],
+              "target_prob": 0.9618973731994629
+            },
+            {
+              "step": 1,
+              "token_id": 11,
+              "token": ",",
+              "token_prob": 0.8143981695175171,
+              "top_k_tokens": ", they you or and",
+              "top_k_token_ids": [11, 484, 345, 393, 290],
+              "top_k_probs": [
+                0.8143981695175171, 0.048955075442790985, 0.017067253589630127,
+                0.023113276809453964, 0.014243805781006813
+              ],
+              "target_prob": 0.8143981695175171
+            },
+            {
+              "step": 2,
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.5190533995628357,
+              "top_k_tokens": " they there the many it",
+              "top_k_token_ids": [484, 612, 262, 867, 340],
+              "top_k_probs": [
+                0.5190533995628357, 0.027340181171894073, 0.03083758056163788,
+                0.007234374526888132, 0.11579173058271408
+              ],
+              "target_prob": 0.0049300286918878555
+            },
+            {
+              "step": 3,
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.2939796447753906,
+              "top_k_tokens": " are often usually should have",
+              "top_k_token_ids": [389, 1690, 3221, 815, 423],
+              "top_k_probs": [
+                0.2939796447753906, 0.09014158695936203, 0.12479070574045181,
+                0.019095271825790405, 0.01574261300265789
+              ],
+              "target_prob": 3.624203372964985e-7
+            },
+            {
+              "step": 4,
+              "token_id": 1690,
+              "token": " often",
+              "token_prob": 0.19281034171581268,
+              "top_k_tokens": " reacting sometimes usually very often",
+              "top_k_token_ids": [33413, 3360, 3221, 845, 1690],
+              "top_k_probs": [
+                0.00039168467628769577, 0.004408521112054586,
+                0.14133884012699127, 0.006283004768192768, 0.19281034171581268
+              ],
+              "target_prob": 1.0123229913006071e-5
+            },
+            {
+              "step": 5,
+              "token_id": 517,
+              "token": " more",
+              "token_prob": 0.024273118004202843,
+              "top_k_tokens": " unaware making responding telling more",
+              "top_k_token_ids": [17261, 1642, 14409, 5149, 517],
+              "top_k_probs": [
+                0.003541443031281233, 0.006115237716585398, 0.01179552637040615,
+                0.008307297714054585, 0.024273118004202843
+              ],
+              "target_prob": 3.020150813881628e-7
+            },
+            {
+              "step": 6,
+              "token_id": 1884,
+              "token": " likely",
+              "token_prob": 0.6586191058158875,
+              "top_k_tokens": " likely interested social successful focused",
+              "top_k_token_ids": [1884, 4609, 1919, 4388, 5670],
+              "top_k_probs": [
+                0.6586191058158875, 0.10980711877346039, 9.168522228719667e-5,
+                0.00323231122456491, 0.008251099847257137
+              ],
+              "target_prob": 0.0001581642427481711
+            },
+            {
+              "step": 7,
+              "token_id": 284,
+              "token": " to",
+              "token_prob": 0.989421010017395,
+              "top_k_tokens": " to than likely motivated going",
+              "top_k_token_ids": [284, 621, 1884, 13338, 1016],
+              "top_k_probs": [
+                0.989421010017395, 0.009351573884487152, 5.174323086976074e-5,
+                1.3214553291618358e-5, 0.0002342192456126213
+              ],
+              "target_prob": 2.5379465569130844e-6
+            },
+            {
+              "step": 8,
+              "token_id": 1577,
+              "token": " give",
+              "token_prob": 0.07599730789661407,
+              "top_k_tokens": " receive travel buy give answer",
+              "top_k_token_ids": [3328, 3067, 2822, 1577, 3280],
+              "top_k_probs": [
+                0.0020120148546993732, 9.838665391725954e-6,
+                0.001561230979859829, 0.07599730789661407, 0.029421430081129074
+              ],
+              "target_prob": 4.945892214891501e-5
+            },
+            {
+              "step": 9,
+              "token_id": 5608,
+              "token": " advice",
+              "token_prob": 0.2929975986480713,
+              "top_k_tokens": " advice it a you suggestions",
+              "top_k_token_ids": [5608, 340, 257, 345, 11776],
+              "top_k_probs": [
+                0.2929975986480713, 0.27230069041252136, 0.04143369570374489,
+                0.1515963226556778, 0.00887263659387827
+              ],
+              "target_prob": 0.002469186671078205
+            },
+            {
+              "step": 10,
+              "token_id": 326,
+              "token": " that",
+              "token_prob": 0.26934537291526794,
+              "top_k_tokens": " on that than to.",
+              "top_k_token_ids": [319, 326, 621, 284, 13],
+              "top_k_probs": [
+                0.22200754284858704, 0.26934537291526794, 0.022145679220557213,
+                0.11312940716743469, 0.01436042133718729
+              ],
+              "target_prob": 7.1046570155886e-6
+            },
+            {
+              "step": 11,
+              "token_id": 318,
+              "token": " is",
+              "token_prob": 0.37570708990097046,
+              "top_k_tokens": " is worked gets works they",
+              "top_k_token_ids": [318, 3111, 3011, 2499, 484],
+              "top_k_probs": [
+                0.37570708990097046, 0.00034488210803829134,
+                0.004012488294392824, 0.022348809987306595, 0.09420692920684814
+              ],
+              "target_prob": 2.2750913558411412e-5
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a",
+          "sample_sequence": " problem, often times they speak to more than one person."
+        }
+      }
+    ]
+  }
+]
