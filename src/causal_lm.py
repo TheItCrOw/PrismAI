@@ -9,9 +9,12 @@ class CausalLM():
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+        print(f'Created model {model_name} to device {self.device}')
 
     def generate(self, context, max_length=256):
-        input_ids = self.tokenizer.encode(context, return_tensors='pt')
+        input_ids = self.tokenizer.encode(context, return_tensors='pt').to(self.device)
         # Check if the input sequence is longer than the model's maximum sequence length
         if input_ids.size(1) > self.model.config.max_position_embeddings:
             print("Input sequence is too long and will be truncated.")
@@ -36,7 +39,7 @@ class CausalLM():
                               max_length=32, 
                               temp=0.9):
 
-        input_ids = self.tokenizer.encode(input_text, return_tensors="pt")
+        input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
         # Check if the input sequence is longer than the model's maximum sequence length
         if input_ids.size(1) > self.model.config.max_position_embeddings:
             print("Input sequence is too long and will be truncated.")
@@ -53,7 +56,7 @@ class CausalLM():
 
             # Generate the next token
             with torch.no_grad():
-                logits = self.model(current_ids).logits[:, -1, :] / temp
+                logits = self.model(current_ids.to(self.device)).logits[:, -1, :] / temp
                 
             # Apply softmax to obtain probabilities
             softmaxed_logits = torch.nn.functional.softmax(logits, dim=-1)
@@ -78,7 +81,7 @@ class CausalLM():
                 target_prob = softmaxed_logits[0][target_idx[0][step]]
 
             # Concatenate the top 1 token to current_ids
-            current_ids = torch.cat([current_ids, target_idx[:, step].unsqueeze(dim=1)], dim=-1)
+            current_ids = torch.cat([current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()], dim=-1)
 
             steps.append({
                 'step': step,

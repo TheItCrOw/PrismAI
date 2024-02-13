@@ -20,7 +20,7 @@ def get_essays(label, take):
     # As a first step, we want to inject AI written sentences into human essays
     # and see if we can sort them out later again
     # 1 = AI generated, 0 = human written
-    filtered_df = df[df['label'] == 0].head(take)
+    filtered_df = df[df['label'] == label].head(take)
     filtered_essays = filtered_df['text'].tolist()
     print(f'Processing {len(filtered_essays)} filtered essays.')
     return filtered_essays
@@ -67,8 +67,9 @@ def preprocess_dataset():
 
 
 def test_detector():
-    detector = Detector()
-    essays = get_essays(1, 100)
+    # https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
+    detector = Detector(models=['mistralai/Mistral-7B-v0.1'])
+    essays = get_essays(0, 100)
     # Let the detector do the work
     essays_avg = []
     for essay in essays:

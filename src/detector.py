@@ -8,6 +8,12 @@ class Detector():
     '''A class that tries to identify AI texts'''
 
     def __init__(self, models=['gpt2']):
+        '''
+        Possible models to choose from:
+        daryl149/llama-2-7b-chat-hf
+        gpt2
+        mistralai/Mistral-7B-v0.1
+        '''
         self.llm_ensemble = [CausalLM(m) for m in models]
         self.min_token_length = 32
         print(f'Model ensemble: {[x.model_name for x in self.llm_ensemble]}')

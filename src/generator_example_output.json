@@ -3,1002 +3,1274 @@
     "model": "gpt2",
     "sample_results": [
       {
-        "avg_prob": 0.00131953140995833,
+        "avg_prob": 0.15403111298671016,
         "model_outputs": {
-          "generated_text": " how to solve problems, they are often not asking for the",
+          "generated_text": " This is because different views are better for figuring out a tough",
           "steps": [
             {
               "step": 0,
-              "token_id": 703,
-              "token": " how",
-              "token_prob": 0.3943787217140198,
-              "top_k_tokens": " something how leadership if making",
-              "top_k_token_ids": [1223, 703, 5531, 611, 1642],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person.",
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.2510371208190918,
+              "top_k_tokens": ["Talking", "As", "Wait", "And"],
+              "top_k_token_ids": [33445, 1081, 198, 16314, 843],
               "top_k_probs": [
-                0.03144439682364464, 0.3943787217140198, 0.00010834099521161988,
-                0.0002308201655978337, 0.003540015546604991
+                0.00040407830965705216, 0.007491089403629303,
+                0.2510371208190918, 1.519156194262905e-5, 0.013917256146669388
               ],
-              "target_prob": 0.0090382294729352
+              "target_prob": 0.07506626099348068,
+              "target": " This"
             },
             {
               "step": 1,
-              "token_id": 284,
-              "token": " to",
-              "token_prob": 0.9416177272796631,
-              "top_k_tokens": " to best they me one",
-              "top_k_token_ids": [284, 1266, 484, 502, 530],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This",
+              "token_id": 318,
+              "token": " is",
+              "token_prob": 0.38462552428245544,
+              "top_k_tokens": ["can", "pattern", "gives", "is", "has"],
+              "top_k_token_ids": [460, 3912, 3607, 318, 468],
               "top_k_probs": [
-                0.9416177272796631, 0.007177721243351698, 0.027142327278852463,
-                1.0656938229658408e-6, 8.132174116326496e-5
+                0.18072202801704407, 0.0010200496762990952,
+                0.011415090411901474, 0.38462552428245544, 0.009141962043941021
               ],
-              "target_prob": 0.00045311887515708804
+              "target_prob": 0.38462552428245544,
+              "target": " is"
             },
             {
               "step": 2,
-              "token_id": 8494,
-              "token": " solve",
-              "token_prob": 0.3851676285266876,
-              "top_k_tokens": " solve get deal improve address",
-              "top_k_token_ids": [8494, 651, 1730, 2987, 2209],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is",
+              "token_id": 780,
+              "token": " because",
+              "token_prob": 0.2898979187011719,
+              "top_k_tokens": ["because", "called", "why", "very", "not"],
+              "top_k_token_ids": [780, 1444, 1521, 845, 407],
               "top_k_probs": [
-                0.3851676285266876, 0.07216794788837433, 0.029311049729585648,
-                0.0594843290746212, 0.0038346368819475174
+                0.2898979187011719, 0.046911850571632385, 0.09024713933467865,
+                0.00647879159078002, 0.03926156461238861
               ],
-              "target_prob": 0.00014109686890151352
+              "target_prob": 0.2898979187011719,
+              "target": " because"
             },
             {
               "step": 3,
-              "token_id": 2761,
-              "token": " problems",
-              "token_prob": 0.33093953132629395,
-              "top_k_tokens": " a problems some an this",
-              "top_k_token_ids": [257, 2761, 617, 281, 428],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because",
+              "token_id": 262,
+              "token": " the",
+              "token_prob": 0.10162271559238434,
+              "top_k_tokens": ["they", "you", "the", "there", "your"],
+              "top_k_token_ids": [484, 345, 262, 612, 534],
               "top_k_probs": [
-                0.2612539827823639, 0.33093953132629395, 0.004588505253195763,
-                0.02749880775809288, 0.011160137131810188
+                0.0999571681022644, 0.02471444010734558, 0.10162271559238434,
+                0.06151045486330986, 0.005164878908544779
               ],
-              "target_prob": 0.0017382019432261586
+              "target_prob": 0.004338327795267105,
+              "target": " different"
             },
             {
               "step": 4,
-              "token_id": 11,
-              "token": ",",
-              "token_prob": 0.7536149024963379,
-              "top_k_tokens": " with, there or in",
-              "top_k_token_ids": [351, 11, 612, 393, 287],
-              "top_k_probs": [
-                0.016260238364338875, 0.7536149024963379, 0.0011583352461457253,
-                0.02291417121887207, 0.029832636937499046
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different",
+              "token_id": 661,
+              "token": " people",
+              "token_prob": 0.6982298493385315,
+              "top_k_tokens": [
+                "people",
+                "voices",
+                "parts",
+                "words",
+                "interactions"
               ],
-              "target_prob": 7.701087452005595e-5
+              "top_k_token_ids": [661, 10839, 3354, 2456, 12213],
+              "top_k_probs": [
+                0.6982298493385315, 0.006720082368701696, 0.008821394294500351,
+                0.0018587391823530197, 0.0002355345932301134
+              ],
+              "target_prob": 0.00031144756940193474,
+              "target": " views"
             },
             {
               "step": 5,
-              "token_id": 484,
-              "token": " they",
-              "token_prob": 0.5411907434463501,
-              "top_k_tokens": " they two most here there",
-              "top_k_token_ids": [484, 734, 749, 994, 612],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views",
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.3230629861354828,
+              "top_k_tokens": ["are", "of", "differ", "on", "have"],
+              "top_k_token_ids": [389, 286, 13238, 319, 423],
               "top_k_probs": [
-                0.5411907434463501, 8.286224328912795e-5, 0.016739290207624435,
-                0.0003981346089858562, 0.028161652386188507
+                0.11799174547195435, 0.3230629861354828, 0.007618725765496492,
+                0.16386781632900238, 0.018065376207232475
               ],
-              "target_prob": 6.794175078539411e-6
+              "target_prob": 0.11799174547195435,
+              "target": " are"
             },
             {
               "step": 6,
-              "token_id": 389,
-              "token": " are",
-              "token_prob": 0.29454219341278076,
-              "top_k_tokens": " spend tend are usually can",
-              "top_k_token_ids": [4341, 4327, 389, 3221, 460],
-              "top_k_probs": [
-                0.0004865722148679197, 0.06702157109975815, 0.29454219341278076,
-                0.11700357496738434, 0.013245951384305954
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are",
+              "token_id": 6241,
+              "token": " expressed",
+              "token_prob": 0.3048039972782135,
+              "top_k_tokens": [
+                "beneficial",
+                "expressed",
+                "created",
+                "born",
+                "often"
               ],
-              "target_prob": 1.3539115570893046e-5
+              "top_k_token_ids": [13205, 6241, 2727, 4642, 1690],
+              "top_k_probs": [
+                0.00023277831496670842, 0.3048039972782135,
+                0.004864101763814688, 0.0005876205395907164, 0.0874798446893692
+              ],
+              "target_prob": 0.00427895225584507,
+              "target": " better"
             },
             {
               "step": 7,
-              "token_id": 1690,
-              "token": " often",
-              "token_prob": 0.269718736410141,
-              "top_k_tokens": " missing given often asked challenged",
-              "top_k_token_ids": [4814, 1813, 1690, 1965, 12827],
-              "top_k_probs": [
-                0.002864115172997117, 0.002188333310186863, 0.269718736410141,
-                0.014042707160115242, 0.00016821399913169444
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better",
+              "token_id": 379,
+              "token": " at",
+              "token_prob": 0.256312757730484,
+              "top_k_tokens": [
+                "at",
+                "understood",
+                "communicated",
+                "than",
+                "conveyed"
               ],
-              "target_prob": 4.16949461623517e-8
+              "top_k_token_ids": [379, 7247, 28412, 621, 33348],
+              "top_k_probs": [
+                0.256312757730484, 0.026839720085263252, 0.004371113609522581,
+                0.17285922169685364, 0.0012973537668585777
+              ],
+              "target_prob": 0.03668946772813797,
+              "target": " for"
             },
             {
               "step": 8,
-              "token_id": 407,
-              "token": " not",
-              "token_prob": 0.07529754936695099,
-              "top_k_tokens": " expecting not frustrated asked trying",
-              "top_k_token_ids": [12451, 407, 14718, 1965, 2111],
-              "top_k_probs": [
-                0.0023402106016874313, 0.07529754936695099,
-                0.010050967335700989, 0.06055869534611702, 0.013988923281431198
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for",
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.2333769053220749,
+              "top_k_tokens": [
+                "different",
+                "people",
+                "some",
+                "each",
+                "someone"
               ],
-              "target_prob": 0.001298593939282
+              "top_k_token_ids": [1180, 661, 617, 1123, 2130],
+              "top_k_probs": [
+                0.2333769053220749, 0.050905968993902206, 0.007674167398363352,
+                0.22155436873435974, 0.007781471125781536
+              ],
+              "target_prob": 2.4956012566690333e-5,
+              "target": " figuring"
             },
             {
               "step": 9,
-              "token_id": 4737,
-              "token": " asking",
-              "token_prob": 0.11211787164211273,
-              "top_k_tokens": " expressing doing usually asking able",
-              "top_k_token_ids": [16621, 1804, 3221, 4737, 1498],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring",
+              "token_id": 503,
+              "token": " out",
+              "token_prob": 0.8916639685630798,
+              "top_k_tokens": ["out", "things", "it", "factors", "this"],
+              "top_k_token_ids": [503, 1243, 340, 5087, 428],
               "top_k_probs": [
-                0.0007620318210683763, 0.015297879464924335,
-                0.0007094793254509568, 0.11211787164211273, 0.0272227730602026
+                0.8916639685630798, 0.07003046572208405, 0.018744761124253273,
+                4.279855602362659e-6, 0.0061976108700037
               ],
-              "target_prob": 0.0009801267879083753
+              "target_prob": 0.8916639685630798,
+              "target": " out"
             },
             {
               "step": 10,
-              "token_id": 329,
-              "token": " for",
-              "token_prob": 0.5610795617103577,
-              "top_k_tokens": " for what their them you",
-              "top_k_token_ids": [329, 644, 511, 606, 345],
-              "top_k_probs": [
-                0.5610795617103577, 0.012251632288098335, 0.028087519109249115,
-                0.00547041418030858, 0.016379306092858315
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out",
+              "token_id": 644,
+              "token": " what",
+              "token_prob": 0.2994545102119446,
+              "top_k_tokens": [
+                "what",
+                "solutions",
+                "where",
+                "how",
+                "questions"
               ],
-              "target_prob": 4.025001544505358e-6
+              "top_k_token_ids": [644, 8136, 810, 703, 2683],
+              "top_k_probs": [
+                0.2994545102119446, 0.022835316136479378, 0.02396519109606743,
+                0.13875234127044678, 0.0013927507679909468
+              ],
+              "target_prob": 0.04344769939780235,
+              "target": " a"
             },
             {
               "step": 11,
-              "token_id": 262,
-              "token": " the",
-              "token_prob": 0.09578872472047806,
-              "top_k_tokens": " one a fill the suggestions",
-              "top_k_token_ids": [530, 257, 6070, 262, 11776],
-              "top_k_probs": [
-                0.002083598170429468, 0.05754735693335533, 9.051133247339749e-7,
-                0.09578872472047806, 0.002938613062724471
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a",
+              "token_id": 4610,
+              "token": " solution",
+              "token_prob": 0.6680966019630432,
+              "top_k_tokens": [
+                "solution",
+                "problem",
+                "catalog",
+                "situation",
+                "new"
               ],
-              "target_prob": 0.002083598170429468
+              "top_k_token_ids": [4610, 1917, 18388, 3074, 649],
+              "top_k_probs": [
+                0.6680966019630432, 0.23398423194885254, 3.105871826392104e-8,
+                0.001240794314071536, 0.010776061564683914
+              ],
+              "target_prob": 3.708706935867667e-5,
+              "target": " tough"
             }
           ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on",
-          "sample_sequence": " solving a problem, often times they speak to more than one"
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person.",
+          "sample_sequence": " This is because different views are better for figuring out a tough"
         }
       },
       {
-        "avg_prob": 3.2763779977775724e-5,
+        "avg_prob": 0.1826897763191179,
         "model_outputs": {
-          "generated_text": " different opinions.\n\nThe best way to solve a problem",
+          "generated_text": " have experienced a problem like yours and may be able to help",
           "steps": [
             {
               "step": 0,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may",
+              "token_id": 307,
+              "token": " be",
+              "token_prob": 0.19105130434036255,
+              "top_k_tokens": ["be", "just", "look", "disagree", "feel"],
+              "top_k_token_ids": [307, 655, 804, 12546, 1254],
+              "top_k_probs": [
+                0.19105130434036255, 0.004358580801635981,
+                0.0019610023591667414, 0.14143238961696625, 0.028677230700850487
+              ],
+              "target_prob": 0.11402799934148788,
+              "target": " have"
+            },
+            {
+              "step": 1,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have",
               "token_id": 1180,
               "token": " different",
               "token_prob": 0.7363173365592957,
-              "top_k_tokens": " different their more real something",
-              "top_k_token_ids": [1180, 511, 517, 1103, 1223],
-              "top_k_probs": [
-                0.7363173365592957, 0.0032398069743067026, 0.03677842393517494,
-                3.398420813027769e-5, 0.0006203787634149194
+              "top_k_tokens": [
+                "different",
+                "a",
+                "it",
+                "opinions",
+                "conversations"
               ],
-              "target_prob": 0.00031546904938295484
-            },
-            {
-              "step": 1,
-              "token_id": 9317,
-              "token": " opinions",
-              "token_prob": 0.49430009722709656,
-              "top_k_tokens": " opinions different case views viewpoints",
-              "top_k_token_ids": [9317, 1180, 1339, 5009, 42806],
+              "top_k_token_ids": [1180, 257, 340, 9317, 10275],
               "top_k_probs": [
-                0.49430009722709656, 0.00038241836591623724,
-                2.215072981925914e-6, 0.17720814049243927, 0.03682373836636543
+                0.7363173365592957, 0.040493786334991455,
+                0.00014844740508124232, 0.016077112406492233,
+                1.7411548469681293e-5
               ],
-              "target_prob": 7.120510417735204e-6
+              "target_prob": 0.00031546904938295484,
+              "target": " experienced"
             },
             {
               "step": 2,
-              "token_id": 13,
-              "token": ".",
-              "token_prob": 0.4372301399707794,
-              "top_k_tokens": " on if at. than",
-              "top_k_token_ids": [319, 611, 379, 13, 621],
-              "top_k_probs": [
-                0.17367151379585266, 0.0018219216726720333,
-                0.0048750825226306915, 0.4372301399707794, 0.08318113535642624
-              ],
-              "target_prob": 9.86916077749811e-8
-            },
-            {
-              "step": 3,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.4517638087272644,
-              "top_k_tokens": "\n Therefore Go What If",
-              "top_k_token_ids": [198, 8447, 1514, 1867, 1002],
-              "top_k_probs": [
-                0.4517638087272644, 0.005598017014563084,
-                0.00017403670062776655, 0.005475018639117479,
-                0.03282969072461128
-              ],
-              "target_prob": 8.954357610946317e-8
-            },
-            {
-              "step": 4,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.9997881054878235,
-              "top_k_tokens": "\n2InThe.",
-              "top_k_token_ids": [198, 17, 818, 464, 13],
-              "top_k_probs": [
-                0.9997881054878235, 1.1355962215020554e-6, 6.369124548655236e-6,
-                1.7731215848471038e-5, 1.1064465070376173e-5
-              ],
-              "target_prob": 4.4895554288104655e-13
-            },
-            {
-              "step": 5,
-              "token_id": 464,
-              "token": "The",
-              "token_prob": 0.05291849002242088,
-              "top_k_tokens": "FinallyTheInNeedResearch",
-              "top_k_token_ids": [11158, 464, 818, 23037, 25104],
-              "top_k_probs": [
-                0.0014109403127804399, 0.05291849002242088, 0.03433241322636604,
-                0.00045173492981120944, 0.0026041206438094378
-              ],
-              "target_prob": 1.7539849750392023e-7
-            },
-            {
-              "step": 6,
-              "token_id": 1266,
-              "token": " best",
-              "token_prob": 0.08732007443904877,
-              "top_k_tokens": " sound most problem group best",
-              "top_k_token_ids": [2128, 749, 1917, 1448, 1266],
-              "top_k_probs": [
-                7.10098393028602e-5, 0.050241731107234955, 0.04708193242549896,
-                0.0004703054728452116, 0.08732007443904877
-              ],
-              "target_prob": 9.517325452179648e-6
-            },
-            {
-              "step": 7,
-              "token_id": 835,
-              "token": " way",
-              "token_prob": 0.5556000471115112,
-              "top_k_tokens": " way organization approach thing open",
-              "top_k_token_ids": [835, 4009, 3164, 1517, 1280],
-              "top_k_probs": [
-                0.5556000471115112, 2.9473885660991073e-5, 0.036125581711530685,
-                0.017794450744986534, 4.029155752505176e-5
-              ],
-              "target_prob": 8.597568921686616e-6
-            },
-            {
-              "step": 8,
-              "token_id": 284,
-              "token": " to",
-              "token_prob": 0.9691537022590637,
-              "top_k_tokens": " to is of for you",
-              "top_k_token_ids": [284, 318, 286, 329, 345],
-              "top_k_probs": [
-                0.9691537022590637, 0.0015028456691652536,
-                0.0036196361761540174, 0.015377460978925228, 0.00490184361115098
-              ],
-              "target_prob": 5.710656836299677e-8
-            },
-            {
-              "step": 9,
-              "token_id": 8494,
-              "token": " solve",
-              "token_prob": 0.12407234311103821,
-              "top_k_tokens": " solve play approach feel develop",
-              "top_k_token_ids": [8494, 711, 3164, 1254, 1205],
-              "top_k_probs": [
-                0.12407234311103821, 0.0007469247793778777,
-                0.009617636911571026, 0.0018001102143898606, 0.00250615575350821
-              ],
-              "target_prob": 3.231569644412957e-5
-            },
-            {
-              "step": 10,
-              "token_id": 257,
-              "token": " a",
-              "token_prob": 0.7263355851173401,
-              "top_k_tokens": " an a problems problem these",
-              "top_k_token_ids": [281, 257, 2761, 1917, 777],
-              "top_k_probs": [
-                0.024809883907437325, 0.7263355851173401, 0.09824260324239731,
-                0.002972900401800871, 0.0053865546360611916
-              ],
-              "target_prob": 1.8983151676366106e-5
-            },
-            {
-              "step": 11,
-              "token_id": 1917,
-              "token": " problem",
-              "token_prob": 0.8270957469940186,
-              "top_k_tokens": " social problem difficult life math",
-              "top_k_token_ids": [1919, 1917, 2408, 1204, 10688],
-              "top_k_probs": [
-                0.0004978168872185051, 0.8270957469940186, 0.08692751824855804,
-                0.00016982265515252948, 8.647856884635985e-5
-              ],
-              "target_prob": 7.413167395498022e-7
-            }
-          ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have",
-          "sample_sequence": " experienced a problem like yours and may be able to help you"
-        }
-      },
-      {
-        "avg_prob": 0.002860642016968266,
-        "model_outputs": {
-          "generated_text": " they are asking for advice on how to solve it.\n",
-          "steps": [
-            {
-              "step": 0,
-              "token_id": 484,
-              "token": " they",
-              "token_prob": 0.5195337533950806,
-              "top_k_tokens": " they people the it that",
-              "top_k_token_ids": [484, 661, 262, 340, 326],
-              "top_k_probs": [
-                0.5195337533950806, 0.024641867727041245, 0.09956485778093338,
-                0.1550135463476181, 0.008866733871400356
-              ],
-              "target_prob": 0.00798364169895649
-            },
-            {
-              "step": 1,
-              "token_id": 389,
-              "token": " are",
-              "token_prob": 0.38724634051322937,
-              "top_k_tokens": " do are will don consider",
-              "top_k_token_ids": [466, 389, 481, 836, 2074],
-              "top_k_probs": [
-                0.025146447122097015, 0.38724634051322937, 0.07765887677669525,
-                0.05782488361001015, 0.000297050952212885
-              ],
-              "target_prob": 1.5489120414713398e-5
-            },
-            {
-              "step": 2,
-              "token_id": 4737,
-              "token": " asking",
-              "token_prob": 0.1926094889640808,
-              "top_k_tokens": " often asking staying talking trying",
-              "top_k_token_ids": [1690, 4737, 10589, 3375, 2111],
-              "top_k_probs": [
-                0.012360550463199615, 0.1926094889640808, 4.32286542491056e-5,
-                0.04522888734936714, 0.02381286397576332
-              ],
-              "target_prob": 4.701774400928116e-7
-            },
-            {
-              "step": 3,
-              "token_id": 329,
-              "token": " for",
-              "token_prob": 0.592124879360199,
-              "top_k_tokens": " for too their highly them",
-              "top_k_token_ids": [329, 1165, 511, 4047, 606],
-              "top_k_probs": [
-                0.592124879360199, 0.0048873950727283955, 0.011212309822440147,
-                4.6171669964678586e-5, 0.005543047562241554
-              ],
-              "target_prob": 0.011113516986370087
-            },
-            {
-              "step": 4,
-              "token_id": 5608,
-              "token": " advice",
-              "token_prob": 0.3008612394332886,
-              "top_k_tokens": " advice help'answers support",
-              "top_k_token_ids": [5608, 1037, 705, 7429, 1104],
-              "top_k_probs": [
-                0.3008612394332886, 0.1077733263373375, 0.0006431702058762312,
-                0.010403153486549854, 0.0038663153536617756
-              ],
-              "target_prob": 0.008797305636107922
-            },
-            {
-              "step": 5,
-              "token_id": 319,
-              "token": " on",
-              "token_prob": 0.5015193819999695,
-              "top_k_tokens": " that on from about which",
-              "top_k_token_ids": [326, 319, 422, 546, 543],
-              "top_k_probs": [
-                0.14074093103408813, 0.5015193819999695, 0.14727482199668884,
-                0.060753073543310165, 0.006294825114309788
-              ],
-              "target_prob": 1.0857023880816996e-5
-            },
-            {
-              "step": 6,
-              "token_id": 703,
-              "token": " how",
-              "token_prob": 0.33038419485092163,
-              "top_k_tokens": " getting a same how basic",
-              "top_k_token_ids": [1972, 257, 976, 703, 4096],
-              "top_k_probs": [
-                0.007307049352675676, 0.06071525067090988, 6.77530697430484e-5,
-                0.33038419485092163, 0.0003241702797822654
-              ],
-              "target_prob": 0.006261505652219057
-            },
-            {
-              "step": 7,
-              "token_id": 284,
-              "token": " to",
-              "token_prob": 0.8798238039016724,
-              "top_k_tokens": " to they you things best",
-              "top_k_token_ids": [284, 484, 345, 1243, 1266],
-              "top_k_probs": [
-                0.8798238039016724, 0.047616515308618546, 0.0173265989869833,
-                0.0012313701445236802, 0.011251046322286129
-              ],
-              "target_prob": 3.5505045161698945e-6
-            },
-            {
-              "step": 8,
-              "token_id": 8494,
-              "token": " solve",
-              "token_prob": 0.39316752552986145,
-              "top_k_tokens": " solve make get go leave",
-              "top_k_token_ids": [8494, 787, 651, 467, 2666],
-              "top_k_probs": [
-                0.39316752552986145, 0.047761451452970505, 0.07411787658929825,
-                0.005412264261394739, 0.00037306034937500954
-              ],
-              "target_prob": 0.00010186771396547556
-            },
-            {
-              "step": 9,
-              "token_id": 340,
-              "token": " it",
-              "token_prob": 0.37089163064956665,
-              "top_k_tokens": " it a anything problems the",
-              "top_k_token_ids": [340, 257, 1997, 2761, 262],
-              "top_k_probs": [
-                0.37089163064956665, 0.24953927099704742, 0.0008314243168570101,
-                0.01976661942899227, 0.17630301415920258
-              ],
-              "target_prob": 2.2491012430236879e-7
-            },
-            {
-              "step": 10,
-              "token_id": 13,
-              "token": ".",
-              "token_prob": 0.5995977520942688,
-              "top_k_tokens": " better. correctly properly,",
-              "top_k_token_ids": [1365, 13, 9380, 6105, 11],
-              "top_k_probs": [
-                0.11309684067964554, 0.5995977520942688, 0.005122526083141565,
-                0.0054633524268865585, 0.09078577905893326
-              ],
-              "target_prob": 3.749718234757893e-5
-            },
-            {
-              "step": 11,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.22422271966934204,
-              "top_k_tokens": " Not But This\n Sometimes",
-              "top_k_token_ids": [1892, 887, 770, 198, 8975],
-              "top_k_probs": [
-                0.002472221851348877, 0.018202556297183037, 0.0625147745013237,
-                0.22422271966934204, 0.01688271574676037
-              ],
-              "target_prob": 1.777597276486631e-6
-            }
-          ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often",
-          "sample_sequence": " times they speak to more than one person. This is because"
-        }
-      },
-      {
-        "avg_prob": 0.013698816109132017,
-        "model_outputs": {
-          "generated_text": " this before.\n\nA few of the most common reasons",
-          "steps": [
-            {
-              "step": 0,
-              "token_id": 428,
-              "token": " this",
-              "token_prob": 0.3294495940208435,
-              "top_k_tokens": " this many that you don",
-              "top_k_token_ids": [428, 867, 326, 345, 836],
-              "top_k_probs": [
-                0.3294495940208435, 0.0007842976483516395, 0.040543537586927414,
-                0.09291984885931015, 4.6983732318039984e-5
-              ],
-              "target_prob": 0.15357108414173126
-            },
-            {
-              "step": 1,
-              "token_id": 878,
-              "token": " before",
-              "token_prob": 0.351803183555603,
-              "top_k_tokens": ". and before too all",
-              "top_k_token_ids": [13, 290, 878, 1165, 477],
-              "top_k_probs": [
-                0.27153319120407104, 0.009300575591623783, 0.351803183555603,
-                0.08928156644105911, 0.0009719920926727355
-              ],
-              "target_prob": 0.009300575591623783
-            },
-            {
-              "step": 2,
-              "token_id": 13,
-              "token": ".",
-              "token_prob": 0.8693122863769531,
-              "top_k_tokens": ". or, too while",
-              "top_k_token_ids": [13, 393, 11, 1165, 981],
-              "top_k_probs": [
-                0.8693122863769531, 0.017837656661868095, 0.0353035070002079,
-                0.005187451373785734, 0.0003629070124588907
-              ],
-              "target_prob": 9.013741873786785e-6
-            },
-            {
-              "step": 3,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.5231829881668091,
-              "top_k_tokens": "\n You For Generally It",
-              "top_k_token_ids": [198, 921, 1114, 23904, 632],
-              "top_k_probs": [
-                0.5231829881668091, 0.017984475940465927, 0.010172931477427483,
-                0.0003122002526652068, 0.02613573521375656
-              ],
-              "target_prob": 2.9144990776330815e-7
-            },
-            {
-              "step": 4,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.9996882677078247,
-              "top_k_tokens": "\nTheThereInI",
-              "top_k_token_ids": [198, 464, 1858, 818, 40],
-              "top_k_probs": [
-                0.9996882677078247, 2.997346018673852e-5, 5.556728865485638e-6,
-                1.0648949682945386e-5, 8.848518518789206e-6
-              ],
-              "target_prob": 1.4980387535914325e-15
-            },
-            {
-              "step": 5,
-              "token_id": 32,
-              "token": "A",
-              "token_prob": 0.02002626284956932,
-              "top_k_tokens": "AAre(FindingI",
-              "top_k_token_ids": [32, 8491, 7, 36276, 40],
-              "top_k_probs": [
-                0.02002626284956932, 0.0036246399395167828,
-                0.001422964152880013, 0.004210177343338728, 0.014059738256037235
-              ],
-              "target_prob": 2.4562273992501105e-8
-            },
-            {
-              "step": 6,
-              "token_id": 1178,
-              "token": " few",
-              "token_prob": 0.06239801272749901,
-              "top_k_tokens": " simple moving very couple few",
-              "top_k_token_ids": [2829, 3867, 845, 3155, 1178],
-              "top_k_probs": [
-                0.012817357666790485, 1.8829470718628727e-5,
-                0.005017511546611786, 0.00710514560341835, 0.06239801272749901
-              ],
-              "target_prob": 0.00012178718316135928
-            },
-            {
-              "step": 7,
-              "token_id": 286,
-              "token": " of",
-              "token_prob": 0.10613185912370682,
-              "top_k_tokens": " common of different friends alternate",
-              "top_k_token_ids": [2219, 286, 1180, 2460, 13527],
-              "top_k_probs": [
-                0.1003212258219719, 0.10613185912370682, 0.01718534342944622,
-                0.0044562616385519505, 1.657766188145615e-5
-              ],
-              "target_prob": 0.00010891618876485154
-            },
-            {
-              "step": 8,
-              "token_id": 262,
-              "token": " the",
-              "token_prob": 0.6635698080062866,
-              "top_k_tokens": " my those the you us",
-              "top_k_token_ids": [616, 883, 262, 345, 514],
-              "top_k_probs": [
-                0.060426756739616394, 0.00851935613900423, 0.6635698080062866,
-                0.04748779535293579, 0.05010165274143219
-              ],
-              "target_prob": 4.635934601537883e-6
-            },
-            {
-              "step": 9,
-              "token_id": 749,
-              "token": " most",
-              "token_prob": 0.27768051624298096,
-              "top_k_tokens": " ways most possible best tips",
-              "top_k_token_ids": [2842, 749, 1744, 1266, 9040],
-              "top_k_probs": [
-                0.017780529335141182, 0.27768051624298096,
-                0.0009565014624968171, 0.1468350738286972, 0.013472125865519047
-              ],
-              "target_prob": 3.3425271794840228e-6
-            },
-            {
-              "step": 10,
-              "token_id": 2219,
-              "token": " common",
-              "token_prob": 0.8244109153747559,
-              "top_k_tokens": " sign common important popular commonly",
-              "top_k_token_ids": [1051, 2219, 1593, 2968, 8811],
-              "top_k_probs": [
-                1.106834929487377e-6, 0.8244109153747559, 0.03204352781176567,
-                0.07721993327140808, 0.006907728500664234
-              ],
-              "target_prob": 1.643326413613977e-6
-            },
-            {
-              "step": 11,
-              "token_id": 3840,
-              "token": " reasons",
-              "token_prob": 0.08550482988357544,
-              "top_k_tokens": " descript misconceptions reasons mistakes interactions",
-              "top_k_token_ids": [12145, 45679, 3840, 10135, 12213],
-              "top_k_probs": [
-                5.840082394570345e-6, 0.0757426768541336, 0.08550482988357544,
-                0.05967741832137108, 0.0006911875680088997
-              ],
-              "target_prob": 0.0012644786620512605
-            }
-          ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like",
-          "sample_sequence": " yours and may be able to help you in making better decisions"
-        }
-      },
-      {
-        "avg_prob": 0.009972053292441515,
-        "model_outputs": {
-          "generated_text": " different experiences.\n\nIf you are struggling with a problem",
-          "steps": [
-            {
-              "step": 0,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced",
               "token_id": 1180,
               "token": " different",
               "token_prob": 0.2000872641801834,
-              "top_k_tokens": " great hot different some similar",
-              "top_k_token_ids": [1049, 3024, 1180, 617, 2092],
+              "top_k_tokens": ["a", "different", "some", "issues", "problems"],
+              "top_k_token_ids": [257, 1180, 617, 2428, 2761],
               "top_k_probs": [
-                0.0014857754576951265, 1.9111366782453842e-5,
-                0.2000872641801834, 0.04240129142999649, 0.11802976578474045
+                0.11739929765462875, 0.2000872641801834, 0.04240129142999649,
+                0.00550266494974494, 0.043466463685035706
               ],
-              "target_prob": 0.11739929765462875
-            },
-            {
-              "step": 1,
-              "token_id": 6461,
-              "token": " experiences",
-              "token_prob": 0.36415186524391174,
-              "top_k_tokens": " experiences things emotions feelings situations",
-              "top_k_token_ids": [6461, 1243, 10825, 7666, 7445],
-              "top_k_probs": [
-                0.36415186524391174, 0.047948889434337616, 0.01197117194533348,
-                0.032490409910678864, 0.0197494775056839
-              ],
-              "target_prob": 0.00032112098415382206
-            },
-            {
-              "step": 2,
-              "token_id": 13,
-              "token": ".",
-              "token_prob": 0.640087902545929,
-              "top_k_tokens": ". or, ( as",
-              "top_k_token_ids": [13, 393, 11, 357, 355],
-              "top_k_probs": [
-                0.640087902545929, 0.03127843141555786, 0.036104124039411545,
-                0.003979398403316736, 0.013183029368519783
-              ],
-              "target_prob": 0.0007588443695567548
+              "target_prob": 0.11739929765462875,
+              "target": " a"
             },
             {
               "step": 3,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.47072136402130127,
-              "top_k_tokens": "\n Don One Here The",
-              "top_k_token_ids": [198, 2094, 1881, 3423, 383],
-              "top_k_probs": [
-                0.47072136402130127, 0.002400010358542204, 0.005711388308554888,
-                0.008523198775947094, 0.028377491980791092
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a",
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.3855995237827301,
+              "top_k_tokens": [
+                "harder",
+                "bigger",
+                "similar",
+                "different",
+                "little"
               ],
-              "target_prob": 4.1440180176266495e-9
+              "top_k_token_ids": [7069, 5749, 2092, 1180, 1310],
+              "top_k_probs": [
+                0.011426722630858421, 0.002247275784611702, 0.20161844789981842,
+                0.3855995237827301, 0.0011880681850016117
+              ],
+              "target_prob": 0.062446098774671555,
+              "target": " problem"
             },
             {
               "step": 4,
-              "token_id": 198,
-              "token": "\n",
-              "token_prob": 0.9998012185096741,
-              "top_k_tokens": "\nLooking\"<|endoftext|>Just",
-              "top_k_token_ids": [198, 15784, 1, 50256, 5703],
-              "top_k_probs": [
-                0.9998012185096741, 3.865503828137662e-8, 6.487301561719505e-6,
-                2.2169744624989107e-5, 3.5521571817298536e-7
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem",
+              "token_id": 326,
+              "token": " that",
+              "token_prob": 0.18547476828098297,
+              "top_k_tokens": [
+                "of",
+                "that",
+                "and",
+                "indicating",
+                "differently"
               ],
-              "target_prob": 5.478065645547758e-7
+              "top_k_token_ids": [286, 326, 290, 12739, 10338],
+              "top_k_probs": [
+                0.005353757180273533, 0.18547476828098297, 0.02377883344888687,
+                1.47121852478449e-6, 0.10604377835988998
+              ],
+              "target_prob": 0.002020185347646475,
+              "target": " like"
             },
             {
               "step": 5,
-              "token_id": 1532,
-              "token": "If",
-              "token_prob": 0.055929671972990036,
-              "top_k_tokens": "ToLetIfInDo",
-              "top_k_token_ids": [2514, 5756, 1532, 818, 5211],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like",
+              "token_id": 428,
+              "token": " this",
+              "token_prob": 0.3294495940208435,
+              "top_k_tokens": ["you", "a", "this", "that", "yours"],
+              "top_k_token_ids": [345, 257, 428, 326, 12431],
               "top_k_probs": [
-                0.012326679192483425, 0.008157637901604176,
-                0.055929671972990036, 0.033939629793167114, 0.01820847950875759
+                0.09291984885931015, 0.10674304515123367, 0.3294495940208435,
+                0.040543537586927414, 0.15357108414173126
               ],
-              "target_prob": 2.185414071931291e-9
+              "target_prob": 0.15357108414173126,
+              "target": " yours"
             },
             {
               "step": 6,
-              "token_id": 345,
-              "token": " you",
-              "token_prob": 0.8326261043548584,
-              "top_k_tokens": " there you your a I",
-              "top_k_token_ids": [612, 345, 534, 257, 314],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours",
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.606896162033081,
+              "top_k_tokens": ["prior", "but.", "that", "personally"],
+              "top_k_token_ids": [3161, 475, 13, 326, 7620],
               "top_k_probs": [
-                0.015542556531727314, 0.8326261043548584, 0.034036241471767426,
-                0.020006736740469933, 0.003014303743839264
+                0.000548102252651006, 0.01083891186863184, 0.606896162033081,
+                0.06043153628706932, 0.0019492789870128036
               ],
-              "target_prob": 1.5964365047693718e-6
+              "target_prob": 0.015847111120820045,
+              "target": " and"
             },
             {
               "step": 7,
-              "token_id": 389,
-              "token": " are",
-              "token_prob": 0.3104470372200012,
-              "top_k_tokens": " are have thought're see",
-              "top_k_token_ids": [389, 423, 1807, 821, 766],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours and",
+              "token_id": 345,
+              "token": " you",
+              "token_prob": 0.09820556640625,
+              "top_k_tokens": ["maybe", "that", "you", "shared", "not"],
+              "top_k_token_ids": [3863, 326, 345, 4888, 407],
               "top_k_probs": [
-                0.3104470372200012, 0.26605045795440674, 0.00022238049132283777,
-                0.040121667087078094, 0.011140025220811367
+                0.0023237131536006927, 0.010437226854264736, 0.09820556640625,
+                0.0014121587155386806, 0.0568699836730957
               ],
-              "target_prob": 1.4628964208895923e-6
+              "target_prob": 0.03386961296200752,
+              "target": " may"
             },
             {
               "step": 8,
-              "token_id": 9648,
-              "token": " struggling",
-              "token_prob": 0.16838747262954712,
-              "top_k_tokens": " not struggling in facing a",
-              "top_k_token_ids": [407, 9648, 287, 6476, 257],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours and may",
+              "token_id": 407,
+              "token": " not",
+              "token_prob": 0.2566138803958893,
+              "top_k_tokens": ["relate", "not", "have", "feel", "ask"],
+              "top_k_token_ids": [15124, 407, 423, 1254, 1265],
               "top_k_probs": [
-                0.037178248167037964, 0.16838747262954712, 0.03111007623374462,
-                0.008836403489112854, 0.05827045813202858
+                0.0005698846653103828, 0.2566138803958893, 0.23879294097423553,
+                0.037628915160894394, 0.004265099763870239
               ],
-              "target_prob": 0.0004994141636416316
+              "target_prob": 0.12158259004354477,
+              "target": " be"
             },
             {
               "step": 9,
-              "token_id": 351,
-              "token": " with",
-              "token_prob": 0.5043313503265381,
-              "top_k_tokens": " to with due, hard",
-              "top_k_token_ids": [284, 351, 2233, 11, 1327],
-              "top_k_probs": [
-                0.4188508987426758, 0.5043313503265381, 0.00024259855854324996,
-                0.025011884048581123, 7.212165655801073e-5
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours and may be",
+              "token_id": 517,
+              "token": " more",
+              "token_prob": 0.13255035877227783,
+              "top_k_tokens": [
+                "searching",
+                "more",
+                "less",
+                "interested",
+                "the"
               ],
-              "target_prob": 3.271860350650968e-6
+              "top_k_token_ids": [10342, 517, 1342, 4609, 262],
+              "top_k_probs": [
+                0.000775551307015121, 0.13255035877227783, 0.06312750279903412,
+                0.01088654063642025, 0.013709270395338535
+              ],
+              "target_prob": 0.11099019646644592,
+              "target": " able"
             },
             {
               "step": 10,
-              "token_id": 257,
-              "token": " a",
-              "token_prob": 0.4767630696296692,
-              "top_k_tokens": " a your dealing some difficult",
-              "top_k_token_ids": [257, 534, 7219, 617, 2408],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours and may be able",
+              "token_id": 284,
+              "token": " to",
+              "token_prob": 0.9767817854881287,
+              "top_k_tokens": ["to", "figure", "share", "arrange", "re"],
+              "top_k_token_ids": [284, 3785, 2648, 21674, 302],
               "top_k_probs": [
-                0.4767630696296692, 0.0614231713116169, 0.003951927646994591,
-                0.01035822369158268, 0.006385802291333675
+                0.9767817854881287, 0.00031346865580417216,
+                0.00046982557978481054, 8.304758011945523e-6,
+                1.7259349988307804e-5
               ],
-              "target_prob": 0.0006727762520313263
+              "target_prob": 0.9767817854881287,
+              "target": " to"
             },
             {
               "step": 11,
-              "token_id": 1917,
-              "token": " problem",
-              "token_prob": 0.5430921316146851,
-              "top_k_tokens": " difficult specific problem hard question",
-              "top_k_token_ids": [2408, 2176, 1917, 1327, 1808],
-              "top_k_probs": [
-                0.18474960327148438, 0.014926183968782425, 0.5430921316146851,
-                0.0328795500099659, 0.008750850334763527
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced a problem like yours and may be able to",
+              "token_id": 1037,
+              "token": " help",
+              "token_prob": 0.48342588543891907,
+              "top_k_tokens": [
+                "help",
+                "communicate",
+                "offer",
+                "relate",
+                "solve"
               ],
-              "target_prob": 6.300756012933562e-6
+              "top_k_token_ids": [1037, 10996, 2897, 15124, 8494],
+              "top_k_probs": [
+                0.48342588543891907, 0.002109368797391653, 0.021103275939822197,
+                0.0319565050303936, 0.05030226707458496
+              ],
+              "target_prob": 0.48342588543891907,
+              "target": " help"
             }
           ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may have experienced",
-          "sample_sequence": " a problem like yours and may be able to help you in"
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may",
+          "sample_sequence": " have experienced a problem like yours and may be able to help"
         }
       },
       {
-        "avg_prob": 0.14866213020227548,
+        "avg_prob": 0.19527414726826464,
         "model_outputs": {
-          "generated_text": " problem, they are often more likely to give advice that is",
+          "generated_text": " are better for figuring out a tough problem, many opinions are",
           "steps": [
             {
               "step": 0,
-              "token_id": 1917,
-              "token": " problem",
-              "token_prob": 0.9618973731994629,
-              "top_k_tokens": " problem difficult puzzle serious particular",
-              "top_k_token_ids": [1917, 2408, 15027, 2726, 1948],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views",
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.3230629861354828,
+              "top_k_tokens": [",", "of", "differ", "are", "tend"],
+              "top_k_token_ids": [11, 286, 13238, 389, 4327],
               "top_k_probs": [
-                0.9618973731994629, 0.004672554321587086, 0.0029416419565677643,
-                0.0004923934466205537, 0.0028930767439305782
+                0.015342650935053825, 0.3230629861354828, 0.007618725765496492,
+                0.11799174547195435, 0.004509058315306902
               ],
-              "target_prob": 0.9618973731994629
+              "target_prob": 0.11799174547195435,
+              "target": " are"
             },
             {
               "step": 1,
-              "token_id": 11,
-              "token": ",",
-              "token_prob": 0.8143981695175171,
-              "top_k_tokens": ", they you or and",
-              "top_k_token_ids": [11, 484, 345, 393, 290],
-              "top_k_probs": [
-                0.8143981695175171, 0.048955075442790985, 0.017067253589630127,
-                0.023113276809453964, 0.014243805781006813
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are",
+              "token_id": 6241,
+              "token": " expressed",
+              "token_prob": 0.3048039972782135,
+              "top_k_tokens": [
+                "likely",
+                "based",
+                "expressed",
+                "common",
+                "involved"
               ],
-              "target_prob": 0.8143981695175171
+              "top_k_token_ids": [1884, 1912, 6241, 2219, 2950],
+              "top_k_probs": [
+                0.004079642239958048, 0.007001821883022785, 0.3048039972782135,
+                0.01710296794772148, 0.009741855785250664
+              ],
+              "target_prob": 0.00427895225584507,
+              "target": " better"
             },
             {
               "step": 2,
-              "token_id": 484,
-              "token": " they",
-              "token_prob": 0.5190533995628357,
-              "top_k_tokens": " they there the many it",
-              "top_k_token_ids": [484, 612, 262, 867, 340],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better",
+              "token_id": 379,
+              "token": " at",
+              "token_prob": 0.256312757730484,
+              "top_k_tokens": ["in", "than", "products", "at", "described"],
+              "top_k_token_ids": [287, 621, 3186, 379, 3417],
               "top_k_probs": [
-                0.5190533995628357, 0.027340181171894073, 0.03083758056163788,
-                0.007234374526888132, 0.11579173058271408
+                0.011573956348001957, 0.17285922169685364, 2.596146623545792e-5,
+                0.256312757730484, 0.0019385750638321042
               ],
-              "target_prob": 0.0049300286918878555
+              "target_prob": 0.03668946772813797,
+              "target": " for"
             },
             {
               "step": 3,
-              "token_id": 389,
-              "token": " are",
-              "token_prob": 0.2939796447753906,
-              "top_k_tokens": " are often usually should have",
-              "top_k_token_ids": [389, 1690, 3221, 815, 423],
-              "top_k_probs": [
-                0.2939796447753906, 0.09014158695936203, 0.12479070574045181,
-                0.019095271825790405, 0.01574261300265789
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for",
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.2333769053220749,
+              "top_k_tokens": [
+                "certain",
+                "regulating",
+                "many",
+                "my",
+                "different"
               ],
-              "target_prob": 3.624203372964985e-7
+              "top_k_token_ids": [1728, 26379, 867, 616, 1180],
+              "top_k_probs": [
+                0.0031797969713807106, 1.1881606951646972e-6,
+                0.006717572920024395, 9.016536205308512e-5, 0.2333769053220749
+              ],
+              "target_prob": 2.4956012566690333e-5,
+              "target": " figuring"
             },
             {
               "step": 4,
-              "token_id": 1690,
-              "token": " often",
-              "token_prob": 0.19281034171581268,
-              "top_k_tokens": " reacting sometimes usually very often",
-              "top_k_token_ids": [33413, 3360, 3221, 845, 1690],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring",
+              "token_id": 503,
+              "token": " out",
+              "token_prob": 0.8916639685630798,
+              "top_k_tokens": ["out", "things", "this", "it", "those"],
+              "top_k_token_ids": [503, 1243, 428, 340, 883],
               "top_k_probs": [
-                0.00039168467628769577, 0.004408521112054586,
-                0.14133884012699127, 0.006283004768192768, 0.19281034171581268
+                0.8916639685630798, 0.07003046572208405, 0.0061976108700037,
+                0.018744761124253273, 0.0001404623471898958
               ],
-              "target_prob": 1.0123229913006071e-5
+              "target_prob": 0.8916639685630798,
+              "target": " out"
             },
             {
               "step": 5,
-              "token_id": 517,
-              "token": " more",
-              "token_prob": 0.024273118004202843,
-              "top_k_tokens": " unaware making responding telling more",
-              "top_k_token_ids": [17261, 1642, 14409, 5149, 517],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out",
+              "token_id": 644,
+              "token": " what",
+              "token_prob": 0.2994545102119446,
+              "top_k_tokens": ["which", "what", "one", "how", "the"],
+              "top_k_token_ids": [543, 644, 530, 703, 262],
               "top_k_probs": [
-                0.003541443031281233, 0.006115237716585398, 0.01179552637040615,
-                0.008307297714054585, 0.024273118004202843
+                0.0914149135351181, 0.2994545102119446, 0.0022756087128072977,
+                0.13875234127044678, 0.17040807008743286
               ],
-              "target_prob": 3.020150813881628e-7
+              "target_prob": 0.04344769939780235,
+              "target": " a"
             },
             {
               "step": 6,
-              "token_id": 1884,
-              "token": " likely",
-              "token_prob": 0.6586191058158875,
-              "top_k_tokens": " likely interested social successful focused",
-              "top_k_token_ids": [1884, 4609, 1919, 4388, 5670],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a",
+              "token_id": 4610,
+              "token": " solution",
+              "token_prob": 0.6680966019630432,
+              "top_k_tokens": ["solution", "problem", "work", "best", "way"],
+              "top_k_token_ids": [4610, 1917, 670, 1266, 835],
               "top_k_probs": [
-                0.6586191058158875, 0.10980711877346039, 9.168522228719667e-5,
-                0.00323231122456491, 0.008251099847257137
+                0.6680966019630432, 0.23398423194885254, 0.00028656821814365685,
+                0.0011664011981338263, 0.013397729024291039
               ],
-              "target_prob": 0.0001581642427481711
+              "target_prob": 3.708706935867667e-5,
+              "target": " tough"
             },
             {
               "step": 7,
-              "token_id": 284,
-              "token": " to",
-              "token_prob": 0.989421010017395,
-              "top_k_tokens": " to than likely motivated going",
-              "top_k_token_ids": [284, 621, 1884, 13338, 1016],
-              "top_k_probs": [
-                0.989421010017395, 0.009351573884487152, 5.174323086976074e-5,
-                1.3214553291618358e-5, 0.0002342192456126213
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough",
+              "token_id": 1917,
+              "token": " problem",
+              "token_prob": 0.7346727252006531,
+              "top_k_tokens": [
+                "topic",
+                "problem",
+                "question",
+                "situation",
+                "resolution"
               ],
-              "target_prob": 2.5379465569130844e-6
+              "top_k_token_ids": [7243, 1917, 1808, 3074, 6323],
+              "top_k_probs": [
+                0.006358783692121506, 0.7346727252006531, 0.018915005028247833,
+                0.029091665521264076, 0.00011899625678779557
+              ],
+              "target_prob": 0.7346727252006531,
+              "target": " problem"
             },
             {
               "step": 8,
-              "token_id": 1577,
-              "token": " give",
-              "token_prob": 0.07599730789661407,
-              "top_k_tokens": " receive travel buy give answer",
-              "top_k_token_ids": [3328, 3067, 2822, 1577, 3280],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem",
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.49652886390686035,
+              "top_k_tokens": [".", "or", "than", "in", "which"],
+              "top_k_token_ids": [13, 393, 621, 287, 543],
               "top_k_probs": [
-                0.0020120148546993732, 9.838665391725954e-6,
-                0.001561230979859829, 0.07599730789661407, 0.029421430081129074
+                0.49652886390686035, 0.04636160284280777, 0.11354255676269531,
+                0.006705520674586296, 0.0009098923183046281
               ],
-              "target_prob": 4.945892214891501e-5
+              "target_prob": 0.08733884245157242,
+              "target": ","
             },
             {
               "step": 9,
-              "token_id": 5608,
-              "token": " advice",
-              "token_prob": 0.2929975986480713,
-              "top_k_tokens": " advice it a you suggestions",
-              "top_k_token_ids": [5608, 340, 257, 345, 11776],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem,",
+              "token_id": 290,
+              "token": " and",
+              "token_prob": 0.3429943323135376,
+              "top_k_tokens": ["because", "so", "and", "or", "whereas"],
+              "top_k_token_ids": [780, 523, 290, 393, 9472],
               "top_k_probs": [
-                0.2929975986480713, 0.27230069041252136, 0.04143369570374489,
-                0.1515963226556778, 0.00887263659387827
+                0.022910216823220253, 0.03533167764544487, 0.3429943323135376,
+                0.0663151666522026, 0.022927002981305122
               ],
-              "target_prob": 0.002469186671078205
+              "target_prob": 0.00019380979938432574,
+              "target": " many"
             },
             {
               "step": 10,
-              "token_id": 326,
-              "token": " that",
-              "token_prob": 0.26934537291526794,
-              "top_k_tokens": " on that than to.",
-              "top_k_token_ids": [319, 326, 621, 284, 13],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many",
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.38194751739501953,
+              "top_k_tokens": ["of", "times", "prefer", "people", "warriors"],
+              "top_k_token_ids": [286, 1661, 4702, 661, 17119],
               "top_k_probs": [
-                0.22200754284858704, 0.26934537291526794, 0.022145679220557213,
-                0.11312940716743469, 0.01436042133718729
+                0.38194751739501953, 0.2146851122379303, 0.001160588231869042,
+                0.2370806336402893, 7.622905968673876e-7
               ],
-              "target_prob": 7.1046570155886e-6
+              "target_prob": 0.0008303214563056827,
+              "target": " opinions"
             },
             {
               "step": 11,
-              "token_id": 318,
-              "token": " is",
-              "token_prob": 0.37570708990097046,
-              "top_k_tokens": " is worked gets works they",
-              "top_k_token_ids": [318, 3111, 3011, 2499, 484],
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions",
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.42612019181251526,
+              "top_k_tokens": ["are", "will", "help", "on", "come"],
+              "top_k_token_ids": [389, 481, 1037, 319, 1282],
               "top_k_probs": [
-                0.37570708990097046, 0.00034488210803829134,
-                0.004012488294392824, 0.022348809987306595, 0.09420692920684814
+                0.42612019181251526, 0.02700875885784626, 0.0016990657895803452,
+                0.019653882831335068, 0.012629810720682144
               ],
-              "target_prob": 2.2750913558411412e-5
+              "target_prob": 0.42612019181251526,
+              "target": " are"
             }
           ],
-          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a",
-          "sample_sequence": " problem, often times they speak to more than one person."
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views",
+          "sample_sequence": " are better for figuring out a tough problem, many opinions are"
+        }
+      },
+      {
+        "avg_prob": 0.30864867756463354,
+        "model_outputs": {
+          "generated_text": " speak to more than one person. This is because different views",
+          "steps": [
+            {
+              "step": 0,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they",
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.37911561131477356,
+              "top_k_tokens": ["are", "don", "just", "have", "go"],
+              "top_k_token_ids": [389, 836, 655, 423, 467],
+              "top_k_probs": [
+                0.37911561131477356, 0.08279157429933548, 0.011205818504095078,
+                0.031068937852978706, 0.0029256665147840977
+              ],
+              "target_prob": 0.0009003196028061211,
+              "target": " speak"
+            },
+            {
+              "step": 1,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak",
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.13003185391426086,
+              "top_k_tokens": ["to", "ill", "in", "of", "with"],
+              "top_k_token_ids": [284, 2801, 287, 286, 351],
+              "top_k_probs": [
+                0.10382082313299179, 0.0036215155851095915, 0.09452921152114868,
+                0.13003185391426086, 0.0947711244225502
+              ],
+              "target_prob": 0.10382082313299179,
+              "target": " to"
+            },
+            {
+              "step": 2,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to",
+              "token_id": 2130,
+              "token": " someone",
+              "token_prob": 0.32116594910621643,
+              "top_k_tokens": ["someone", "either", "a", "friends", "the"],
+              "top_k_token_ids": [2130, 2035, 257, 2460, 262],
+              "top_k_probs": [
+                0.32116594910621643, 0.00046992971329018474, 0.1460922509431839,
+                0.009539129212498665, 0.05197091028094292
+              ],
+              "target_prob": 0.0006182484212331474,
+              "target": " more"
+            },
+            {
+              "step": 3,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more",
+              "token_id": 621,
+              "token": " than",
+              "token_prob": 0.376947820186615,
+              "top_k_tokens": [
+                "experienced",
+                "than",
+                "people",
+                "advanced",
+                "negative"
+              ],
+              "top_k_token_ids": [5924, 621, 661, 6190, 4633],
+              "top_k_probs": [
+                0.35145053267478943, 0.376947820186615, 0.09878689795732498,
+                0.003745308378711343, 0.00031713457428850234
+              ],
+              "target_prob": 0.376947820186615,
+              "target": " than"
+            },
+            {
+              "step": 4,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than",
+              "token_id": 530,
+              "token": " one",
+              "token_prob": 0.8939486742019653,
+              "top_k_tokens": ["one", "just", "once", "only", "the"],
+              "top_k_token_ids": [530, 655, 1752, 691, 262],
+              "top_k_probs": [
+                0.8939486742019653, 0.07660036534070969, 0.00041201553540304303,
+                0.0007378107984550297, 0.0018876054091379046
+              ],
+              "target_prob": 0.8939486742019653,
+              "target": " one"
+            },
+            {
+              "step": 5,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one",
+              "token_id": 1048,
+              "token": " person",
+              "token_prob": 0.9334995150566101,
+              "top_k_tokens": [
+                "qualified",
+                "person",
+                "pro",
+                "advisor",
+                "expert"
+              ],
+              "top_k_token_ids": [10617, 1048, 386, 20685, 5887],
+              "top_k_probs": [
+                0.00010751051740953699, 0.9334995150566101,
+                7.191224540292751e-6, 3.1295458029489964e-5, 0.0175474900752306
+              ],
+              "target_prob": 0.9334995150566101,
+              "target": " person"
+            },
+            {
+              "step": 6,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person",
+              "token_id": 13,
+              "token": ".",
+              "token_prob": 0.639809250831604,
+              "top_k_tokens": [".,", "in", "at", "involved"],
+              "top_k_token_ids": [13, 11, 287, 379, 2950],
+              "top_k_probs": [
+                0.639809250831604, 0.08493860810995102, 0.021389832720160484,
+                0.04566529020667076, 0.0012775418581441045
+              ],
+              "target_prob": 0.639809250831604,
+              "target": "."
+            },
+            {
+              "step": 7,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person.",
+              "token_id": 198,
+              "token": "\n",
+              "token_prob": 0.2510371208190918,
+              "top_k_tokens": ["This", "That", "Our", "They"],
+              "top_k_token_ids": [198, 770, 1320, 3954, 1119],
+              "top_k_probs": [
+                0.2510371208190918, 0.07506626099348068, 0.009250120259821415,
+                0.0009061552118510008, 0.035199493169784546
+              ],
+              "target_prob": 0.07506626099348068,
+              "target": " This"
+            },
+            {
+              "step": 8,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This",
+              "token_id": 318,
+              "token": " is",
+              "token_prob": 0.38462552428245544,
+              "top_k_tokens": ["is", "kind", "can", "makes", "means"],
+              "top_k_token_ids": [318, 1611, 460, 1838, 1724],
+              "top_k_probs": [
+                0.38462552428245544, 0.00777919078245759, 0.18072202801704407,
+                0.03433702141046524, 0.035617243498563766
+              ],
+              "target_prob": 0.38462552428245544,
+              "target": " is"
+            },
+            {
+              "step": 9,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is",
+              "token_id": 780,
+              "token": " because",
+              "token_prob": 0.2898979187011719,
+              "top_k_tokens": [
+                "because",
+                "the",
+                "especially",
+                "probably",
+                "normal"
+              ],
+              "top_k_token_ids": [780, 262, 2592, 2192, 3487],
+              "top_k_probs": [
+                0.2898979187011719, 0.040222689509391785, 0.09751790761947632,
+                0.0034065376967191696, 0.006198541261255741
+              ],
+              "target_prob": 0.2898979187011719,
+              "target": " because"
+            },
+            {
+              "step": 10,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because",
+              "token_id": 262,
+              "token": " the",
+              "token_prob": 0.10162271559238434,
+              "top_k_tokens": ["often", "the", "there", "we", "they"],
+              "top_k_token_ids": [1690, 262, 612, 356, 484],
+              "top_k_probs": [
+                0.009075439535081387, 0.10162271559238434, 0.06151045486330986,
+                0.03140735998749733, 0.0999571681022644
+              ],
+              "target_prob": 0.004338327795267105,
+              "target": " different"
+            },
+            {
+              "step": 11,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different",
+              "token_id": 661,
+              "token": " people",
+              "token_prob": 0.6982298493385315,
+              "top_k_tokens": ["people", "voices", "ways", "kinds", "types"],
+              "top_k_token_ids": [661, 10839, 2842, 6982, 3858],
+              "top_k_probs": [
+                0.6982298493385315, 0.006720082368701696, 0.002648501191288233,
+                0.01200509537011385, 0.0334964320063591
+              ],
+              "target_prob": 0.00031144756940193474,
+              "target": " views"
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they",
+          "sample_sequence": " speak to more than one person. This is because different views"
+        }
+      },
+      {
+        "avg_prob": 0.27954691004318494,
+        "model_outputs": {
+          "generated_text": " people ask for advice on solving a problem, often times they",
+          "steps": [
+            {
+              "step": 0,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When",
+              "token_id": 345,
+              "token": " you",
+              "token_prob": 0.34989359974861145,
+              "top_k_tokens": ["you", "Bronze", "pairing", "I"],
+              "top_k_token_ids": [345, 19461, 27356, 314, 220],
+              "top_k_probs": [
+                0.34989359974861145, 1.7499456816949532e-7,
+                6.245774329727283e-6, 0.11157448589801788, 2.0288443920435384e-5
+              ],
+              "target_prob": 0.015943389385938644,
+              "target": " people"
+            },
+            {
+              "step": 1,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people",
+              "token_id": 1265,
+              "token": " ask",
+              "token_prob": 0.33102110028266907,
+              "top_k_tokens": ["are", "talk", "ask", "have", "first"],
+              "top_k_token_ids": [389, 1561, 1265, 423, 717],
+              "top_k_probs": [
+                0.09855993092060089, 0.05049334466457367, 0.33102110028266907,
+                0.017255684360861778, 0.0040803630836308
+              ],
+              "target_prob": 0.33102110028266907,
+              "target": " ask"
+            },
+            {
+              "step": 2,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask",
+              "token_id": 345,
+              "token": " you",
+              "token_prob": 0.30943793058395386,
+              "top_k_tokens": ["you", "me", "for", "they,"],
+              "top_k_token_ids": [345, 502, 329, 484, 11],
+              "top_k_probs": [
+                0.30943793058395386, 0.05590874329209328, 0.23480169475078583,
+                0.000716431881301105, 0.2060168981552124
+              ],
+              "target_prob": 0.23480169475078583,
+              "target": " for"
+            },
+            {
+              "step": 3,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for",
+              "token_id": 1037,
+              "token": " help",
+              "token_prob": 0.539271891117096,
+              "top_k_tokens": ["help", "advice", "tips", "somebody", "your"],
+              "top_k_token_ids": [1037, 5608, 9040, 8276, 534],
+              "top_k_probs": [
+                0.539271891117096, 0.36857447028160095, 0.016884800046682358,
+                1.4744643522135448e-5, 0.005383053328841925
+              ],
+              "target_prob": 0.36857447028160095,
+              "target": " advice"
+            },
+            {
+              "step": 4,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice",
+              "token_id": 11,
+              "token": ",",
+              "token_prob": 0.7026394605636597,
+              "top_k_tokens": [",", "on", "about", "do", "anyway"],
+              "top_k_token_ids": [11, 319, 546, 466, 6949],
+              "top_k_probs": [
+                0.7026394605636597, 0.040995679795742035, 0.03515975922346115,
+                0.0002507275203242898, 1.3989565559313633e-5
+              ],
+              "target_prob": 0.040995679795742035,
+              "target": " on"
+            },
+            {
+              "step": 5,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on",
+              "token_id": 703,
+              "token": " how",
+              "token_prob": 0.3943787217140198,
+              "top_k_tokens": ["what", "school", "how", "A", "a"],
+              "top_k_token_ids": [644, 1524, 703, 317, 257],
+              "top_k_probs": [
+                0.060356397181749344, 0.00021197092428337783,
+                0.3943787217140198, 0.00016529358981642872, 0.050351232290267944
+              ],
+              "target_prob": 0.0090382294729352,
+              "target": " solving"
+            },
+            {
+              "step": 6,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving",
+              "token_id": 2761,
+              "token": " problems",
+              "token_prob": 0.6125183701515198,
+              "top_k_tokens": ["problems", "their", "ass", "the", "puzzles"],
+              "top_k_token_ids": [2761, 511, 840, 262, 24367],
+              "top_k_probs": [
+                0.6125183701515198, 0.06592626124620438, 4.444817932380829e-6,
+                0.020190304145216942, 0.005086791235953569
+              ],
+              "target_prob": 0.11245278269052505,
+              "target": " a"
+            },
+            {
+              "step": 7,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a",
+              "token_id": 1917,
+              "token": " problem",
+              "token_prob": 0.9618973731994629,
+              "top_k_tokens": [
+                "problem",
+                "particular",
+                "social",
+                "tough",
+                "relationship"
+              ],
+              "top_k_token_ids": [1917, 1948, 1919, 5802, 2776],
+              "top_k_probs": [
+                0.9618973731994629, 0.0028930767439305782,
+                0.0005413994076661766, 0.0004932431620545685,
+                4.506971890805289e-5
+              ],
+              "target_prob": 0.9618973731994629,
+              "target": " problem"
+            },
+            {
+              "step": 8,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem",
+              "token_id": 11,
+              "token": ",",
+              "token_prob": 0.8143981695175171,
+              "top_k_tokens": ["and,", "they", "it", "in"],
+              "top_k_token_ids": [290, 11, 484, 340, 287],
+              "top_k_probs": [
+                0.014243805781006813, 0.8143981695175171, 0.048955075442790985,
+                0.009397214278578758, 0.006885594688355923
+              ],
+              "target_prob": 0.8143981695175171,
+              "target": ","
+            },
+            {
+              "step": 9,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem,",
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.5190533995628357,
+              "top_k_tokens": ["they", "their", "it", "I", "just"],
+              "top_k_token_ids": [484, 511, 340, 314, 655],
+              "top_k_probs": [
+                0.5190533995628357, 0.017131777480244637, 0.11579173058271408,
+                0.016765333712100983, 0.001113548525609076
+              ],
+              "target_prob": 0.0049300286918878555,
+              "target": " often"
+            },
+            {
+              "step": 10,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often",
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.5195337533950806,
+              "top_k_tokens": ["they", "it", "the", "their", "somebody"],
+              "top_k_token_ids": [484, 340, 262, 511, 8276],
+              "top_k_probs": [
+                0.5195337533950806, 0.1550135463476181, 0.09956485778093338,
+                0.010431078262627125, 6.929636583663523e-5
+              ],
+              "target_prob": 0.00798364169895649,
+              "target": " times"
+            },
+            {
+              "step": 11,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times",
+              "token_id": 484,
+              "token": " they",
+              "token_prob": 0.45252636075019836,
+              "top_k_tokens": ["they", "it", "what,", "those"],
+              "top_k_token_ids": [484, 340, 644, 11, 883],
+              "top_k_probs": [
+                0.45252636075019836, 0.17672984302043915, 0.004037026781588793,
+                0.10745573788881302, 0.004593822173774242
+              ],
+              "target_prob": 0.45252636075019836,
+              "target": " they"
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When",
+          "sample_sequence": " people ask for advice on solving a problem, often times they"
+        }
+      },
+      {
+        "avg_prob": 0.18474571242404636,
+        "model_outputs": {
+          "generated_text": " many opinions are better than one, and other people may have",
+          "steps": [
+            {
+              "step": 0,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem,",
+              "token_id": 290,
+              "token": " and",
+              "token_prob": 0.3429943323135376,
+              "top_k_tokens": ["because", "and", "but", "making", "a"],
+              "top_k_token_ids": [780, 290, 475, 1642, 257],
+              "top_k_probs": [
+                0.022910216823220253, 0.3429943323135376, 0.18759584426879883,
+                0.004849961027503014, 0.002399549586698413
+              ],
+              "target_prob": 0.00019380979938432574,
+              "target": " many"
+            },
+            {
+              "step": 1,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many",
+              "token_id": 286,
+              "token": " of",
+              "token_prob": 0.38194751739501953,
+              "top_k_tokens": ["persons", "of", "times", "people", "hearing"],
+              "top_k_token_ids": [6506, 286, 1661, 661, 4854],
+              "top_k_probs": [
+                8.799997885944322e-5, 0.38194751739501953, 0.2146851122379303,
+                0.2370806336402893, 5.209929440752603e-5
+              ],
+              "target_prob": 0.0008303214563056827,
+              "target": " opinions"
+            },
+            {
+              "step": 2,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions",
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.42612019181251526,
+              "top_k_tokens": ["are", "may", "will", "differ", "fall"],
+              "top_k_token_ids": [389, 743, 481, 13238, 2121],
+              "top_k_probs": [
+                0.42612019181251526, 0.055497076362371445, 0.02700875885784626,
+                0.0515296496450901, 0.002910032868385315
+              ],
+              "target_prob": 0.42612019181251526,
+              "target": " are"
+            },
+            {
+              "step": 3,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are",
+              "token_id": 1180,
+              "token": " different",
+              "token_prob": 0.2932133972644806,
+              "top_k_tokens": [
+                "different",
+                "shared",
+                "very",
+                "separate",
+                "more"
+              ],
+              "top_k_token_ids": [1180, 4888, 845, 4553, 517],
+              "top_k_probs": [
+                0.2932133972644806, 0.07821600139141083, 0.011957168579101562,
+                0.00042561290320008993, 0.1153913289308548
+              ],
+              "target_prob": 0.03385811671614647,
+              "target": " better"
+            },
+            {
+              "step": 4,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better",
+              "token_id": 329,
+              "token": " for",
+              "token_prob": 0.739590585231781,
+              "top_k_tokens": ["for", "at", "than", "co", "geared"],
+              "top_k_token_ids": [329, 379, 621, 763, 31394],
+              "top_k_probs": [
+                0.739590585231781, 0.06786680221557617, 0.06463851034641266,
+                1.2667269402300008e-5, 3.853983071167022e-5
+              ],
+              "target_prob": 0.06463851034641266,
+              "target": " than"
+            },
+            {
+              "step": 5,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than",
+              "token_id": 1854,
+              "token": " others",
+              "token_prob": 0.3276168704032898,
+              "top_k_tokens": ["others", "certain", "the", "one", "different"],
+              "top_k_token_ids": [1854, 1728, 262, 530, 1180],
+              "top_k_probs": [
+                0.3276168704032898, 0.00038845642120577395, 0.23207953572273254,
+                0.20925727486610413, 0.015528206713497639
+              ],
+              "target_prob": 0.20925727486610413,
+              "target": " one"
+            },
+            {
+              "step": 6,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one",
+              "token_id": 1048,
+              "token": " person",
+              "token_prob": 0.22362594306468964,
+              "top_k_tokens": [
+                "contradictory",
+                "detailed,",
+                "person",
+                "opinion"
+              ],
+              "top_k_token_ids": [29096, 6496, 11, 1048, 4459],
+              "top_k_probs": [
+                2.3818252884666435e-5, 1.2083586625522003e-5,
+                0.16350840032100677, 0.22362594306468964, 0.04873697832226753
+              ],
+              "target_prob": 0.16350840032100677,
+              "target": ","
+            },
+            {
+              "step": 7,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one,",
+              "token_id": 290,
+              "token": " and",
+              "token_prob": 0.8888806700706482,
+              "top_k_tokens": ["and", "a", "or", "so", "especially"],
+              "top_k_token_ids": [290, 257, 393, 523, 2592],
+              "top_k_probs": [
+                0.8888806700706482, 0.0024083934258669615, 0.025368236005306244,
+                0.008685207925736904, 0.0010132633615285158
+              ],
+              "target_prob": 0.8888806700706482,
+              "target": " and"
+            },
+            {
+              "step": 8,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and",
+              "token_id": 262,
+              "token": " the",
+              "token_prob": 0.07962315529584885,
+              "top_k_tokens": ["the", "some", "research", "many", "sometimes"],
+              "top_k_token_ids": [262, 617, 2267, 867, 3360],
+              "top_k_probs": [
+                0.07962315529584885, 0.03827187046408653, 0.0008745884988456964,
+                0.07471690326929092, 0.03069183975458145
+              ],
+              "target_prob": 0.003010565647855401,
+              "target": " other"
+            },
+            {
+              "step": 9,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other",
+              "token_id": 9317,
+              "token": " opinions",
+              "token_prob": 0.5111107230186462,
+              "top_k_tokens": [
+                "opinions",
+                "very",
+                "respondents",
+                "views",
+                "people"
+              ],
+              "top_k_token_ids": [9317, 845, 14502, 5009, 661],
+              "top_k_probs": [
+                0.5111107230186462, 5.793222226202488e-5, 2.4432922145933844e-5,
+                0.07455729693174362, 0.19844476878643036
+              ],
+              "target_prob": 0.19844476878643036,
+              "target": " people"
+            },
+            {
+              "step": 10,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people",
+              "token_id": 389,
+              "token": " are",
+              "token_prob": 0.29980146884918213,
+              "top_k_tokens": ["are's", "may", "misunderstand", "have"],
+              "top_k_token_ids": [389, 338, 743, 39653, 423],
+              "top_k_probs": [
+                0.29980146884918213, 0.11735200136899948, 0.11417791992425919,
+                0.0022626554127782583, 0.07218382507562637
+              ],
+              "target_prob": 0.11417791992425919,
+              "target": " may"
+            },
+            {
+              "step": 11,
+              "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem, many opinions are better than one, and other people may",
+              "token_id": 407,
+              "token": " not",
+              "token_prob": 0.1910804659128189,
+              "top_k_tokens": ["disagree", "be", "not", "give", "want"],
+              "top_k_token_ids": [12546, 307, 407, 1577, 765],
+              "top_k_probs": [
+                0.14143238961696625, 0.19105130434036255, 0.1910804659128189,
+                0.004123663064092398, 0.013579691760241985
+              ],
+              "target_prob": 0.11402799934148788,
+              "target": " have"
+            }
+          ],
+          "context": "\nDo you have a problem that you are struggling to solve? Why don't you ask your friends for advice? When people ask for advice on solving a problem, often times they speak to more than one person. This is because different views are better for figuring out a tough problem,",
+          "sample_sequence": " many opinions are better than one, and other people may have"
         }
       }
-    ]
+    ],
+    "avg_prob": 0.21748938943432625
   }
 ]
