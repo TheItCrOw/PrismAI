@@ -6,9 +6,10 @@ import spacy
 
 class CausalLM():
 
-    def __init__(self, model_name):
+    def __init__(self, model_name, include_spacy=True):
         self.model_name = model_name
-        self.nlp = spacy.load("en_core_web_sm")
+        if(include_spacy):
+            self.nlp = spacy.load("en_core_web_sm")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -83,9 +84,10 @@ class CausalLM():
             if len(target_idx > 0) and len(target_idx[0] -1 >= step):
                 target = self.tokenizer.decode(target_idx[0][step]).strip()
                 target_prob = softmaxed_logits[0][target_idx[0][step]]
-                doc = self.nlp(target)
-                if(len(doc) > 0):
-                    target_pos = doc[0].pos_
+                if(self.nlp != None):
+                    doc = self.nlp(target)
+                    if(len(doc) > 0):
+                        target_pos = doc[0].pos_
 
             # Concatenate the top 1 token to current_ids
             current_ids = torch.cat([current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()], dim=-1)
