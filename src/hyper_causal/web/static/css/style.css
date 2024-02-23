@@ -3,9 +3,41 @@ nav {
     rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
 }
 
+* {
+  font-family: monospace;
+}
+
 #scene-container {
   position: absolute;
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.9);
+}
+
+#tooltip {
+  display: none;
+  position: absolute;
+  width: 200px;
+  height: 80px;
+  background-color: white;
+  z-index: 5;
+  padding: 16px;
+  font-size: 20px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+}
+
+#tooltip::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: calc(50% - 20px);
+  width: 0;
+  border-top: 20px solid white;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
 }

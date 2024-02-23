@@ -81,7 +81,7 @@ class CausalLM():
             target = None
             target_prob = None
             target_pos = "UNK"
-            if len(target_idx > 0) and len(target_idx[0] -1 >= step):
+            if target_idx != None and len(target_idx > 0) and len(target_idx[0] -1 >= step):
                 target = self.tokenizer.decode(target_idx[0][step]).strip()
                 target_prob = softmaxed_logits[0][target_idx[0][step]]
                 if(self.nlp != None):
@@ -90,7 +90,10 @@ class CausalLM():
                         target_pos = doc[0].pos_
 
             # Concatenate the top 1 token to current_ids
-            current_ids = torch.cat([current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()], dim=-1)
+            if(target_idx != None):
+                current_ids = torch.cat([current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()], dim=-1)
+            else:
+                current_ids = torch.cat([current_ids.cpu(), top_1_index.reshape(1, -1).cpu()], dim=-1)
 
             steps.append({
                 'step': step,
@@ -101,7 +104,7 @@ class CausalLM():
                 'top_k_tokens': top_k_tokens,
                 'top_k_token_ids': top_k_indices.tolist()[0],
                 'top_k_probs': top_k_probs.tolist(),
-                'target_prob': target_prob.item(),
+                'target_prob': [target_prob.item() if target_prob != None else ""],
                 'target': target,
                 'target_pos': target_pos
             })

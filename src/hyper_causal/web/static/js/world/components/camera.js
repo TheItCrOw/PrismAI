@@ -1,4 +1,5 @@
 import { PerspectiveCamera } from 'https://cdn.skypack.dev/three@0.132.2';
+import { TWEEN } from 'https://unpkg.com/three@0.132.2/examples/jsm/libs/tween.module.min.js';
 
 function createCamera() {
   const camera = new PerspectiveCamera(
@@ -14,4 +15,18 @@ function createCamera() {
   return camera;
 }
 
-export { createCamera };
+function moveCameraX(camera, newXPosition) {
+  var tween = new TWEEN.Tween(camera.position)
+    .to({
+      x: newXPosition,
+      y: camera.position.y,
+      z: camera.position.z
+    },
+      100)
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .start();
+
+  TWEEN.update();
+}
+
+export { createCamera, moveCameraX };

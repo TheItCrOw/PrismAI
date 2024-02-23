@@ -24,11 +24,14 @@
         <title>{{llm}} - HyperCausal</title>
     </head>
 
-    <body>
+    <body data-input="{{input}}" data-maxTokens="{{max_new_tokens}}"
+        data-k="{{k}}">
 
         <div id="scene-container">
         </div>
 
+        <div id="tooltip">
+        </div>
     </body>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
