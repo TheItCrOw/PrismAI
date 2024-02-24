@@ -1,6 +1,7 @@
-import { Vector2, Vector3 } from 'three';
-import { ThreeText } from './3text.js';
+import { MathUtils, Vector2, Vector3 } from 'three';
+import { ThreeText, buildStrokeForThreeText } from './3text.js';
 import { createEdge } from './edge.js';
+import { createSphere } from './sphere.js';
 
 class Branch {
     constructor(context, depth, startPos) {
@@ -11,8 +12,10 @@ class Branch {
         this.step = null;
         this.children = [];
         this.order = 0;
+        this.edge = null;
         // The prob of the step token this branch had
         this.prob = -1;
+        this.isOriginalWay = false;
 
         this.worldObject = null;
         this.worldObjectPos = null;
@@ -27,13 +30,17 @@ class Branch {
     getWorldObject() { return this.worldObject; }
     getWorldObjectPos() { return this.worldObjectPos; }
     getOrder() { return this.order; }
+    getEdge() { return this.edge; }
+    getIsOriginalWay() { return this.isOriginalWay; }
+    getProb() { return this.prob; }
 
     setStep(step) { this.step = step; }
     setParentBranch(parentBranch) { this.parentBranch = parentBranch; }
     addChild(child) { this.children.push(child); }
     setOrder(order) { this.order = order; }
-    setProb(prob) { this.prob = prob; }
+    setProb(prob) { this.prob = parseFloat(prob.toFixed(4)); }
     setWorldObjectPos(worldObjectPos) { this.worldObjectPos = worldObjectPos; }
+    setIsOriginalWay(isOriginalWay) { this.isOriginalWay = isOriginalWay; }
 
     async init() {
 
@@ -42,23 +49,31 @@ class Branch {
     /**
      * Visualizes this branch in the world. This can happen async, we don't need to wait for it typically. 
      */
-    async grow(font, scene, loop, maxDepthHeight, kBranches, maxTokens) {
+    async grow(font, scene, loop, camera, maxDepthHeight, kBranches, maxTokens) {
         const textMesh = new ThreeText(font, 'white', this.step);
 
         // How much height do we have per branch?
         let y = 0;
         const heightPerBranches = maxDepthHeight / kBranches;
         y = this.parentBranch.getWorldObjectPos().y;
-        y = y + ((this.order - 1) / heightPerBranches * maxTokens * kBranches);
+        y = y + (this.order / heightPerBranches * maxTokens * kBranches);
 
-        textMesh.position.set(this.startPos.x + (this.depth * 15),
+        textMesh.position.set(this.startPos.x + (this.depth * 5),
             y,
-            this.startPos.z);
+            1);
         textMesh.material.transparent = true;
         textMesh.material.opacity = 0;
+        textMesh.renderOrder = 1;
+        textMesh.position.z *= this.order * 2 * Math.PI;
+        textMesh.geometry.center();
+        textMesh.tick = (delta) => {
+            textMesh.lookAt(camera.position);
+        };
 
         loop.updatables.push(textMesh);
+        loop.updatables.push(textMesh);
         scene.add(textMesh);
+
         this.worldObject = textMesh;
         this.worldObjectPos = textMesh.position;
 
@@ -71,9 +86,36 @@ class Branch {
         }, 150);
 
         // Add the edge to the parent branch
-        const edge = createEdge(this.parentBranch.getWorldObjectPos(), this.worldObjectPos);
-        loop.updatables.push(edge);
-        scene.add(edge);
+        this.edge = createEdge(this.parentBranch.getWorldObjectPos(), this.worldObjectPos);
+        this.edge.userData.prob = `${this.prob}%`;
+        this.edge.userData.parentEdge = this.getParentBranch().getEdge();
+        this.edge.userData.defaultColor = 'white';
+        this.edge.userData.toBranch = this;
+        // According to the probability we give different opacty
+        this.edge.material.opacity = 0.05 + this.prob;
+
+        loop.updatables.push(this.edge);
+        scene.add(this.edge);
+
+        // Also add a sphere to each text
+        const sphereMesh = createSphere(0.3, 32, 16);
+        sphereMesh.renderOrder = 2;
+        sphereMesh.position.copy(textMesh.position);
+        sphereMesh.material.opacity = this.edge.material.opacity;
+        sphereMesh.userData.token = this.step;
+        sphereMesh.userData.defaultOpacity = sphereMesh.material.opacity;
+        sphereMesh.userData.fullText = this.context;
+        sphereMesh.userData.edge = this.edge;
+
+        loop.updatables.push(sphereMesh);
+        scene.add(sphereMesh);
+
+        if (this.isOriginalWay) {
+            this.edge.material.color.set('limegreen');
+            this.edge.userData.defaultColor = 'limegreen';
+            this.edge.material.opacity = 1;
+        }
+        this.edge.userData.defaultOpacity = this.edge.material.opacity;
     }
 }
 

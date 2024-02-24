@@ -27,6 +27,8 @@ let raycaster;
 let worldTree;
 
 let lastHoveredCube = null;
+let lastHoveredLines = [];
+let lastHoveredSphere = null;
 
 const tokenSpace = 0.2;
 const tooltipWidth = 200;
@@ -66,7 +68,7 @@ class World {
     // Once the font loaded, we can interact with and create text 
     onFontLoaded(font) {
         // Init the world tree.
-        worldTree = new WorldTree(scene, loop, font, maxTokens, k);
+        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k);
         console.log(worldTree);
         // First print the starting input text
         this.typewriteNextSequenceIntoScene(inputText, font);
@@ -137,14 +139,23 @@ class World {
 
         if (intersects.length > 0) {
             const obj = intersects[0].object;
-            console.log(obj.position);
-            worldTree.plant(inputText, new Vector3(obj.position.x, 0, 0));
+            if (obj.geometry.type == 'BoxGeometry') {
+                worldTree.plant(inputText, new Vector3(obj.position.x, 0, 0));
+            } else if (obj.type == 'Line') {
+                createTargetView(obj.userData.toBranch);
+                controls.autoRotate = true;
+            } else if (obj.geometry.type == 'SphereGeometry') {
+                createTargetView(obj.userData.edge.userData.toBranch);
+                controls.autoRotate = true;
+            }
+        } else {
+            $('#UI').removeClass('UI-left');
+            controls.autoRotate = false;
         }
     }
 
     handleMouseMove(event) {
         const intersects = getIntersectedObjects(event, raycaster, camera, scene);
-
         if (intersects.length > 0) {
             // Pointer cursor
             $('html, body').css('cursor', 'pointer');
@@ -155,12 +166,34 @@ class World {
                 hoveredObject.material.opacity = 1;
                 lastHoveredCube = hoveredObject;
                 // Show a tooltip for the cube
-                showTooltip(hoveredObject, '- Generate - ');
+                showTooltip(hoveredObject, '- Generate -');
+            } else if (hoveredObject.type == 'Line') { // And highlight lines
+                showTooltipMoving(event, hoveredObject, hoveredObject.userData.prob);
+                hoveredObject.material.color.set('gold');
+                hoveredObject.material.opacity = 1;
+                lastHoveredLines.push(hoveredObject);
+
+                // We only want to highlight the first object, dehighlight the rest.
+                for (var i = 1; i < intersects.length; i++) {
+                    let cur = intersects[i];
+                    if (cur.object.type == 'Line') {
+                        dehighlightEdge(cur.object);
+                    }
+                }
+            } else if (hoveredObject.geometry.type == 'SphereGeometry') {
+                showTooltip(hoveredObject, hoveredObject.userData.token);
+                lastHoveredSphere = hoveredObject;
+                recursvileyHighlightEdges(hoveredObject.userData.edge);
             }
         } else {
             $('html, body').css('cursor', 'default');
+            if (lastHoveredSphere != null) {
+            }
             if (lastHoveredCube != null)
                 lastHoveredCube.material.opacity = 0.5;
+            for (var i = 0; i < lastHoveredLines.length; i++) {
+                dehighlightEdge(lastHoveredLines[i]);
+            }
             $('#tooltip').fadeOut(125);
         }
     }
@@ -181,6 +214,45 @@ class World {
 
 export { World };
 
+function createTargetView(targetBranch) {
+    // When we click onto a line, we wanna target and highlight the to branch
+    const pos = new Vector3().copy(targetBranch.getWorldObjectPos());
+    controls.target.copy(pos);
+    pos.z += 20;
+    camera.position.copy(pos);
+    //controls.autoRotate = true;
+
+    // Show the ui element on the left now
+    let fullTextHtml = '';
+    let parentBranch = targetBranch;
+    while (parentBranch != null) {
+        const token = parentBranch.getStep();
+        if (token == null) break;
+        fullTextHtml = `${token}<span class="prob">(${parentBranch.getProb()}%)</span><br/>` + fullTextHtml;
+        parentBranch = parentBranch.getParentBranch();
+    }
+    $('#UI .full-text').html(inputText + '<br/>' + fullTextHtml);
+    $('#UI .title').html(`${targetBranch.getStep()}`);
+    $('#UI .header .prob').html(`(${targetBranch.getProb()}%)`);
+    $('#UI').addClass('UI-left');
+}
+
+function recursvileyHighlightEdges(hoveredObject) {
+    // We want to recursviley highligh the parent lines
+    let parentLine = hoveredObject;
+    while (parentLine != null) {
+        lastHoveredLines.push(parentLine);
+        parentLine.material.opacity = 1;
+        parentLine.material.color.set('gold');
+        parentLine = parentLine.userData.parentEdge;
+    }
+}
+
+function dehighlightEdge(line) {
+    line.material.color.set(line.userData.defaultColor);
+    line.material.opacity = line.userData.defaultOpacity;
+}
+
 function showTooltip(hoveredObject, content) {
     // Position the tooltip above the hovered object
     const tooltip = document.getElementById('tooltip');
@@ -196,5 +268,19 @@ function showTooltip(hoveredObject, content) {
     console.log(tooltip.style.height);
     tooltip.style.left = (x - tooltipWidth / 2) + 'px';
     tooltip.style.top = (y - tooltipHeight / 2 - 100) + 'px';
+    $(tooltip).fadeIn(200);
+}
+
+function showTooltipMoving(event, hoveredObject, content) {
+    const canvasBounds = renderer.domElement.getBoundingClientRect();
+    const tooltip = document.getElementById('tooltip');
+    // Get mouse coordinates relative to the canvas
+    const mouseX = event.clientX - canvasBounds.left;
+    const mouseY = event.clientY - canvasBounds.top;
+
+    // Update tooltip content and position
+    tooltip.innerText = content;
+    tooltip.style.left = mouseX - tooltipWidth / 2 + 'px';
+    tooltip.style.top = mouseY - tooltipHeight - 60 + 'px';
     $(tooltip).fadeIn(200);
 }

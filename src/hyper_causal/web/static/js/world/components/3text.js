@@ -1,4 +1,4 @@
-import { Mesh, MeshStandardMaterial, MathUtils, Vector3 } from 'three';
+import { Mesh, MeshStandardMaterial, MathUtils, Vector3, MeshBasicMaterial } from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 
@@ -10,12 +10,22 @@ class ThreeText extends Mesh {
         this.geometry = new TextGeometry(text, {
             font: font,
             size: size,
-            height: size / 5,
+            height: size / 2.5,
         });
+        this.text = text;
     }
 
     tick = (delta) => {
     };
+}
+
+function buildStrokeForThreeText(textMesh) {
+    let strokeMesh = textMesh.clone();
+    strokeMesh.scale.multiplyScalar(1.05);
+    var strokeMaterial = new MeshBasicMaterial({ color: 'black' }); // black color
+    strokeMesh.material = strokeMaterial;
+    strokeMesh.position.copy(textMesh.position);
+    return strokeMesh;
 }
 
 function addTextOntoCube(font, text, cube, size = 0.2) {
@@ -34,5 +44,5 @@ function addTextOntoCube(font, text, cube, size = 0.2) {
     });
 }
 
-export { ThreeText, addTextOntoCube };
+export { ThreeText, addTextOntoCube, buildStrokeForThreeText };
 

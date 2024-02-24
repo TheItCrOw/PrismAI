@@ -6,9 +6,10 @@ function createControls(camera, canvas) {
     // damping and auto rotation require
     // the controls to be updated each frame
 
-    //controls.autoRotate = true;
+    controls.autoRotate = false;
+    controls.target.set(0, 0, 0);
     controls.enableDamping = true;
-    controls.enableRotate = false;
+    // controls.enableRotate = false;
 
     controls.tick = () => controls.update();
 

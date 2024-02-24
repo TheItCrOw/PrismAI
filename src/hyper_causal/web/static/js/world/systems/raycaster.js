@@ -5,6 +5,7 @@ let mouse;
 
 function createRaycaster(camera) {
     const raycaster = new Raycaster();
+    raycaster.params.Line.threshold = 0.1;
     mouse = new Vector2();
 
     return raycaster;

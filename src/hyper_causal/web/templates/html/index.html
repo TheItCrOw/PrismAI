@@ -32,6 +32,20 @@
 
         <div id="tooltip">
         </div>
+
+        <div id="UI">
+            <div>
+                <div class="header bg-warning p-2 text-center">
+                    <h5 class="title w-100 text-center m-0"></h5>
+                    <p class="text-center prob font-italic m-0"></p>
+                </div>
+                <div class="content p-3">
+                    <p class="full-text">
+
+                    </p>
+                </div>
+            </div>
+        </div>
     </body>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
@@ -55,6 +69,8 @@
         src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.0.0/chartjs-plugin-datalabels.min.js"
         integrity="sha512-R/QOHLpV1Ggq22vfDAWYOaMd5RopHrJNMxi8/lJu8Oihwi4Ho4BRFeiMiCefn9rasajKjnx9/fTQ/xkWnkDACg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script
+        src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
 
     <script src="{{ url_for('static', filename='js/site.js') }}"
         type="module"></script>

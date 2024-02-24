@@ -9,11 +9,11 @@ app = Flask(__name__, template_folder="./web/templates", static_folder="./web/st
 
 @app.route('/')
 def hello_world():
-    # llm_instance = get_llm()
+    llm_instance = get_llm()
     return render_template("html/index.html", 
-                           llm="LLM", 
-                           input='Once upon a time, there was a boy',
-                           max_new_tokens=7,
+                           llm=llm_instance.model_name, 
+                           input='Steve Jobs was a',
+                           max_new_tokens=25,
                            k=get_k())
 
 @app.route('/api/tokens/next', methods=['POST'])
@@ -47,7 +47,7 @@ def parse_arguments():
     parser.add_argument('--port', type=int, default=5678, help='Port number')
     parser.add_argument('--debug', type=bool, default=True, help='True/False whether the app should be started in debug mode (required True for hot reload)')
     parser.add_argument('--llm', type=str, default="GPT2", help='llm string to store globally and pass to CausalLM')
-    parser.add_argument('--k', type=int, default=3, help='How many alternative branches to visualize.')
+    parser.add_argument('--k', type=int, default=2, help='How many alternative branches to visualize.')
     return parser.parse_args()
 
 def create_llm(llm_arg):
@@ -55,10 +55,10 @@ def create_llm(llm_arg):
     return llm_instance
 
 def get_k():
-    if 'k' not in g:
+    if 'k' not in current_app.config:
         args = parse_arguments()
-        g.k = args.k
-    return g.k
+        current_app.config['k'] = args.k
+    return current_app.config['k']
 
 def get_llm():
     if 'llm' not in current_app.config:

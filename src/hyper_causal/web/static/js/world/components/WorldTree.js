@@ -5,13 +5,14 @@ import { getNextTokenBranches } from '../systems/api.js';
 // The idea is to build a breadth first tree 
 
 class WorldTree {
-    constructor(scene, loop, font, maxTokens, kBranches) {
+    constructor(scene, loop, camera, font, maxTokens, kBranches) {
         this.queue = [];
         this.tree = [];
 
         this.scene = scene;
         this.loop = loop;
         this.font = font;
+        this.camera = camera;
         this.maxTokens = maxTokens;
         this.kBranches = kBranches;
 
@@ -41,6 +42,7 @@ class WorldTree {
     async plant(inputText, startPos) {
         var root = new Branch(inputText, 0, startPos);
         root.setWorldObjectPos(new Vector3(startPos.x, 0, 0));
+        root.setIsOriginalWay(true);
 
         this.queue.push(root);
 
@@ -51,6 +53,7 @@ class WorldTree {
                 branch.grow(this.font,
                     this.scene,
                     this.loop,
+                    this.camera,
                     this.maxHeightPerDepth[branch.getDepth()],
                     this.kBranches,
                     this.maxTokens);
@@ -67,7 +70,7 @@ class WorldTree {
                     prob: newStep.top_k_probs[k]
                 });
             }
-            tokensWithProb.sort((a, b) => a.prob > b.prob);
+            tokensWithProb = tokensWithProb.sort((a, b) => b.prob - a.prob);
 
             for (var i = 0; i < tokensWithProb.length; i++) {
                 const next = tokensWithProb[i];
@@ -80,7 +83,9 @@ class WorldTree {
                 nextBranch.setStep(next.token);
                 nextBranch.setProb(next.prob);
                 nextBranch.setOrder(i);
-
+                if (i == 0 && branch.getIsOriginalWay()) {
+                    nextBranch.setIsOriginalWay(true);
+                }
                 // Store the next branch as a child in the parent
                 branch.addChild(nextBranch);
 
