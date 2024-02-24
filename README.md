@@ -7,7 +7,7 @@
 
 ## HyperCausal
 
-One component of PrismAI is **HyperCausal: A spacial visualization of Causal Language Models decision making through a Hypertext environment.**
+One component of PrismAI is **HyperCausal: A Spacial Visualization of Causal Language Models Decision Making Through Hypertext Environments.**
 
 ![Loop2-ezgif com-optimize](https://github.com/TheItCrOw/PrismAI/assets/49918134/9701cc27-2e13-4529-92d6-a0a48e801533)
 
