@@ -13,7 +13,7 @@ def hello_world():
     return render_template("html/index.html", 
                            llm=llm_instance.model_name, 
                            input='Steve Jobs was a',
-                           max_new_tokens=25,
+                           max_new_tokens=7,
                            k=get_k())
 
 @app.route('/api/tokens/next', methods=['POST'])
@@ -24,7 +24,7 @@ def get_next_tokens():
     try:
         if request.is_json:
             data = request.get_json()
-            input = str(data.get('input'))
+            input = str(data.get('input'))            
 
             llm_instance = get_llm()
             next = llm_instance.generate_k_with_probs(
@@ -47,7 +47,7 @@ def parse_arguments():
     parser.add_argument('--port', type=int, default=5678, help='Port number')
     parser.add_argument('--debug', type=bool, default=True, help='True/False whether the app should be started in debug mode (required True for hot reload)')
     parser.add_argument('--llm', type=str, default="GPT2", help='llm string to store globally and pass to CausalLM')
-    parser.add_argument('--k', type=int, default=2, help='How many alternative branches to visualize.')
+    parser.add_argument('--k', type=int, default=3, help='How many alternative branches to visualize.')
     return parser.parse_args()
 
 def create_llm(llm_arg):

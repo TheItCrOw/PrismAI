@@ -74,6 +74,9 @@ class WorldTree {
 
             for (var i = 0; i < tokensWithProb.length; i++) {
                 const next = tokensWithProb[i];
+                // We let the model end when it wants to.
+                if (next.token == '<|endoftext|>') continue;
+
                 // For each new fetched branch, add a branch to the queue and repeat
                 const nextBranch = new Branch(
                     newStep.context + " " + next.token, // New context

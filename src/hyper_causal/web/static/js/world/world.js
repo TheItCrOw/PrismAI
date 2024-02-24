@@ -141,6 +141,8 @@ class World {
             const obj = intersects[0].object;
             if (obj.geometry.type == 'BoxGeometry') {
                 worldTree.plant(inputText, new Vector3(obj.position.x, 0, 0));
+                camera.position.set(15, 0, 60);
+                controls.autoRotate = true;
             } else if (obj.type == 'Line') {
                 createTargetView(obj.userData.toBranch);
                 controls.autoRotate = true;
