@@ -15,9 +15,38 @@ The last step of each Causal or Generative Language Model is to choose the next 
 
 ![Animation-ezgif com-optimize](https://github.com/TheItCrOw/PrismAI/assets/49918134/e2b40928-8bfa-4ae6-9390-22629df0c9b0)
 
-HyperCausal is visualized with Three.js and uses PrismAI's core library to generate the probabilities of the LLMs.
+HyperCausal is visualized with Three.js and uses PrismAI's core library to generate the probabilities and inference from the LLMs.
 
-**Coming Soon how to use HyperCausal**
+### Usage
+
+Clone this repository
+
+```
+git clone https://github.com/TheItCrOw/PrismAI.git
+```
+
+Create an environment and install requirements
+
+```
+python -m venv venv
+venv\Scripts\activate
+pip install requirements.txt
+```
+Navigate to the HyperCausal package
+
+```
+cd src/hyper_causal
+```
+
+Start the webbrowser with the given command line args
+
+```
+python main.py --host 127.0.0.1 --port 5678 --debug True --llm GPT2 --k 3 --max_tokens 7 --input "Once upon a time there was a boy" --tree-style breadth-first
+```
+
+*Please also refer to the `-h` command to get more detailled info about the parameters.* 
+
+Open the host in the browser and wait a moment for three.js to load. Depending on the targeted LLM and your setup this may take a moment. 
 
 ## Luminar AI Detection
 
