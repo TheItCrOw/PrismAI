@@ -12,9 +12,10 @@ def hello_world():
     llm_instance = get_llm()
     return render_template("html/index.html", 
                            llm=llm_instance.model_name, 
-                           input='Steve Jobs was a',
-                           max_new_tokens=7,
-                           k=get_k())
+                           input=get_input(),
+                           max_new_tokens=get_max_tokens(),
+                           k=get_k(),
+                           tree_style=get_tree_style())
 
 @app.route('/api/tokens/next', methods=['POST'])
 def get_next_tokens():
@@ -46,8 +47,11 @@ def parse_arguments():
     parser.add_argument('--host', type=str, default='127.0.0.1', help='Host IP address')
     parser.add_argument('--port', type=int, default=5678, help='Port number')
     parser.add_argument('--debug', type=bool, default=True, help='True/False whether the app should be started in debug mode (required True for hot reload)')
-    parser.add_argument('--llm', type=str, default="GPT2", help='llm string to store globally and pass to CausalLM')
+    parser.add_argument('--llm', type=str, default="GPT2", help='The Causal LLM which will be used to generate the tokens and probabilities. Please visit https://huggingface.co/docs/transformers/tasks/language_modeling for a detailled list of avaiablabe models. Fine-tuned versions are also possible.')
     parser.add_argument('--k', type=int, default=3, help='How many alternative branches to visualize.')
+    parser.add_argument('--max_tokens', type=int, default=7, help='The max amount of tokens to generate.')
+    parser.add_argument('--input', type=str, default="Once upon a time there was a boy", help='The input text which the model will generate from.')
+    parser.add_argument('--tree-style', type=str, default="breadth-first", help='The style which the tree is being built with, currently either "breadth-first" or "depth-first".')
     return parser.parse_args()
 
 def create_llm(llm_arg):
@@ -60,11 +64,29 @@ def get_k():
         current_app.config['k'] = args.k
     return current_app.config['k']
 
+def get_max_tokens():
+    if 'max_tokens' not in current_app.config:
+        args = parse_arguments()
+        current_app.config['max_tokens'] = args.max_tokens
+    return current_app.config['max_tokens']
+
+def get_input():
+    if 'input' not in current_app.config:
+        args = parse_arguments()
+        current_app.config['input'] = args.input
+    return current_app.config['input']
+
 def get_llm():
     if 'llm' not in current_app.config:
         args = parse_arguments()
         current_app.config['llm'] = create_llm(args.llm)
     return current_app.config['llm']
+
+def get_tree_style():
+    if 'tree_style' not in current_app.config:
+        args = parse_arguments()
+        current_app.config['tree_style'] = args.tree_style
+    return current_app.config['tree_style']
 
 def main():
     args = parse_arguments()

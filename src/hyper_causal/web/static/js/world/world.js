@@ -22,6 +22,7 @@ let loop;
 let inputText;
 let maxTokens;
 let k;
+let treeStyle;
 let controls;
 let raycaster;
 let worldTree;
@@ -36,9 +37,12 @@ const tooltipHeight = 80;
 
 class World {
     constructor(container) {
+        // Fetch the parameters of the user
         inputText = $('body').data('input');
         maxTokens = $('body').data('maxtokens');
         k = $('body').data('k');
+        treeStyle = $('body').data('treestyle');
+
         camera = createCamera();
         renderer = createRenderer();
         scene = createScene();
@@ -68,7 +72,7 @@ class World {
     // Once the font loaded, we can interact with and create text 
     onFontLoaded(font) {
         // Init the world tree.
-        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k);
+        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k, treeStyle);
         console.log(worldTree);
         // First print the starting input text
         this.typewriteNextSequenceIntoScene(inputText, font);

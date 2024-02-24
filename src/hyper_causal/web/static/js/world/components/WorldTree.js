@@ -5,7 +5,7 @@ import { getNextTokenBranches } from '../systems/api.js';
 // The idea is to build a breadth first tree 
 
 class WorldTree {
-    constructor(scene, loop, camera, font, maxTokens, kBranches) {
+    constructor(scene, loop, camera, font, maxTokens, kBranches, treeStyle) {
         this.queue = [];
         this.tree = [];
 
@@ -15,6 +15,7 @@ class WorldTree {
         this.camera = camera;
         this.maxTokens = maxTokens;
         this.kBranches = kBranches;
+        this.treeStyle = treeStyle;
 
         // The amount of branches we have at the final depth
         this.maxDepthBranches = kBranches ** maxTokens;
@@ -47,7 +48,12 @@ class WorldTree {
         this.queue.push(root);
 
         while (this.queue.length > 0) {
-            const branch = this.queue.shift();
+            let branch = null;
+            if (this.treeStyle == 'breadth-first')
+                branch = this.queue.shift();
+            else if (this.treeStyle == 'depth-first')
+                branch = this.queue.pop();
+
             // We dont want the root to grow, that already exists.
             if (branch.getDepth() != 0)
                 branch.grow(this.font,
@@ -70,7 +76,12 @@ class WorldTree {
                     prob: newStep.top_k_probs[k]
                 });
             }
-            tokensWithProb = tokensWithProb.sort((a, b) => b.prob - a.prob);
+
+            // Sort the k branches according to the tree style
+            if (this.treeStyle == 'breadth-first')
+                tokensWithProb = tokensWithProb.sort((a, b) => b.prob - a.prob);
+            else if (this.treeStyle == 'depth-first')
+                tokensWithProb = tokensWithProb.sort((a, b) => a.prob - b.prob);
 
             for (var i = 0; i < tokensWithProb.length; i++) {
                 const next = tokensWithProb[i];
@@ -86,8 +97,12 @@ class WorldTree {
                 nextBranch.setStep(next.token);
                 nextBranch.setProb(next.prob);
                 nextBranch.setOrder(i);
-                if (i == 0 && branch.getIsOriginalWay()) {
-                    nextBranch.setIsOriginalWay(true);
+
+                // Mark if this branch is the original way, meaning this would be the default output of the llm.
+                if (branch.getIsOriginalWay()) {
+                    if ((this.treeStyle == 'breadth-first' && i == 0)
+                        || (this.treeStyle == 'depth-first' && i == tokensWithProb.length - 1))
+                        nextBranch.setIsOriginalWay(true);
                 }
                 // Store the next branch as a child in the parent
                 branch.addChild(nextBranch);
