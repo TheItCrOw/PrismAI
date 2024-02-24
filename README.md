@@ -15,7 +15,10 @@ The last step of each Causal or Generative Language Model is to choose the next 
 
 ![Animation-ezgif com-optimize](https://github.com/TheItCrOw/PrismAI/assets/49918134/e2b40928-8bfa-4ae6-9390-22629df0c9b0)
 
-HyperCausal is visualized with Three.js and uses PrismAI's core library to generate the probabilities and inference from the LLMs.
+HyperCausal is visualized with Three.js and uses PrismAI's core library to generate the probabilities and inference from the LLMs. This is done to:
+
+- see how confident the llm was when printing out a given token.
+- recognize what sequences could have been generated and what their chances were. Truth be told, LLMs are less sure about their predictions than you might think and especially given named-entities, the correct answer was hidden on an alternative path just 2% probability out of reach. 
 
 ### Usage
 
