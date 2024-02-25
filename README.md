@@ -51,6 +51,10 @@ python main.py --host 127.0.0.1 --port 5678 --debug True --llm GPT2 --k 3 --max_
 
 Open the host in the browser and wait a moment for three.js to load. Depending on the targeted LLM and your setup this may take a moment. 
 
+### Supported LLMs
+
+HyperCausal and PrismAI in general supports all Causal Language Models that 🤗 has to offer. This includes the fine-tuned versions of these architectures. Please refer to their [documentation](https://huggingface.co/docs/transformers/tasks/language_modeling) for a full list of LLMs.
+
 ## Luminar AI Detection
 
 **Coming soon**.
