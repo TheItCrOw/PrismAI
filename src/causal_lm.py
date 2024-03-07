@@ -104,7 +104,7 @@ class CausalLM():
                 'top_k_tokens': top_k_tokens,
                 'top_k_token_ids': top_k_indices.tolist()[0],
                 'top_k_probs': top_k_probs.tolist(),
-                'target_prob': [target_prob.item() if target_prob != None else ""],
+                'target_prob': target_prob.item() if target_prob != None else "",
                 'target': target,
                 'target_pos': target_pos
             })
