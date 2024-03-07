@@ -1,6 +1,8 @@
 from causal_lm import CausalLM
 import random
+import hashlib
 import traceback
+from datetime import datetime
 import sys
 import statistics
 
@@ -8,6 +10,12 @@ class Detector():
     '''A class that tries to identify AI texts'''
 
     def __init__(self, models=['gpt2']):
+        '''
+        Possible models to choose from:
+        daryl149/llama-2-7b-chat-hf
+        gpt2
+        mistralai/Mistral-7B-v0.1
+        '''
         self.llm_ensemble = [CausalLM(m) for m in models]
         self.min_token_length = 32
         print(f'Model ensemble: {[x.model_name for x in self.llm_ensemble]}')
@@ -15,9 +23,11 @@ class Detector():
     def detect(self, 
                text, 
                sample_rate=6,
-               sample_sequence_length=12):
+               sample_sequence_length=12,
+               seed=42):
         '''A function that tries to detect AI sequences in a text'''
 
+        random.seed(seed)
         ensemble_results = []
         # We have an ensemble of models which we use to detect
         for model in self.llm_ensemble:
@@ -49,7 +59,9 @@ class Detector():
                     print(f'Sampling sequence: {sample_sequence}')
 
                     # Now try to regenerate that sequence with the cur model
-                    output = model.generate_k_with_probs(context, sample_sequence_idx, max_length=sample_sequence_length)
+                    output = model.generate_k_with_probs(context, sample_sequence_idx, max_length=sample_sequence_length, k=10)
+                    if(output == None):
+                        return None
                     output['context'] = context
                     output['sample_sequence'] = sample_sequence
                     
@@ -68,7 +80,19 @@ class Detector():
             model_result['avg_prob'] = statistics.mean(float(s['avg_prob']) for s in model_result['sample_results'])
             ensemble_results.append(model_result)
     
-        return ensemble_results     
+        return {
+            'metadata': {
+                'full_text': text,
+                'ensemble': [model.model_name for model in self.llm_ensemble],
+                'sample_rate': sample_rate,
+                'sample_sequence_length': sample_sequence_length,
+                'min_token_length': self.min_token_length,
+                'date': str(datetime.now()),
+                'seed': seed,
+                'signature': hashlib.sha256(text.encode('utf-8')).hexdigest()
+            },
+            'ensemble_results': ensemble_results
+        }     
             
 
 test_text = '''

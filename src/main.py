@@ -2,6 +2,8 @@ import pandas as pd
 import glob
 import statistics
 import spacy
+import torch
+import json
 import os
 from detector import Detector
 from causal_lm import CausalLM
@@ -20,7 +22,7 @@ def get_essays(label, take):
     # As a first step, we want to inject AI written sentences into human essays
     # and see if we can sort them out later again
     # 1 = AI generated, 0 = human written
-    filtered_df = df[df['label'] == 0].head(take)
+    filtered_df = df[df['label'] == label].sort_index().head(take)
     filtered_essays = filtered_df['text'].tolist()
     print(f'Processing {len(filtered_essays)} filtered essays.')
     return filtered_essays
@@ -28,7 +30,7 @@ def get_essays(label, take):
 def preprocess_dataset():
     '''We want to preprocess the dataset'''
     nlp = spacy.load("en_core_web_sm")
-    model = CausalLM('gpt2') # mistralai/Mistral-7B-v0.1
+    model = CausalLM('gpt2')
 
     filtered_essays = get_essays(1, 100)
 
@@ -66,23 +68,40 @@ def preprocess_dataset():
     print(f'Average confidence: ${statistics.mean(confidences)}')
 
 
-def test_detector():
-    detector = Detector()
-    essays = get_essays(1, 100)
+def test_detector(label, amount, ensemble):
+    # https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
+    detector = Detector(models=ensemble)
+    essays = get_essays(label, amount)
+    results = []
     # Let the detector do the work
     essays_avg = []
     for essay in essays:
         try:
-            output = detector.detect(essay)
-            avg = output[0]['avg_prob']
+            if(len(essay) < 500):
+                continue
+            output = detector.detect(essay, sample_sequence_length=32)
+            if(output == None):
+                continue
+            results.append(output)
+            avg = output['ensemble_results'][0]['avg_prob']
             print(f'\n========== AVG: {avg} ==========\n')
             essays_avg.append(avg)
         except Exception as ex:
             print('Skipped one essay.')
+            print(ex)
     print(statistics.mean(essays_avg))
 
+    # At the end, delete the model
+    del detector
+    torch.cuda.empty_cache()
+    print("Deleted detector")
+
+    with open(f'outputs/generator_{label}_{ensemble[0].replace("/", "_")}_{amount}_outputs.json', 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False)
 
 
 if __name__ == '__main__':
-    # First step: Process the dataset
-    test_detector()
+    ensemble = ['gpt2', 'mistralai/Mistral-7B-v0.1', 'daryl149/llama-2-7b-chat-hf']
+    for model in ensemble:
+        test_detector(0, 4000, [model])
+        test_detector(1, 4000, [model])

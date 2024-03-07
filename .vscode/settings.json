@@ -1,0 +1,4 @@
+{
+    "python.defaultInterpreterPath": "python.exe",
+    "python.analysis.typeCheckingMode": "basic"
+}
