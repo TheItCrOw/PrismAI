@@ -25,18 +25,19 @@ def get_next_tokens():
     try:
         if request.is_json:
             data = request.get_json()
-            input = str(data.get('input'))            
+            input = str(data.get('input'))
+            overwrite_k = int(data.get('overwriteK'))            
 
             llm_instance = get_llm()
             next = llm_instance.generate_k_with_probs(
                 input_text=input,
                 target_idx=None,
-                k = get_k(),
+                k = get_k() if overwrite_k == -1 else overwrite_k,
                 max_length=1)
 
             result['result'] = next # type: ignore
             result['status'] = 200
-            print(result)
+            # print(result)
     except Exception as ex:
         print("Couldn't generate next token branches: ")
         print(ex)

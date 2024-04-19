@@ -14,6 +14,7 @@ import { Raycaster, Vector2, Vector3 } from 'three';
 import { createRaycaster, getIntersectedObjects } from './systems/raycaster.js';
 import { getNextTokenBranches } from './systems/api.js';
 import { WorldTree } from './components/WorldTree.js';
+import { Branch } from './components/Branch.js';
 
 let camera;
 let renderer;
@@ -52,6 +53,8 @@ class World {
         // Add all events here
         renderer.domElement.addEventListener('click', this.handleOnMouseClick);
         renderer.domElement.addEventListener('mousemove', this.handleMouseMove);
+        document.getElementById('continue-branch-btn').addEventListener('click', this.handleContinueBranch);
+        document.getElementById('stop-generation-btn').addEventListener('click', this.handleStopTreeGrowing);
 
         container.append(renderer.domElement);
 
@@ -138,6 +141,67 @@ class World {
 
     }
 
+    /**
+     * Stops the growing of the tree.
+     * @param {*} event 
+     */
+    handleStopTreeGrowing(event) {
+        worldTree.setFinishedGrowing(true);
+    }
+
+    /**
+     * Handler for the event when the user wants to continue a specifc branch
+     * @param {*} event 
+     */
+    async handleContinueBranch(event) {
+        // If the tree is still growing, we cant conitnue a branch exclsuively.
+        if (!worldTree.getFinishedGrowing()) return;
+
+        const branchId = $(this).closest('#UI').attr('data-branch');
+        // This is the branch we want to continue.
+        let branch = worldTree.getTree().find(b => b.getId() == branchId);
+
+        // Now, we get the next predicted token and continue for... let's say 6 more steps
+        const steps = 6;
+        for (let i = 0; i < steps; i++) {
+            const nextStep = await getNextTokenBranches(branch.getContext(), 1);
+            const nextToken = nextStep.generated_text.trim();
+            console.log(nextStep);
+
+            let nextBranch = new Branch(
+                nextStep.steps[0].context + " " + nextToken,
+                branch.getDepth() + 1,
+                branch.getStartPos()
+            );
+            nextBranch.setParentBranch(branch);
+            nextBranch.setStep(nextToken);
+            nextBranch.setProb(nextStep.steps[0].top_k_probs[0]);
+            nextBranch.setOrder(branch.getOrder());
+
+            if (branch.getIsOriginalWay()) nextBranch.setIsOriginalWay(true);
+            branch.addChild(nextBranch);
+
+            // Now let the branch grow
+            nextBranch.placeBranch(branch.getFont(),
+                scene,
+                loop,
+                camera,
+                branch.getWorldObjectPos().y);
+
+            // Focus this branch
+            createTargetView(nextBranch);
+
+            worldTree.addBranchToTree(nextBranch);
+
+            // So we continue the loop with the correct parent branch
+            branch = nextBranch;
+        }
+    }
+
+    /**
+     * Handles the events of clicking onto a three.js object
+     * @param {*} event 
+     */
     handleOnMouseClick(event) {
         const intersects = getIntersectedObjects(event, raycaster, camera, scene);
 
@@ -241,6 +305,7 @@ function createTargetView(targetBranch) {
     $('#UI .title').html(`${targetBranch.getStep()}`);
     $('#UI .header .prob').html(`(${targetBranch.getProb()}%)`);
     $('#UI').addClass('UI-left');
+    $('#UI').attr('data-branch', targetBranch.getId());
 }
 
 function recursvileyHighlightEdges(hoveredObject) {
@@ -271,7 +336,6 @@ function showTooltip(hoveredObject, content) {
 
     // Update tooltip content and position
     tooltip.innerText = content;
-    console.log(tooltip.style.height);
     tooltip.style.left = (x - tooltipWidth / 2) + 'px';
     tooltip.style.top = (y - tooltipHeight / 2 - 100) + 'px';
     $(tooltip).fadeIn(200);

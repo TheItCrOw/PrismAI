@@ -3,8 +3,15 @@ import { ThreeText, buildStrokeForThreeText } from './3text.js';
 import { createEdge } from './edge.js';
 import { createSphere } from './sphere.js';
 
+function uuidv4() {
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+    );
+}
+
 class Branch {
     constructor(context, depth, startPos) {
+        this.id = uuidv4();
         this.context = context;
         this.depth = depth;
         this.startPos = startPos;
@@ -13,6 +20,7 @@ class Branch {
         this.children = [];
         this.order = 0;
         this.edge = null;
+        this.font = null;
         // The prob of the step token this branch had
         this.prob = -1;
         this.isOriginalWay = false;
@@ -21,6 +29,7 @@ class Branch {
         this.worldObjectPos = null;
     }
 
+    getId() { return this.id; }
     getContext() { return this.context; }
     getDepth() { return this.depth; }
     getStep() { return this.step; }
@@ -33,6 +42,7 @@ class Branch {
     getEdge() { return this.edge; }
     getIsOriginalWay() { return this.isOriginalWay; }
     getProb() { return this.prob; }
+    getFont() { return this.font; }
 
     setStep(step) { this.step = step; }
     setParentBranch(parentBranch) { this.parentBranch = parentBranch; }
@@ -47,16 +57,11 @@ class Branch {
     }
 
     /**
-     * Visualizes this branch in the world. This can happen async, we don't need to wait for it typically. 
+     * Takes in the world coordinates and all parameters required and places a branch in the world
      */
-    async grow(font, scene, loop, camera, maxDepthHeight, kBranches, maxTokens) {
+    placeBranch(font, scene, loop, camera, y) {
+        // ========== First: Place the TextMesh into the world
         const textMesh = new ThreeText(font, 'white', this.step);
-
-        // How much height do we have per branch?
-        let y = 0;
-        const heightPerBranches = maxDepthHeight / kBranches;
-        y = this.parentBranch.getWorldObjectPos().y;
-        y = y + (this.order / heightPerBranches * maxTokens * kBranches);
 
         textMesh.position.set(this.startPos.x + (this.depth * 5),
             y,
@@ -76,6 +81,7 @@ class Branch {
 
         this.worldObject = textMesh;
         this.worldObjectPos = textMesh.position;
+        this.font = font;
 
         // Fade in the text gradually
         var fadeInInterval = setInterval(function () {
@@ -85,6 +91,7 @@ class Branch {
             }
         }, 150);
 
+        // ========== Second: Place the line to the parent branch
         // Add the edge to the parent branch
         this.edge = createEdge(this.parentBranch.getWorldObjectPos(), this.worldObjectPos);
         this.edge.userData.prob = `${this.prob}%`;
@@ -97,6 +104,7 @@ class Branch {
         loop.updatables.push(this.edge);
         scene.add(this.edge);
 
+        // ========== Third: Place a sphere around the text to make it look like a node
         // Also add a sphere to each text
         const sphereMesh = createSphere(0.3, 32, 16);
         sphereMesh.renderOrder = 2;
@@ -116,6 +124,20 @@ class Branch {
             this.edge.material.opacity = 1;
         }
         this.edge.userData.defaultOpacity = this.edge.material.opacity;
+    }
+
+    /**
+     * Visualizes this branch in the world. This can happen async, we don't need to wait for it typically. 
+     */
+    async grow(font, scene, loop, camera, maxDepthHeight, kBranches, maxTokens) {
+
+        // How much height do we have per branch?
+        let y = 0;
+        const heightPerBranches = maxDepthHeight / kBranches;
+        y = this.parentBranch.getWorldObjectPos().y;
+        y = y + (this.order / heightPerBranches * maxTokens * kBranches);
+
+        this.placeBranch(font, scene, loop, camera, y);
     }
 }
 

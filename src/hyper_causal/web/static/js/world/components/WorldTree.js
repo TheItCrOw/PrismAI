@@ -16,6 +16,7 @@ class WorldTree {
         this.maxTokens = maxTokens;
         this.kBranches = kBranches;
         this.treeStyle = treeStyle;
+        this.finishedGrowing = false;
 
         // The amount of branches we have at the final depth
         this.maxDepthBranches = kBranches ** maxTokens;
@@ -30,6 +31,22 @@ class WorldTree {
         for (var i = maxTokens - 1; i >= 0; i--) {
             this.maxHeightPerDepth[i] = this.maxHeightPerDepth[i + 1] / kBranches;
         }
+    }
+
+    getTree() {
+        return this.tree;
+    }
+
+    addBranchToTree(branch) {
+        this.tree.push(branch);
+    }
+
+    getFinishedGrowing() {
+        return this.finishedGrowing;
+    }
+
+    setFinishedGrowing(finishedGrowing) {
+        this.finishedGrowing = finishedGrowing;
     }
 
     async init() {
@@ -47,7 +64,7 @@ class WorldTree {
 
         this.queue.push(root);
 
-        while (this.queue.length > 0) {
+        while (this.queue.length > 0 && !this.finishedGrowing) {
             let branch = null;
             if (this.treeStyle == 'breadth-first')
                 branch = this.queue.shift();
@@ -112,7 +129,7 @@ class WorldTree {
                 // else put it into the queue.
                 this.queue.push(nextBranch);
             }
-            // this.tree.push(branch);
+            this.tree.push(branch);
         }
     }
 }

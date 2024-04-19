@@ -33,7 +33,7 @@
         <div id="tooltip">
         </div>
 
-        <div id="UI">
+        <div id="UI" data-branch="none">
             <div>
                 <div class="header bg-warning p-2 text-center">
                     <h5 class="title w-100 text-center m-0"></h5>
@@ -44,7 +44,19 @@
 
                     </p>
                 </div>
+                <button class="btn btn-primary rounded-0 w-100"
+                    id="continue-branch-btn">
+                    <i class="fas fa-code-branch"></i> Continue this branch
+                </button>
+                <label class="small-font text-center text-danger p-2">
+                    A branch can only be continued if the HyperCausal-Tree has
+                    finished or was stopped growing.</label>
             </div>
+        </div>
+
+        <div id="stop-generation-btn"
+            title="Stop the growing of the HyperCausal-Tree.">
+            <i class="fas fa-stop"></i>
         </div>
     </body>
 
