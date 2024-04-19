@@ -158,8 +158,22 @@ class World {
         if (!worldTree.getFinishedGrowing()) return;
 
         const branchId = $(this).closest('#UI').attr('data-branch');
-        // This is the branch we want to continue.
-        let branch = worldTree.getTree().find(b => b.getId() == branchId);
+        // This is the branch it was clicked on. That isnt necesseraly the
+        // branch we want to continue as it could have children.
+        let clickedBranch = worldTree.getTree().find(b => b.getId() == branchId);
+        let branch = clickedBranch;
+        while (branch.getChildren().length > 0) {
+            let curChild = branch.getChildren().find(b => b.getOrder() == branch.getOrder());
+            // Sometimes this specific order isn't available. In that case take any child
+            if (curChild === undefined) {
+                curChild = branch.getChildren()[0];
+            }
+            // If this child hasn't been placed into the world yet due to stop, ignore it
+            if (curChild.getWorldObject() == null) {
+                break;
+            }
+            branch = curChild;
+        }
 
         // Now, we get the next predicted token and continue for... let's say 6 more steps
         const steps = 6;

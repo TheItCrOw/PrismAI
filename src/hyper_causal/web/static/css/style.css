@@ -73,8 +73,10 @@ nav {
 
 #UI .full-text {
   margin: 0;
+  max-height: 40vh;
   text-align: center;
   font-size: x-large;
+  overflow-y: auto;
 }
 
 #UI .prob {

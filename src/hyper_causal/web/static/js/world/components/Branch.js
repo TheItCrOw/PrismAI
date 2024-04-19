@@ -130,7 +130,6 @@ class Branch {
      * Visualizes this branch in the world. This can happen async, we don't need to wait for it typically. 
      */
     async grow(font, scene, loop, camera, maxDepthHeight, kBranches, maxTokens) {
-
         // How much height do we have per branch?
         let y = 0;
         const heightPerBranches = maxDepthHeight / kBranches;

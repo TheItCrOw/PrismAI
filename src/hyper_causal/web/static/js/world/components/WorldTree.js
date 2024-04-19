@@ -64,7 +64,16 @@ class WorldTree {
 
         this.queue.push(root);
 
-        while (this.queue.length > 0 && !this.finishedGrowing) {
+        while (this.queue.length > 0) {
+
+            // This means the tree growing was interrupted
+            if (this.finishedGrowing) {
+                // There might be some branches which are in the datastructure
+                // but which haven't been placed yet. We can't use these, so delete them.
+                this.tree = this.tree.filter(b => b.getWorldObject() != null);
+                break;
+            }
+
             let branch = null;
             if (this.treeStyle == 'breadth-first')
                 branch = this.queue.shift();
