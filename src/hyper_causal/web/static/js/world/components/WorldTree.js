@@ -118,7 +118,8 @@ class WorldTree {
                 const nextBranch = new Branch(
                     newStep.context + " " + next.token, // New context
                     branch.getDepth() + 1, // Add a depth
-                    branch.getStartPos());
+                    branch.getStartPos()
+                );
                 nextBranch.setParentBranch(branch);
                 nextBranch.setStep(next.token);
                 nextBranch.setProb(next.prob);

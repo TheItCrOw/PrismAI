@@ -121,7 +121,7 @@ class Branch {
         if (this.isOriginalWay) {
             this.edge.material.color.set('limegreen');
             this.edge.userData.defaultColor = 'limegreen';
-            this.edge.material.opacity = 1;
+            // this.edge.material.opacity = 1;
         }
         this.edge.userData.defaultOpacity = this.edge.material.opacity;
     }
