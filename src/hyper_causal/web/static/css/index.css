@@ -1,0 +1,83 @@
+:root {
+  --primary: MidnightBlue;
+  --black: rgb(32, 28, 28);
+}
+
+.bg-black {
+  background-color: var(--black);
+}
+
+.color-primary {
+  color: var(--primary);
+}
+
+.text {
+  color: rgba(125, 125, 125, 1);
+}
+
+.top-hr {
+  height: 1px;
+  background-color: var(--primary);
+}
+
+.params-container {
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+  border-left: 2px var(--primary) solid;
+  padding-left: 32px;
+  padding-top: 32px;
+  padding-right: 32px;
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+
+.params-container .group {
+  width: 100%;
+  padding-left: 16px;
+  padding-bottom: 16px;
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.params-container .group::before {
+  content: "";
+  position: absolute;
+  left: -32px;
+  top: 10px;
+  height: 2px;
+  background-color: var(--primary);
+  width: 32px;
+}
+
+.params-container .group::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 5px;
+  height: 12px;
+  width: 12px;
+  background-color: var(--primary);
+  border-radius: 50%;
+}
+
+.params-container .group .llm-options {
+  text-wrap: wrap;
+}
+
+.params-container .group .llm-options a {
+  background-color: var(--primary);
+  color: light;
+  border-radius: 6px;
+  padding-top: 1px;
+  padding-bottom: 2px;
+  padding-left: 8px;
+  color: white;
+  cursor: pointer;
+  padding-right: 8px;
+}
+
+.generate-hypercausal-btn {
+  width: 100%;
+  font-size: 20px;
+  max-width: 500px;
+}

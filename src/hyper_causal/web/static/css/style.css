@@ -7,6 +7,27 @@ nav {
   font-family: monospace;
 }
 
+.flexed {
+  display: flex;
+}
+
+.card-shadow {
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.large-font {
+  font-size: large;
+}
+
+.larger-font {
+  font-size: x-large;
+}
+
 .small-font {
   font-size: small;
 }

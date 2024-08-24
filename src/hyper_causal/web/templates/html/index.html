@@ -12,52 +12,130 @@
             crossorigin="anonymous"></script>
         <link rel="stylesheet" type="text/css"
             href="{{ url_for('static', filename='css/style.css') }}">
-
-        <script type="importmap">
-                {
-                  "imports": {
-                    "three": "https://unpkg.com/three@v0.161.0/build/three.module.js",
-                    "three/addons/": "https://unpkg.com/three@v0.161.0/examples/jsm/"
-                  }
-                }
-              </script>
-        <title>{{llm}} - HyperCausal</title>
+        <link rel="stylesheet" type="text/css"
+            href="{{ url_for('static', filename='css/index.css') }}">
+        <title>HyperCausal - Web Interface</title>
     </head>
 
-    <body data-input="{{input}}" data-maxTokens="{{max_new_tokens}}"
-        data-k="{{k}}" data-treestyle="{{tree_style}}">
+    <body>
 
-        <div id="scene-container">
-        </div>
-
-        <div id="tooltip">
-        </div>
-
-        <div id="UI" data-branch="none">
-            <div>
-                <div class="header bg-warning p-2 text-center">
-                    <h5 class="title w-100 text-center m-0"></h5>
-                    <p class="text-center prob font-italic m-0"></p>
-                </div>
-                <div class="content p-3">
-                    <p class="full-text">
-
-                    </p>
-                </div>
-                <button class="btn btn-primary rounded-0 w-100"
-                    id="continue-branch-btn">
-                    <i class="fas fa-code-branch"></i> Continue this branch
-                </button>
-                <label class="small-font text-center text-danger p-2">
-                    A branch can only be continued if the HyperCausal-Tree has
-                    finished or was stopped growing.</label>
+        <div class="bg-black pt-3 pb-3 card-shadow mb-4">
+            <div
+                class="container flexed align-items-center justify-content-between">
+                <h3
+                    class="mb-0 font-weight-bold text-light">HyperCausal</h3>
+                <a class="btn text-light m-0 clickable">
+                    <i
+                        class="m-0 large-font larger-font fab fa-github text-light"></i>
+                </a>
             </div>
         </div>
 
-        <div id="stop-generation-btn"
-            title="Stop the growing of the HyperCausal-Tree.">
-            <i class="fas fa-stop"></i>
+        <div class="container">
+
+            <h4
+                class="text-center font-weight-bold color-primary mb-3">Blueprint</h4>
+
+            <div class="params-container">
+
+                <!-- choose llm -->
+                <div class="group">
+                    <h5><span class="font-weight-bold color-primary">1)</span>
+                        Choose your LLM</h5>
+                    <p class="text">
+                        You can choose any Causal LLM from the 🤗 platform,
+                        see e.g.
+                        <a
+                            href="https://huggingface.co/models?pipeline_tag=text-generation&sort=trending">here</a>.
+                        Most popular:
+                        <span class="llm-options">
+                            <a>gpt2</a>
+                            <a>daryl149/llama-2-7b-chat-hf</a>
+                            <a>mistralai/Mistral-7B-v0.1</a>
+                            <a>mistralai/Mistral-7B-v0.1</a>
+                            <a>google/gemma-2b</a>
+                        </span>
+                    </p>
+                    <input type="text" class="form-control" class="w-100"
+                        placeholder="...username/modelname" />
+                </div>
+
+                <!-- choose prompt -->
+                <div class="group">
+                    <h5><span
+                            class="font-weight-bold color-primary">2)
+                        </span>Enter
+                        the Prompt</h5>
+                    <p class="text">
+                        Enter the prompt you wish the given LLM continue.</p>
+                    <textarea class="form-control"
+                        placeholder="Once upon a time..."></textarea>
+                </div>
+
+                <!-- choose more parameter -->
+                <div class="group">
+                    <h5><span
+                            class="font-weight-bold color-primary">3) </span>Set
+                        additional Parameters</h5>
+                    <div
+                        class="flexed justify-content-between align-items-center">
+                        <p class="text mb-0 mr-2"><i
+                                class="font-weight-bold font-large color-primary">k:</i>
+                            Alternative branches per token
+                            node:</p>
+                        <input class="text-center form-control"
+                            type="number" style="width:60px"
+                            value="2" max="10" min="1" />
+                    </div>
+
+                    <div
+                        class="flexed justify-content-between mt-3 align-items-center">
+                        <p class="text mb-0 mr-2"><i
+                                class="font-weight-bold font-large color-primary">temp:</i>
+                            The randomness of the LLM's output: </p>
+                        <input class="text-center form-control"
+                            type="number" style="width:100px" step="0.1"
+                            value="0.9" max="2" min="0" />
+                    </div>
+
+                    <div
+                        class="mt-3 flexed justify-content-between align-items-center">
+                        <p class="text mb-0 mr-2"><i
+                                class="font-weight-bold font-large color-primary">max_tokens:</i>
+                            The amount of inferred token-nodes to generate:</p>
+                        <input class="text-center form-control"
+                            type="number" style="width:60px"
+                            value="4" max="100" min="1" />
+                    </div>
+
+                    <div
+                        class="mt-3 flexed justify-content-between align-items-center">
+                        <p class="text mb-0 mr-2"><i
+                                class="font-weight-bold font-large color-primary">tree_style:</i>
+                            The order in which the token-nodes are being
+                            inferred within the network tree:</p>
+                        <select class="form-control w-auto">
+                            <option>Breadth-first</option>
+                            <option>Depth-first</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- go -->
+                <div class="group mb-0">
+                    <h5><span
+                            class="font-weight-bold color-primary">4)
+                        </span>Generate HyperCausal</h5>
+                    <div
+                        class="w-100 flexed align-items-center justify-content-center">
+                        <button
+                            class="generate-hypercausal-btn text-center mt-3 btn btn-warning card-shadow">
+                            <i class="fas fa-project-diagram"></i></button>
+                    </div>
+                </div>
+            </div>
         </div>
+
     </body>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
@@ -71,19 +149,6 @@
         src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
-    <script src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.0.0/chartjs-plugin-datalabels.min.js"
-        integrity="sha512-R/QOHLpV1Ggq22vfDAWYOaMd5RopHrJNMxi8/lJu8Oihwi4Ho4BRFeiMiCefn9rasajKjnx9/fTQ/xkWnkDACg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script
-        src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
-
     <script src="{{ url_for('static', filename='js/site.js') }}"
         type="module"></script>
 </html>
