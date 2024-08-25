@@ -127,3 +127,9 @@ nav {
   background-color: gray;
   color: white !important;
 }
+
+#hyperCausal-parameters-container {
+  position: fixed;
+  top: 0;
+  width: 100vw;
+}

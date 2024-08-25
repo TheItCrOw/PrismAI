@@ -23,6 +23,11 @@ let loop;
 let inputText;
 let maxTokens;
 let k;
+let beamWidth;
+let temp;
+let p;
+let llm;
+let decodingStrategy;
 let treeStyle;
 let controls;
 let raycaster;
@@ -38,11 +43,17 @@ const tooltipHeight = 80;
 
 class World {
     constructor(container) {
-        // Fetch the parameters of the user
-        inputText = $('body').data('input');
-        maxTokens = $('body').data('maxtokens');
-        k = $('body').data('k');
-        treeStyle = $('body').data('treestyle');
+        // Fetch the parameters of the user - this is basically the backend state.
+        const $body = $('body');
+        inputText = $body.data('input');
+        maxTokens = $body.data('maxtokens');
+        k = $body.data('k');
+        treeStyle = $body.data('treestyle');
+        beamWidth = $body.data('beamwidth');
+        temp = $body.data('temp');
+        p = $body.data('p');
+        llm = $body.data('llm')
+        decodingStrategy = $body.data('decodingstrategy');
 
         camera = createCamera();
         renderer = createRenderer();
@@ -75,7 +86,7 @@ class World {
     // Once the font loaded, we can interact with and create text 
     onFontLoaded(font) {
         // Init the world tree.
-        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k, treeStyle);
+        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k, treeStyle, decodingStrategy, temp, p, beamWidth, llm);
         console.log(worldTree);
         // First print the starting input text
         this.typewriteNextSequenceIntoScene(inputText, font);
@@ -178,7 +189,7 @@ class World {
         // Now, we get the next predicted token and continue for... let's say 6 more steps
         const steps = 6;
         for (let i = 0; i < steps; i++) {
-            const nextStep = await getNextTokenBranches(branch.getContext(), 1);
+            const nextStep = await getNextTokenBranches(branch.getContext(), k, temp, p, beamWidth, decodingStrategy, llm);
             const nextToken = nextStep.generated_text.trim();
             console.log(nextStep);
 

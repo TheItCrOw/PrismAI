@@ -12,6 +12,8 @@
             crossorigin="anonymous"></script>
         <link rel="stylesheet" type="text/css"
             href="{{ url_for('static', filename='css/style.css') }}">
+        <link rel="stylesheet" type="text/css"
+            href="{{ url_for('static', filename='css/index.css') }}">
 
         <script type="importmap">
                 {
@@ -25,12 +27,32 @@
     </head>
 
     <body data-input="{{input}}" data-maxTokens="{{max_new_tokens}}"
-        data-k="{{k}}" data-treestyle="{{tree_style}}">
+        data-p="{{p}}" data-beamwidth="{{beam_width}}"
+        data-k="{{k}}" data-treestyle="{{tree_style}}" data-temp="{{temp}}"
+        data-decodingstrategy="{{decoding_strategy}}" data-llm="{{llm}}">
 
         <div id="scene-container">
         </div>
 
         <div id="tooltip">
+        </div>
+
+        <!-- hyperCausal parameters -->
+        <div id="hyperCausal-parameters-container">
+            <div class="position-relative w-100">
+                <div
+                    class="pl-3 pr-3 pt-1 flex-wrap small-font pb-1 text-secondary w-100 flexed align-items-center justify-content-between">
+                    <label class="mt-1">llm: {{llm}}</label>
+                    <label class="mt-1">max_tokens: {{max_new_tokens}}</label>
+                    <label class="mt-1">decoding_strategy:
+                        {{decoding_strategy}}</label>
+                    <label class="mt-1">treestyle: {{tree_style}}</label>
+                    <label class="mt-1">temp: {{temp}}</label>
+                    <label class="mt-1">k: {{k}}</label>
+                    <label class="mt-1">p: {{p}}</label>
+                    <label class="mt-1">beam_width: {{beam_width}}</label>
+                </div>
+            </div>
         </div>
 
         <div id="UI" data-branch="none">

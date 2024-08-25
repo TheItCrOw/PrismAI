@@ -5,7 +5,8 @@ import { getNextTokenBranches } from '../systems/api.js';
 // The idea is to build a breadth first tree 
 
 class WorldTree {
-    constructor(scene, loop, camera, font, maxTokens, kBranches, treeStyle) {
+    constructor(scene, loop, camera, font, maxTokens, kBranches,
+        treeStyle, decodingStrategy, temp, p, beamWidth, llm) {
         this.queue = [];
         this.tree = [];
 
@@ -14,6 +15,11 @@ class WorldTree {
         this.font = font;
         this.camera = camera;
         this.maxTokens = maxTokens;
+        this.decodingStrategy = decodingStrategy;
+        this.temp = temp;
+        this.p = p;
+        this.llm = llm;
+        this.beamWidth = beamWidth;
         this.kBranches = kBranches;
         this.treeStyle = treeStyle;
         this.finishedGrowing = false;
@@ -90,7 +96,8 @@ class WorldTree {
                     this.kBranches,
                     this.maxTokens);
 
-            const nextBranches = await getNextTokenBranches(branch.getContext());
+            const nextBranches = await getNextTokenBranches(branch.getContext(), this.kBranches,
+                this.temp, this.p, this.beamWidth, this.decodingStrategy, this.llm);
             // console.log(nextBranches);
             const newStep = nextBranches.steps[0];
 

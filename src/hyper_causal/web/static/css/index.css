@@ -1,8 +1,3 @@
-:root {
-  --primary: MidnightBlue;
-  --black: rgb(32, 28, 28);
-}
-
 .bg-black {
   background-color: var(--black);
 }

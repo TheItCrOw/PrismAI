@@ -4,12 +4,12 @@
  * @param {} input 
  * @param {*} callback 
  */
-async function getNextTokenBranches(input, overwriteK = -1) {
+async function getNextTokenBranches(input, k, temp, p, beamWidth, decodingStrategy, llm) {
     const result = await $.ajax({
         type: 'POST',
         contentType: 'application/json',
         url: '/api/tokens/next',
-        data: JSON.stringify({ input: input, overwriteK: overwriteK }),
+        data: JSON.stringify({ input, k, temp, p, beamWidth, decodingStrategy, llm }),
         error: function (error) {
             console.log(error);
         }
