@@ -1,15 +1,3 @@
-.bg-black {
-  background-color: var(--black);
-}
-
-.color-primary {
-  color: var(--primary);
-}
-
-.text {
-  color: rgba(125, 125, 125, 1);
-}
-
 .top-hr {
   height: 1px;
   background-color: var(--primary);
@@ -73,6 +61,4 @@
 
 .generate-hypercausal-btn {
   width: 100%;
-  font-size: 20px;
-  max-width: 500px;
 }

@@ -1,9 +1,9 @@
 import argparse
-from flask import Flask, g, render_template, request, jsonify, current_app
+from flask import Flask, g, render_template, request, jsonify, current_app, redirect, url_for
 import sys
 import os
 import traceback
-from hyper_causal import HyperCausal # type: ignore
+from hyper_causal_dto import HyperCausal
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from causal_lm import CausalLM
@@ -17,12 +17,45 @@ def index():
 
     # Dependant on the app mode, we return different views as the index.
     if(app_mode == 'CLI'):
-        hyper_causal = get_hyper_causal_instance('CLI')
-        return get_hyper_causal_view(hyper_causal)
+        return redirect(url_for('get_hyper_causal', id='CLI'))
     elif(app_mode == 'WEB'):
         return render_template("html/index.html")
     else: 
-        return "Encountered unknown app mode - it must be either 'CLI' or 'WEB'."
+        return "Encountered unknown app mode - it must be either 'CLI' or 'WEB'. You should restart the service."
+
+@app.route('/hyper_causal')
+def get_hyper_causal():
+    try:
+        id = str(request.args.get('id'))
+        hyper_causal = get_hyper_causal_instance(id)
+        return get_hyper_causal_view(hyper_causal)
+    except Exception as ex:
+        print('Error getting a HyperCausal view:')
+        print(ex)
+        print(traceback.format_exc())
+        return "Error: Couldn't get the HyperCausal view: " + str(ex)
+
+@app.route('/api/hyper_causal/new', methods=['POST'])
+def post_new_hyper_causal_instance():
+    result = {
+        'status': 400,
+        'message': ''
+    }
+    try:
+        if request.is_json:
+            print(request.get_json())
+            hyper_causal = HyperCausal.from_request(request)
+            cache_hyper_causal_instance(hyper_causal)
+            # Create the LLM for the hypercausal if its not cached already.
+            get_llm(hyper_causal.model_name)
+            result['status'] = 200
+            result['id'] = hyper_causal.id
+    except Exception as ex:
+        result['message'] = str(ex)
+        print("Couldn't POST HyperCausal instance and create the Causal LLM: ")
+        print(ex)
+        print(traceback.format_exc())
+    return jsonify(result)
 
 @app.route('/api/tokens/next', methods=['POST'])
 def get_next_tokens():
@@ -31,24 +64,17 @@ def get_next_tokens():
     }
     try:
         if request.is_json:
-            data = request.get_json()
-            input = str(data.get('input'))
-            decoding_strategy = str(data.get('decodingStrategy'))
-            p = float(data.get('p'))
-            beam_width = int(data.get('beamWidth'))
-            temp = float(data.get('temp'))
-            k = int(data.get('k'))
-            model_name = str(data.get('llm'))
-            llm_instance = get_llm(model_name)
+            hyper_causal = HyperCausal.from_request(request)
+            llm_instance = get_llm(hyper_causal.model_name)
 
             next = llm_instance.generate_k_with_probs(
-                input_text=input,
+                input_text=hyper_causal.input,
                 target_idx=None,
-                k=k,
-                temp = temp,
-                p = p,
-                beam_width = beam_width,
-                decoding_strategy = decoding_strategy,
+                k=hyper_causal.k,
+                temp = hyper_causal.temp,
+                p = hyper_causal.p,
+                beam_width = hyper_causal.beam_width,
+                decoding_strategy = hyper_causal.decoding_strategy,
                 max_length=1)
             # print(next)
 
@@ -61,16 +87,7 @@ def get_next_tokens():
     return jsonify(result)
 
 def get_hyper_causal_view(hyper_causal_instance):
-    return render_template("html/hyper_causal.html", 
-                        llm=hyper_causal_instance.model_name, 
-                        input=hyper_causal_instance.input,
-                        max_new_tokens=hyper_causal_instance.max_tokens,
-                        k=hyper_causal_instance.k,
-                        tree_style=hyper_causal_instance.tree_style,
-                        decoding_strategy=hyper_causal_instance.decoding_strategy,
-                        p = hyper_causal_instance.p,
-                        temp = hyper_causal_instance.temp,
-                        beam_width = hyper_causal_instance.beam_width)
+    return render_template("html/hyper_causal.html", hyper_causal=hyper_causal_instance)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='HyperCausal CLI arguments')
@@ -90,23 +107,23 @@ def parse_arguments():
     parser.add_argument('--temp', type=float, default="0.9", help='Sets the temperature of the causal LLM, which stands for the randomness, sometimes referred to as "creativeness" of the model.')
     return parser.parse_args()
 
-def create_llm(llm_arg):
-    llm_instance = CausalLM(llm_arg, include_spacy=False)
+def create_llm(model_name : str) -> CausalLM:
+    llm_instance = CausalLM(model_name=model_name, include_spacy=False)
     return llm_instance
 
-def get_llm(model_name):
+def get_llm(model_name : str) -> CausalLM:
     if model_name not in current_app.config:
         current_app.config[model_name] = create_llm(model_name)
     return current_app.config[model_name]
 
-def cache_hyper_causal_instance(hyper_causal):
+def cache_hyper_causal_instance(hyper_causal : HyperCausal):
     if hyper_causal.id not in current_app.config:
         current_app.config[hyper_causal.id] = hyper_causal
 
-def get_hyper_causal_instance(hyper_causal_id):
+def get_hyper_causal_instance(hyper_causal_id : str) -> HyperCausal:
     return current_app.config[hyper_causal_id]
 
-def get_app_mode():
+def get_app_mode() -> str:
     if 'app_mode' not in current_app.config:
         args = parse_arguments()
         current_app.config['app_mode'] = args.app_mode

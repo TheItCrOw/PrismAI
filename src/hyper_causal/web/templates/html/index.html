@@ -68,7 +68,7 @@
                         the Prompt</h5>
                     <p class="text">
                         Enter the prompt you wish the given LLM continue.</p>
-                    <textarea class="form-control"
+                    <textarea class="form-control prompt-input"
                         placeholder="E.g.: Once upon a time..."></textarea>
                 </div>
 
@@ -83,7 +83,7 @@
                                 class="font-weight-bold font-large color-primary">k:</i>
                             Alternative branches per token
                             node:</p>
-                        <input class="text-center form-control"
+                        <input class="text-center form-control k-input"
                             type="number" style="width:60px"
                             value="2" max="10" min="1" />
                     </div>
@@ -93,7 +93,7 @@
                         <p class="text mb-0 mr-2"><i
                                 class="font-weight-bold font-large color-primary">temp:</i>
                             The randomness of the LLM's output: </p>
-                        <input class="text-center form-control"
+                        <input class="text-center form-control temp-input"
                             type="number" style="width:100px" step="0.1"
                             value="0.9" max="2" min="0" />
                     </div>
@@ -103,9 +103,9 @@
                         <p class="text mb-0 mr-2"><i
                                 class="font-weight-bold font-large color-primary">max_tokens:</i>
                             The amount of inferred token-nodes to generate:</p>
-                        <input class="text-center form-control"
+                        <input class="text-center form-control max-tokens-input"
                             type="number" style="width:60px"
-                            value="4" max="100" min="1" />
+                            value="5" max="100" min="1" />
                     </div>
 
                     <!-- tree style -->
@@ -115,7 +115,7 @@
                                 class="font-weight-bold font-large color-primary">tree_style:</i>
                             The order in which the token-nodes are being
                             inferred within the network tree:</p>
-                        <select class="form-control w-auto">
+                        <select class="form-control w-auto tree-style-select">
                             <option>breadth-first</option>
                             <option>depth-first</option>
                         </select>
@@ -132,7 +132,8 @@
                                     target="_blank">decoding strategy</a> for
                                 text
                                 generation:</p>
-                            <select class="form-control w-auto">
+                            <select
+                                class="form-control w-auto decoding-strategy-select">
                                 <option>top_k</option>
                                 <option>greedy_top_k</option>
                                 <option>top_p</option>
@@ -150,7 +151,7 @@
                                     Cutoff value <i>p</i> for aggregated
                                     probabilities
                                     of selected tokens:</p>
-                                <input class="text-center form-control"
+                                <input class="text-center form-control p-input"
                                     type="number" style="width:100px" step="0.1"
                                     value="0.15" max="1" min="0" />
                             </div>
@@ -162,7 +163,8 @@
                                         class="font-weight-bold font-large color-primary">beam_width:</i>
                                     <i>[beam_search decoding]</i>
                                     Number of beams:</p>
-                                <input class="text-center form-control"
+                                <input
+                                    class="text-center form-control beam-width-input"
                                     type="number" style="width:100px" step="0.1"
                                     value="5" max="20" min="1" />
                             </div>
@@ -172,14 +174,14 @@
 
                 <!-- go -->
                 <div class="group mb-0">
-                    <h5><span
-                            class="font-weight-bold color-primary">4)
-                        </span>Generate HyperCausal</h5>
                     <div
                         class="w-100 flexed align-items-center justify-content-center">
+                        <h5
+                            class="font-weight-bold color-primary mb-0 mr-3">4)</h5>
                         <button
-                            class="generate-hypercausal-btn text-center mt-3 btn btn-warning card-shadow">
-                            <i class="fas fa-project-diagram"></i></button>
+                            class="generate-hypercausal-btn text-center m-0 btn btn-warning card-shadow">
+                            Generate HyperCausal <i
+                                class="fas fa-project-diagram m-0"></i></button>
                     </div>
                 </div>
             </div>
@@ -190,6 +192,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
         crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
         integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
@@ -198,6 +201,8 @@
         src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
+    <script
+        src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
     <script src="{{ url_for('static', filename='js/index.js') }}"
         type="module"></script>
 </html>

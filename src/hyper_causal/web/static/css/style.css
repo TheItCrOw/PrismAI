@@ -3,12 +3,56 @@ nav {
     rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
 }
 
+:root {
+  --primary: MidnightBlue;
+  --black: rgb(32, 28, 28);
+}
+
 * {
   font-family: monospace;
 }
 
 .flexed {
   display: flex;
+}
+
+.rotate {
+  -webkit-animation: spin 4s linear infinite;
+  -moz-animation: spin 4s linear infinite;
+  animation: spin 4s linear infinite;
+}
+
+@-moz-keyframes spin {
+  100% {
+    -moz-transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes spin {
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+@keyframes spin {
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+.bg-black {
+  background-color: var(--black);
+}
+
+.color-primary {
+  color: var(--primary);
+}
+
+.text {
+  color: rgba(125, 125, 125, 1);
+}
+
+.bg-prime {
+  background-color: var(--primary);
 }
 
 .card-shadow {

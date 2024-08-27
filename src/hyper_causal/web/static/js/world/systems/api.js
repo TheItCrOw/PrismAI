@@ -17,4 +17,23 @@ async function getNextTokenBranches(input, k, temp, p, beamWidth, decodingStrate
     return result.result;
 }
 
-export { getNextTokenBranches };
+/**
+ * Posts a new HyperCausal parameters build
+ * @param {*} hyperCausalDto 
+ * @returns 
+ */
+async function postNewHyperCausal(hyperCausalDto) {
+    const result = await $.ajax({
+        type: 'POST',
+        contentType: 'application/json',
+        url: '/api/hyper_causal/new',
+        data: JSON.stringify(hyperCausalDto),
+        error: function (error) {
+            alert('There was a problem sending the request: ' + error);
+            console.log(error);
+        }
+    });
+    return result;
+}
+
+export { getNextTokenBranches, postNewHyperCausal };

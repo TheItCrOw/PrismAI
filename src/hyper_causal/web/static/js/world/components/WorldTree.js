@@ -63,7 +63,7 @@ class WorldTree {
      * Inits the WorldTree and starts the growing process.
      * @param {*} inputText 
      */
-    async plant(inputText, startPos) {
+    async plant(inputText, startPos, finishedCallback) {
         var root = new Branch(inputText, 0, startPos);
         root.setWorldObjectPos(new Vector3(startPos.x, 0, 0));
         root.setIsOriginalWay(true);
@@ -148,6 +148,8 @@ class WorldTree {
             }
             this.tree.push(branch);
         }
+
+        this.setFinishedGrowing(true);
     }
 }
 
