@@ -19,7 +19,7 @@ def index():
     if(app_mode == 'CLI'):
         return redirect(url_for('get_hyper_causal', id='CLI'))
     elif(app_mode == 'WEB'):
-        return render_template("html/index.html")
+        return render_template("html/index.html", instances=get_all_hyper_causal_instances())
     else: 
         return "Encountered unknown app mode - it must be either 'CLI' or 'WEB'. You should restart the service."
 
@@ -45,6 +45,8 @@ def post_new_hyper_causal_instance():
         if request.is_json:
             print(request.get_json())
             hyper_causal = HyperCausal.from_request(request)
+            # Empty spaces at the start and end makes it harder for the llm to predict.
+            hyper_causal.input = hyper_causal.input.strip()
             cache_hyper_causal_instance(hyper_causal)
             # Create the LLM for the hypercausal if its not cached already.
             get_llm(hyper_causal.model_name)
@@ -64,7 +66,7 @@ def get_next_tokens():
     }
     try:
         if request.is_json:
-            hyper_causal = HyperCausal.from_request(request)
+            hyper_causal = HyperCausal.from_request(request, False)
             llm_instance = get_llm(hyper_causal.model_name)
 
             next = llm_instance.generate_k_with_probs(
@@ -118,10 +120,13 @@ def get_llm(model_name : str) -> CausalLM:
 
 def cache_hyper_causal_instance(hyper_causal : HyperCausal):
     if hyper_causal.id not in current_app.config:
-        current_app.config[hyper_causal.id] = hyper_causal
+        current_app.config['instance_' + hyper_causal.id] = hyper_causal
 
 def get_hyper_causal_instance(hyper_causal_id : str) -> HyperCausal:
-    return current_app.config[hyper_causal_id]
+    return current_app.config['instance_' + hyper_causal_id]
+
+def get_all_hyper_causal_instances():
+    return [value for key, value in current_app.config.items() if key.startswith("instance_")]
 
 def get_app_mode() -> str:
     if 'app_mode' not in current_app.config:

@@ -6,7 +6,7 @@ class HyperCausal:
     '''
 
     @staticmethod
-    def from_request(request):
+    def from_request(request, validate_data=True):
         data = request.get_json()
         
         # Define expected properties and their types
@@ -23,28 +23,28 @@ class HyperCausal:
         }
         
         # Validate and extract data
-        validated_data = {}
-        for field, field_type in expected_fields.items():
-            if field not in data:
-                raise ValueError(f"Missing required property: {field}")
-            try:
-                validated_data[field] = field_type(data[field])
-                if(field_type == str and data[field] == ''):
-                    raise AssertionError(f"The string field '{field}' was empty.")
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Invalid type for property '{field}': expected {field_type.__name__}, got {type(data[field]).__name__}.")
+        if(validate_data):
+            for field, field_type in expected_fields.items():
+                if field not in data:
+                    raise ValueError(f"Missing required property: {field}")
+                try:
+                    data[field] = field_type(data[field])
+                    if(field_type == str and data[field] == ''):
+                        raise AssertionError(f"The string field '{field}' was empty.")
+                except (TypeError, ValueError) as e:
+                    raise ValueError(f"Invalid type for property '{field}': expected {field_type.__name__}, got {type(data[field]).__name__}.")
         
         # Create and return the HyperCausal object using validated data
         return HyperCausal(
-            input=validated_data['input'],
-            model_name=validated_data['llm'],
-            k=validated_data['k'],
-            max_tokens=validated_data['maxTokens'],
-            temp=validated_data['temp'],
-            p=validated_data['p'],
-            beam_width=validated_data['beamWidth'],
-            decoding_strategy=validated_data['decodingStrategy'],
-            tree_style=validated_data['treeStyle']
+            input=data['input'],
+            model_name=data['llm'],
+            k=data['k'],
+            max_tokens=None if 'maxTokens' not in data else data['maxTokens'],
+            temp=data['temp'],
+            p=data['p'],
+            beam_width=data['beamWidth'],
+            decoding_strategy=data['decodingStrategy'],
+            tree_style=None if 'treeStyle' not in data else data['treeStyle']
         )
 
     def __init__(self, input, model_name, k, max_tokens, temp, p, beam_width, decoding_strategy, tree_style):
@@ -58,3 +58,17 @@ class HyperCausal:
         self.p = p
         self.beam_width = beam_width
         self.decoding_strategy = decoding_strategy
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'model_name': self.model_name,
+            'input': self.input,
+            'k': self.k,
+            'max_tokens': self.max_tokens,
+            'tree_style': self.tree_style,
+            'temp': self.temp,
+            'p': self.p,
+            'beam_width': self.beam_width,
+            'decoding_strategy': self.decoding_strategy
+        }

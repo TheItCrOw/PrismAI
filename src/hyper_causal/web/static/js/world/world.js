@@ -171,7 +171,7 @@ class World {
         const branchId = $(this).closest('#UI').attr('data-branch');
         // This is the branch it was clicked on. That isnt necesseraly the
         // branch we want to continue as it could have children.
-        let clickedBranch = worldTree.getTree().find(b => b.getId() == branchId);
+        let clickedBranch = worldTree.getTree()[branchId];
         let branch = clickedBranch;
         while (branch.getChildren().length > 0) {
             let curChild = branch.getChildren().find(b => b.getOrder() == branch.getOrder());
@@ -191,7 +191,6 @@ class World {
         for (let i = 0; i < steps; i++) {
             const nextStep = await getNextTokenBranches(branch.getContext(), k, temp, p, beamWidth, decodingStrategy, llm);
             const nextToken = nextStep.generated_text.trim();
-            console.log(nextStep);
 
             let nextBranch = new Branch(
                 nextStep.steps[0].context + " " + nextToken,

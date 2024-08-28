@@ -19,172 +19,235 @@
 
     <body>
 
-        <div class="bg-black pt-3 pb-3 card-shadow mb-4">
+        <nav class="pt-3 pb-3 card-shadow">
             <div
                 class="container flexed align-items-center justify-content-between">
                 <h3
                     class="mb-0 font-weight-bold text-light">HyperCausal</h3>
                 <a class="btn text-light m-0 clickable">
                     <i
-                        class="m-0 large-font larger-font fab fa-github text-light"></i>
+                        class="m-0 larger-font fab fa-github text-light"></i>
                 </a>
             </div>
-        </div>
+        </nav>
 
         <div class="container">
 
-            <h4
-                class="text-center font-weight-bold color-primary mb-3">Blueprint</h4>
+            <div
+                class="flexed align-items-center justify-content-between navbar p-0">
+                <button
+                    class="btn rounded-0 show-blueprint-btn" data-id="new">
+                    <i class="fas fa-plus-circle"></i> HyperCausal
+                </button>
+                <button
+                    class="btn show-instances-btn text-center selected-navbar-btn"
+                    data-id="instances">Running
+                    Instances</button>
+            </div>
 
-            <div class="params-container">
+            <div class="views">
 
-                <!-- choose llm -->
-                <div class="group">
-                    <h5><span class="font-weight-bold color-primary">1)</span>
-                        Choose your LLM</h5>
-                    <p class="text">
-                        You can choose any Causal LLM from the 🤗 platform,
-                        see e.g.
-                        <a
-                            href="https://huggingface.co/models?pipeline_tag=text-generation&sort=trending">here</a>.
-                        Most popular:<br />
-                        <span class="llm-options">
-                            <a>gpt2</a>
-                            <a>daryl149/llama-2-7b-chat-hf</a>
-                            <a>mistralai/Mistral-7B-v0.1</a>
-                            <a>google/gemma-2b</a>
-                        </span>
-                    </p>
-                    <input type="text" class="form-control llm-name-input"
-                        class="w-100" value="gpt2"
-                        placeholder="...username/modelname" />
+                <div class="params-container" data-id="instances">
+                    {% if not instances %}
+                    <p class="text text-center small-font">No HyperCausal
+                        instances found.
+                        You
+                        can add new instances by pressing the "Plus" sign at the
+                        top
+                        left.</p>
+                    {% else %}
+                    <div class="instances-list mb-3">
+                        {% for instance in instances %}
+                        <div class="instance-item">
+                            <div
+                                class="flexed align-items-center justify-content-between mb-2">
+                                <p class="mb-0 color-primary">HyperCausal: <span
+                                        class="text">{{instance.id}}</span></p>
+                                <div class="flexed">
+                                    <button class="btn open-hyper-causal-btn"
+                                        data-id="{{instance.id}}"><i
+                                            class="fas fa-external-link-alt"></i></button>
+                                </div>
+                            </div>
+                            <hr class="mt-0 mb-2" />
+                            <div class="row m-0 p-0">
+                                {% for key, value in instance.to_dict().items()
+                                %}
+                                {% if key != 'id' and key != 'input' %}
+                                <!-- Skip the 'id' field if already displayed above -->
+                                <div class="col-md-3 m-0 p-0">
+                                    <p
+                                        class="mb-1 color-primary small-font"><span>{{key}}:</span>
+                                        <span class="text">{{ value
+                                            }}</span></p>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            <label
+                                class="color-primary small-font">input:</label>
+                            <textarea class="form-control w-100 small-font"
+                                style="min-height:75px"
+                                disabled>{{instance.input}}</textarea>
+                        </div>
+                        {%endfor%}
+                    </div>
+                    {% endif %}
                 </div>
 
-                <!-- choose prompt -->
-                <div class="group">
-                    <h5><span
-                            class="font-weight-bold color-primary">2)
-                        </span>Enter
-                        the Prompt</h5>
-                    <p class="text">
-                        Enter the prompt you wish the given LLM continue.</p>
-                    <textarea class="form-control prompt-input"
-                        placeholder="E.g.: Once upon a time..."></textarea>
-                </div>
+                <div class="params-container display-none" data-id="new">
 
-                <!-- choose more parameter -->
-                <div class="group">
-                    <h5><span
-                            class="font-weight-bold color-primary">3) </span>Set
-                        additional Parameters</h5>
-                    <div
-                        class="flexed justify-content-between align-items-center">
-                        <p class="text mb-0 mr-2"><i
-                                class="font-weight-bold font-large color-primary">k:</i>
-                            Alternative branches per token
-                            node:</p>
-                        <input class="text-center form-control k-input"
-                            type="number" style="width:60px"
-                            value="2" max="10" min="1" />
+                    <!-- choose llm -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">1) Choose
+                            your LLM</h6>
+                        <p class="text">
+                            You can choose any Causal LLM from the 🤗
+                            platform,
+                            see e.g.
+                            <a
+                                href="https://huggingface.co/models?pipeline_tag=text-generation&sort=trending">here</a>.
+                            Most popular:<br />
+                            <span class="llm-options">
+                                <a>gpt2</a>
+                                <a>daryl149/llama-2-7b-chat-hf</a>
+                                <a>mistralai/Mistral-7B-v0.1</a>
+                                <a>google/gemma-2b</a>
+                            </span>
+                        </p>
+                        <input type="text"
+                            class="form-control llm-name-input"
+                            class="w-100" value="gpt2"
+                            placeholder="...username/modelname" />
                     </div>
 
-                    <div
-                        class="flexed justify-content-between mt-3 align-items-center">
-                        <p class="text mb-0 mr-2"><i
-                                class="font-weight-bold font-large color-primary">temp:</i>
-                            The randomness of the LLM's output: </p>
-                        <input class="text-center form-control temp-input"
-                            type="number" style="width:100px" step="0.1"
-                            value="0.9" max="2" min="0" />
+                    <!-- choose prompt -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">2) Enter the
+                            Prompt</h6>
+                        <p class="text">
+                            Enter the prompt you wish the given LLM
+                            continue.</p>
+                        <textarea class="form-control prompt-input"
+                            placeholder="E.g.: Once upon a time..."></textarea>
                     </div>
 
-                    <div
-                        class="mt-3 flexed justify-content-between align-items-center">
-                        <p class="text mb-0 mr-2"><i
-                                class="font-weight-bold font-large color-primary">max_tokens:</i>
-                            The amount of inferred token-nodes to generate:</p>
-                        <input class="text-center form-control max-tokens-input"
-                            type="number" style="width:60px"
-                            value="5" max="100" min="1" />
-                    </div>
+                    <!-- choose more parameter -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">3) Set
+                            additional Parameters</h6>
+                        <div
+                            class="flexed justify-content-between align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">k:</i>
+                                Alternative branches per token
+                                node:</p>
+                            <input class="text-center form-control k-input"
+                                type="number" style="width:60px"
+                                value="2" max="10" min="1" />
+                        </div>
 
-                    <!-- tree style -->
-                    <div
-                        class="mt-3 flexed justify-content-between align-items-center">
-                        <p class="text mb-0 mr-2"><i
-                                class="font-weight-bold font-large color-primary">tree_style:</i>
-                            The order in which the token-nodes are being
-                            inferred within the network tree:</p>
-                        <select class="form-control w-auto tree-style-select">
-                            <option>breadth-first</option>
-                            <option>depth-first</option>
-                        </select>
-                    </div>
+                        <div
+                            class="flexed justify-content-between mt-3 align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">temp:</i>
+                                The randomness of the LLM's output: </p>
+                            <input
+                                class="text-center form-control temp-input"
+                                type="number" style="width:100px" step="0.1"
+                                value="0.9" max="2" min="0" />
+                        </div>
 
-                    <!-- decoding strategies -->
-                    <div>
                         <div
                             class="mt-3 flexed justify-content-between align-items-center">
                             <p class="text mb-0 mr-2"><i
-                                    class="font-weight-bold font-large color-primary">decoding_strategy:</i>
-                                The used <a
-                                    href="https://mlabonne.github.io/blog/posts/2023-06-07-Decoding_strategies.html"
-                                    target="_blank">decoding strategy</a> for
-                                text
-                                generation:</p>
+                                    class="font-weight-bold font-large color-primary">max_tokens:</i>
+                                The amount of inferred token-nodes to
+                                generate:</p>
+                            <input
+                                class="text-center form-control max-tokens-input"
+                                type="number" style="width:60px"
+                                value="5" max="100" min="1" />
+                        </div>
+
+                        <!-- tree style -->
+                        <div
+                            class="mt-3 flexed justify-content-between align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">tree_style:</i>
+                                The order in which the token-nodes are being
+                                inferred within the network tree:</p>
                             <select
-                                class="form-control w-auto decoding-strategy-select">
-                                <option>top_k</option>
-                                <option>greedy_top_k</option>
-                                <option>top_p</option>
-                                <option>beam_search</option>
+                                class="form-control w-auto tree-style-select">
+                                <option>breadth-first</option>
+                                <option>depth-first</option>
                             </select>
                         </div>
 
-                        <div class="pl-5">
-                            <!-- p -->
+                        <!-- decoding strategies -->
+                        <div>
                             <div
-                                class="flexed justify-content-between mt-3 align-items-center">
+                                class="mt-3 flexed justify-content-between align-items-center">
                                 <p class="text mb-0 mr-2"><i
-                                        class="font-weight-bold font-large color-primary">p:</i>
-                                    <i>[top_p decoding]</i>
-                                    Cutoff value <i>p</i> for aggregated
-                                    probabilities
-                                    of selected tokens:</p>
-                                <input class="text-center form-control p-input"
-                                    type="number" style="width:100px" step="0.1"
-                                    value="0.15" max="1" min="0" />
+                                        class="font-weight-bold font-large color-primary">decoding_strategy:</i>
+                                    The used <a
+                                        href="https://mlabonne.github.io/blog/posts/2023-06-07-Decoding_strategies.html"
+                                        target="_blank">decoding
+                                        strategy</a>
+                                    for
+                                    text
+                                    generation:</p>
+                                <select
+                                    class="form-control w-auto decoding-strategy-select">
+                                    <option>top_k</option>
+                                    <option>greedy_top_k</option>
+                                    <option>top_p</option>
+                                    <option>beam_search</option>
+                                </select>
                             </div>
 
-                            <!-- beam width -->
-                            <div
-                                class="flexed justify-content-between mt-3 align-items-center">
-                                <p class="text mb-0 mr-2"><i
-                                        class="font-weight-bold font-large color-primary">beam_width:</i>
-                                    <i>[beam_search decoding]</i>
-                                    Number of beams:</p>
-                                <input
-                                    class="text-center form-control beam-width-input"
-                                    type="number" style="width:100px" step="0.1"
-                                    value="5" max="20" min="1" />
+                            <div class="pl-5">
+                                <!-- p -->
+                                <div
+                                    class="flexed justify-content-between mt-3 align-items-center">
+                                    <p class="text mb-0 mr-2"><i
+                                            class="font-weight-bold font-large color-primary">p:</i>
+                                        <i>[top_p decoding]</i>
+                                        Cutoff value <i>p</i> for aggregated
+                                        probabilities
+                                        of selected tokens:</p>
+                                    <input
+                                        class="text-center form-control p-input"
+                                        type="number" style="width:100px"
+                                        step="0.1"
+                                        value="0.15" max="1" min="0" />
+                                </div>
+
+                                <!-- beam width -->
+                                <div
+                                    class="flexed justify-content-between mt-3 align-items-center">
+                                    <p class="text mb-0 mr-2"><i
+                                            class="font-weight-bold font-large color-primary">beam_width:</i>
+                                        <i>[beam_search decoding]</i>
+                                        Number of beams:</p>
+                                    <input
+                                        class="text-center form-control beam-width-input"
+                                        type="number" style="width:100px"
+                                        step="0.1"
+                                        value="5" max="20" min="1" />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- go -->
-                <div class="group mb-0">
-                    <div
-                        class="w-100 flexed align-items-center justify-content-center">
-                        <h5
-                            class="font-weight-bold color-primary mb-0 mr-3">4)</h5>
-                        <button
-                            class="generate-hypercausal-btn text-center m-0 btn btn-warning card-shadow">
-                            Generate HyperCausal <i
-                                class="fas fa-project-diagram m-0"></i></button>
-                    </div>
+                    <!-- go -->
+                    <button
+                        class="generate-hypercausal-btn text-center m-0 btn btn-warning rounded-0">
+                        Generate HyperCausal <i
+                            class="fas fa-project-diagram m-0"></i></button>
                 </div>
             </div>
+
         </div>
 
     </body>

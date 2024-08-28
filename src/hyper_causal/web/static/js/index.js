@@ -7,6 +7,27 @@ $('body').on('click', '.llm-options a', function () {
     $('.llm-name-input').val($(this).html());
 })
 
+/*
+ * Open HyperCausal instance 
+ */
+$('body').on('click', '.instances-list .instance-item .open-hyper-causal-btn', function () {
+    const id = $(this).data('id');
+    window.open(`/hyper_causal?id=${id}`, '_blank');
+})
+
+/**
+ * Switch between different navbar views
+ */
+$('body').on('click', '.navbar button', function () {
+    const target = $(this).data('id');
+    $('.navbar button').each(function () { $(this).removeClass('selected-navbar-btn') })
+    $(this).addClass('selected-navbar-btn');
+    $('.views .params-container').each(function () {
+        $(this).hide();
+    });
+    $(`.views .params-container[data-id="${target}"]`).fadeIn(50);
+})
+
 /**
  * Generates a new hypercausal instance and opens a new tab for it.
  */
@@ -38,7 +59,9 @@ $('body').on('click', '.generate-hypercausal-btn', async function () {
         }
 
         // Else, we open a new tab with the new HyperCausal id
-        window.open(`/hyper_causal?id=${result.id}`, '_blank');
+        //window.open(`/hyper_causal?id=${result.id}`, '_blank');
+        // After we've stored the new hypercausal, we reload the page
+        location.reload();
     } catch (ex) {
         alert('Unknown error occured client sided, has nothing to do with backend:\n ' + ex);
     } finally {

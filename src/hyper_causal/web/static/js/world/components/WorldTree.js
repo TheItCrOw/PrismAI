@@ -8,7 +8,7 @@ class WorldTree {
     constructor(scene, loop, camera, font, maxTokens, kBranches,
         treeStyle, decodingStrategy, temp, p, beamWidth, llm) {
         this.queue = [];
-        this.tree = [];
+        this.tree = {};
 
         this.scene = scene;
         this.loop = loop;
@@ -44,7 +44,7 @@ class WorldTree {
     }
 
     addBranchToTree(branch) {
-        this.tree.push(branch);
+        this.tree[branch.getId()] = branch;
     }
 
     getFinishedGrowing() {
@@ -76,7 +76,9 @@ class WorldTree {
             if (this.finishedGrowing) {
                 // There might be some branches which are in the datastructure
                 // but which haven't been placed yet. We can't use these, so delete them.
-                this.tree = this.tree.filter(b => b.getWorldObject() != null);
+                this.tree = Object.fromEntries(
+                    Object.entries(this.tree).filter(([key, value]) => value.getWorldObject() != null)
+                );
                 break;
             }
 
@@ -146,10 +148,11 @@ class WorldTree {
                 // else put it into the queue.
                 this.queue.push(nextBranch);
             }
-            this.tree.push(branch);
+            this.addBranchToTree(branch);
         }
 
         this.setFinishedGrowing(true);
+        console.log(this.tree);
     }
 }
 
