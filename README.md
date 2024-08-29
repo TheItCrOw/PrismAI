@@ -56,6 +56,8 @@ Open the host in the browser and wait a moment for three.js to load. Depending o
 
 #### Docker
 
+#### Pull and run
+
 Pull the docker image:
 
 ```
@@ -63,6 +65,20 @@ to be added
 ```
 
 Run it:
+
+```
+docker run --name hyper-causal -p 5678:5678 hyper-causal
+```
+
+#### Or: build image from repo
+
+Navigate to the root of the repo, then execute:
+
+```
+docker build -f src/hyper_causal/Dockerfile -t hyper-causal .
+```
+
+This should create the image. From there, run it:
 
 ```
 docker run --name hyper-causal -p 5678:5678 hyper-causal
