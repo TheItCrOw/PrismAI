@@ -4,6 +4,7 @@
 </div>
 
 > PrismAI is a framework that aims to make AI more transparent and the outputs of language models more comprehensible. PrismAI is currently built around the 🤗 API which makes it easy to wrap around existing and new projects. The project is a collection of components, each with different functionalities but bundled under the bonnet of PrismAI's primary goal.
+The repo is split into multiple components, each of which can be used independently or together.
 
 ## HyperCausal
 
@@ -22,6 +23,8 @@ HyperCausal is visualized with Three.js and uses PrismAI's core library to gener
 
 ### Usage
 
+#### Python environment
+
 Clone this repository
 
 ```
@@ -33,12 +36,12 @@ Create an environment and install requirements
 ```
 python -m venv venv
 venv\Scripts\activate
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 Navigate to the HyperCausal package
 
 ```
-cd src/hyper_causal
+cd PrismAI/src/hyper_causal
 ```
 
 Start the webbrowser with the given command line args
@@ -50,6 +53,20 @@ python main.py --host 127.0.0.1 --port 5678 --debug True --llm GPT2 --k 3 --max_
 *Please also refer to the `-h` command to get more detailled info about the parameters.* 
 
 Open the host in the browser and wait a moment for three.js to load. Depending on the targeted LLM and your setup this may take a moment. 
+
+#### Docker
+
+Pull the docker image:
+
+```
+to be added
+```
+
+Run it:
+
+```
+docker run --name hyper-causal -p 5678:5678 hyper-causal
+```
 
 ### Supported LLMs
 
