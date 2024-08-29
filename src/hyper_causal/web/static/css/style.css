@@ -181,3 +181,72 @@ nav {
   top: 0;
   width: 100vw;
 }
+
+.show-ui-tree-btn{
+  border-left:gray 1px solid;
+  border-right:gray 1px solid;
+  border-radius: 0;
+  color:gold;
+}
+
+#branch-ui-container{
+  border-top:1px gray solid;
+  border-bottom:1px gray solid;
+}
+
+#ui-tree-container{
+  width: 50%;
+  position: absolute;
+  right:0;
+  min-width: 300px;
+  max-width: 600px;
+  height: calc(100vh - 75px);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#ui-tree-container .layers .layer{
+  padding-left: 12px;
+  margin-bottom: 24px;
+  border-bottom: gray 1px solid;
+  color:lightgray;
+  padding-right: 12px;
+  font-size: small;
+}
+
+#ui-tree-container .layers .layer-content{
+  border-left:1px gray solid;
+  padding-left: 14px;
+  padding-bottom: 12px;
+  padding-right: 14px;
+  margin-left:6px;
+}
+
+#ui-tree-container .layers .layer-content .layer-branch{
+  position: relative;
+}
+
+#ui-tree-container .layers .layer-content .layer-branch::before{
+  position: absolute;
+  left:-14px;
+  content: '';
+  border-bottom: 1px gray solid;
+  top:50%;
+  height: 1px;
+  width: 12px;
+}
+
+#ui-tree-container .layers .toggle-btn{
+  border:1px gray solid;
+  border-radius: 0;
+  color:white;
+  font-size: 12px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}

@@ -1,5 +1,5 @@
 import { PerspectiveCamera } from 'https://cdn.skypack.dev/three@0.132.2';
-import { TWEEN } from 'https://unpkg.com/three@0.132.2/examples/jsm/libs/tween.module.min.js';
+import { TWEEN } from './../systems/tween.js';
 
 function createCamera() {
   const camera = new PerspectiveCamera(

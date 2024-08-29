@@ -60,6 +60,48 @@ class WorldTree {
     }
 
     /**
+     * Adds the given branch to the 2D tree UI
+     * @param {} branch 
+     */
+    addTo2DWorldTree(branch){
+        let $layersContainer = $('#ui-tree-container .layers');
+        const curLayer = branch.getDepth();
+
+        // Check if this layer already exists in the UI. Else, we create a container for it
+        let exists = false;
+        $layersContainer.find('.layer').each(function(){
+            if($(this).data('layer') == curLayer) {
+                exists = true;
+                return;
+            }
+        });
+
+        if(!exists){
+            $layersContainer.append(
+                `<div class="layer" data-layer=${curLayer}>
+                    <div class="flexed align-items-center justify-content-between">
+                        <label class="mb-0"><i class="fas fa-layer-group"></i> ${curLayer}</label>
+                        <button class="toggle-btn btn" onclick="$(this).closest('.layer').find('.layer-content').toggle()">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="layer-content">
+                    </div>
+                </div>`
+            );
+        }
+
+        // The layer container now definetly exists and we can fill in the branches
+        let $layer = $layersContainer.find(`.layer[data-layer=${curLayer}] .layer-content`);
+        $layer.append(
+            `<div class="layer-branch" data-id=${branch.getId()}>
+                ${branch.getContext()}
+            </div>`
+        )
+    }
+
+    /**
      * Inits the WorldTree and starts the growing process.
      * @param {*} inputText 
      */
@@ -89,7 +131,8 @@ class WorldTree {
                 branch = this.queue.pop();
 
             // We dont want the root to grow, that already exists.
-            if (branch.getDepth() != 0)
+            if (branch.getDepth() != 0){
+                // This makes the branch grow in 3D
                 branch.grow(this.font,
                     this.scene,
                     this.loop,
@@ -97,6 +140,9 @@ class WorldTree {
                     this.maxHeightPerDepth[branch.getDepth()],
                     this.kBranches,
                     this.maxTokens);
+                // And update the 2d tree UI with the new branch
+                this.addTo2DWorldTree(branch);
+            }
 
             const nextBranches = await getNextTokenBranches(branch.getContext(), this.kBranches,
                 this.temp, this.p, this.beamWidth, this.decodingStrategy, this.llm);
@@ -121,7 +167,7 @@ class WorldTree {
             for (var i = 0; i < tokensWithProb.length; i++) {
                 const next = tokensWithProb[i];
                 // We let the model end when it wants to.
-                if (next.token == '<|endoftext|>') continue;
+                if (next.token == '<|endoftext|>' || next.token === 'EOS') continue;
 
                 // For each new fetched branch, add a branch to the queue and repeat
                 const nextBranch = new Branch(

@@ -274,6 +274,10 @@ class World {
                         dehighlightEdge(cur.object);
                     }
                 }
+
+                // We want to showcase the current context of that branch in the UI
+                const $branchUiContainer = $('#branch-ui-container');
+                $branchUiContainer.find('.branch-sequence').html(hoveredObject.userData.context);
             } else if (hoveredObject.geometry.type == 'SphereGeometry') {
                 showTooltip(hoveredObject, hoveredObject.userData.token);
                 lastHoveredSphere = hoveredObject;

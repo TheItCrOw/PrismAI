@@ -44,7 +44,7 @@
         <div id="hyperCausal-parameters-container">
             <div class="position-relative w-100">
                 <div
-                    class="pl-3 pr-3 pt-1 flex-wrap small-font pb-1 text-secondary w-100 flexed align-items-center justify-content-between">
+                    class="pl-3 pr-3 pt-1 flex-wrap small-font pb-0 text w-100 flexed align-items-center justify-content-between">
                     <label class="mt-1">llm: {{hyper_causal.model_name}}</label>
                     <label class="mt-1">max_tokens:
                         {{hyper_causal.max_tokens}}</label>
@@ -57,6 +57,38 @@
                     <label class="mt-1">p: {{hyper_causal.p}}</label>
                     <label class="mt-1">beam_width:
                         {{hyper_causal.beam_width}}</label>
+                </div>
+            </div>
+            
+            <!-- branch tokens and probs -->
+            <div id="branch-ui-container">
+                <div class="flexed align-items-center justify-content-between pl-3 pr-3">
+                    <!-- placeholder -->
+                    <div></div>
+                    <p class="text-center small-font mb-0 text-light">
+                        <i class="fas fa-code-branch"></i>
+                        <span class="branch-sequence">{{hyper_causal.input}}</span>
+                    </p>
+                    <button class="btn show-ui-tree-btn">
+                        <i class="fas fa-tree"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- All branches with their inputs shown as the whole tree -->
+            <div id="ui-tree-container">
+                <!-- root layer -->
+                <div class="w-100 text-center small-font p-2">
+                    <label class="text-light">Root</label>
+                    <hr class="mt-0 mb-2 bg-secondary"/>
+                    <p class="text small-font bg-transparent w-100 text-light">{{hyper_causal.input}}</p>
+                </div>
+
+                <!-- other layers which we add dynamically -->
+                <div class="layers">
+
+                        
+
                 </div>
             </div>
         </div>

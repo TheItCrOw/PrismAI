@@ -2,6 +2,7 @@ import argparse
 from flask import Flask, g, render_template, request, jsonify, current_app, redirect, url_for
 import sys
 import os
+import torch
 import traceback
 from hyper_causal_dto import HyperCausal
 
@@ -110,6 +111,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def create_llm(model_name : str) -> CausalLM:
+    print('Create ' + model_name + 'to device: ' + str(torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     llm_instance = CausalLM(model_name=model_name, include_spacy=False)
     return llm_instance
 
