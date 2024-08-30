@@ -86,7 +86,13 @@ class World {
     // Once the font loaded, we can interact with and create text 
     onFontLoaded(font) {
         // Init the world tree.
-        worldTree = new WorldTree(scene, loop, camera, font, maxTokens, k, treeStyle, decodingStrategy, temp, p, beamWidth, llm);
+        worldTree = new WorldTree(scene, loop, camera, font,
+            maxTokens, k, treeStyle, decodingStrategy, temp,
+            p, beamWidth, llm, inputText,
+            (b) => this.handleHoveringOf2dUIBranch(b),
+            (b) => this.handleUnHoveringOf2dUIBranch(b),
+            (b) => this.handle2dUIBranchClicked(b)
+        );
         console.log(worldTree);
         // First print the starting input text
         this.typewriteNextSequenceIntoScene(inputText, font);
@@ -153,6 +159,37 @@ class World {
     }
 
     /**
+     * Gets called when a branch in the 2d ui is clicked
+     * @param {*} branch 
+     */
+    async handle2dUIBranchClicked(branch) {
+        createTargetView(branch);
+        controls.autoRotate = true;
+    }
+
+    /**
+     * Gets called when the user hovers over a 2d branch in the tree view.
+     * @param {*} branch 
+     */
+    async handleHoveringOf2dUIBranch(branch) {
+        const hoveredObject = branch.getWorldObject();
+        showTooltip(hoveredObject, branch.getStep());
+        lastHoveredSphere = hoveredObject;
+        recursvileyHighlightEdges(branch.getEdge());
+    }
+
+    /**
+     * Gets called when the user stops hovering over a 2d branch in the tree view.
+     * @param {*} branch 
+     */
+    async handleUnHoveringOf2dUIBranch(branch) {
+        for (var i = 0; i < lastHoveredLines.length; i++) {
+            dehighlightEdge(lastHoveredLines[i]);
+        }
+        $('#tooltip').hide();
+    }
+
+    /**
      * Stops the growing of the tree.
      * @param {*} event 
      */
@@ -216,6 +253,7 @@ class World {
             createTargetView(nextBranch);
 
             worldTree.addBranchToTree(nextBranch);
+            worldTree.addTo2DWorldTree(nextBranch);
 
             // So we continue the loop with the correct parent branch
             branch = nextBranch;
@@ -285,14 +323,12 @@ class World {
             }
         } else {
             $('html, body').css('cursor', 'default');
-            if (lastHoveredSphere != null) {
-            }
             if (lastHoveredCube != null)
                 lastHoveredCube.material.opacity = 0.5;
             for (var i = 0; i < lastHoveredLines.length; i++) {
                 dehighlightEdge(lastHoveredLines[i]);
             }
-            $('#tooltip').fadeOut(125);
+            $('#tooltip').hide();
         }
     }
 
@@ -366,7 +402,7 @@ function showTooltip(hoveredObject, content) {
     tooltip.innerText = content;
     tooltip.style.left = (x - tooltipWidth / 2) + 'px';
     tooltip.style.top = (y - tooltipHeight / 2 - 100) + 'px';
-    $(tooltip).fadeIn(200);
+    $(tooltip).show();
 }
 
 function showTooltipMoving(event, hoveredObject, content) {
@@ -380,5 +416,5 @@ function showTooltipMoving(event, hoveredObject, content) {
     tooltip.innerText = content;
     tooltip.style.left = mouseX - tooltipWidth / 2 + 'px';
     tooltip.style.top = mouseY - tooltipHeight - 60 + 'px';
-    $(tooltip).fadeIn(200);
+    $(tooltip).show();
 }

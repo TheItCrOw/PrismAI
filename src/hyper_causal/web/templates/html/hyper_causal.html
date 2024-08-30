@@ -26,7 +26,7 @@
         <title>{{hyper_causal.model_name}} - HyperCausal</title>
     </head>
 
-    <body data-input="{{hyper_causal.input}}"
+    <body id="hyperCausalBody" data-input="{{hyper_causal.input}}"
         data-maxTokens="{{hyper_causal.max_tokens}}"
         data-p="{{hyper_causal.p}}" data-beamwidth="{{hyper_causal.beam_width}}"
         data-k="{{hyper_causal.k}}" data-treestyle="{{hyper_causal.tree_style}}"
@@ -59,15 +59,17 @@
                         {{hyper_causal.beam_width}}</label>
                 </div>
             </div>
-            
+
             <!-- branch tokens and probs -->
             <div id="branch-ui-container">
-                <div class="flexed align-items-center justify-content-between pl-3 pr-3">
+                <div
+                    class="flexed align-items-center justify-content-between pl-3 pr-3">
                     <!-- placeholder -->
                     <div></div>
                     <p class="text-center small-font mb-0 text-light">
                         <i class="fas fa-code-branch"></i>
-                        <span class="branch-sequence">{{hyper_causal.input}}</span>
+                        <span
+                            class="branch-sequence">{{hyper_causal.input}}</span>
                     </p>
                     <button class="btn show-ui-tree-btn">
                         <i class="fas fa-tree"></i>
@@ -78,16 +80,16 @@
             <!-- All branches with their inputs shown as the whole tree -->
             <div id="ui-tree-container">
                 <!-- root layer -->
-                <div class="w-100 text-center small-font p-2">
-                    <label class="text-light">Root</label>
-                    <hr class="mt-0 mb-2 bg-secondary"/>
-                    <p class="text small-font bg-transparent w-100 text-light">{{hyper_causal.input}}</p>
+                <div class="w-100 text-center small-font p-2 header mb-2">
+                    <label class="text-light"><i class="fas fa-layer-group"></i>
+                        Root</label>
+                    <hr class="mt-0 mb-2 bg-secondary" />
+                    <p
+                        class="text small-font bg-transparent w-100 text-light font-italic mb-0">{{hyper_causal.input}}</p>
                 </div>
 
                 <!-- other layers which we add dynamically -->
                 <div class="layers">
-
-                        
 
                 </div>
             </div>

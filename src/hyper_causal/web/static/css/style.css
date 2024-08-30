@@ -3,6 +3,10 @@ nav {
     rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
 }
 
+#hyperCausalBody {
+  overflow: hidden;
+}
+
 :root {
   --primary: MidnightBlue;
   --black: rgb(32, 28, 28);
@@ -10,6 +14,10 @@ nav {
 
 * {
   font-family: monospace;
+}
+
+.underlined {
+  text-decoration: underline;
 }
 
 .flexed {
@@ -182,22 +190,22 @@ nav {
   width: 100vw;
 }
 
-.show-ui-tree-btn{
-  border-left:gray 1px solid;
-  border-right:gray 1px solid;
+.show-ui-tree-btn {
+  border-left: gray 1px solid;
+  border-right: gray 1px solid;
   border-radius: 0;
-  color:gold;
+  color: gold;
 }
 
-#branch-ui-container{
-  border-top:1px gray solid;
-  border-bottom:1px gray solid;
+#branch-ui-container {
+  border-top: 1px gray solid;
+  border-bottom: 1px gray solid;
 }
 
-#ui-tree-container{
+#ui-tree-container {
   width: 50%;
   position: absolute;
-  right:0;
+  right: 0;
   min-width: 300px;
   max-width: 600px;
   height: calc(100vh - 75px);
@@ -209,41 +217,75 @@ nav {
   border-left: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-#ui-tree-container .layers .layer{
+#ui-tree-container .header {
+  position: sticky;
+  background-color: rgba(25, 25, 25, 1);
+  z-index: 2;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+  top: 0;
+}
+
+#ui-tree-container .layers .layer {
   padding-left: 12px;
   margin-bottom: 24px;
   border-bottom: gray 1px solid;
-  color:lightgray;
+  color: lightgray;
   padding-right: 12px;
   font-size: small;
 }
 
-#ui-tree-container .layers .layer-content{
-  border-left:1px gray solid;
-  padding-left: 14px;
+#ui-tree-container .layers .layer-content {
+  border-left: 1px gray solid;
+  padding-left: 10px;
   padding-bottom: 12px;
-  padding-right: 14px;
-  margin-left:6px;
+  padding-right: 10px;
+  margin-left: 6px;
 }
 
-#ui-tree-container .layers .layer-content .layer-branch{
+#ui-tree-container .layers .layer-content .layer-branch {
   position: relative;
+  padding-bottom: 4px;
+  padding-top: 4px;
+  padding-left: 4px;
+  transition: 0.15s;
+  padding-right: 4px;
 }
 
-#ui-tree-container .layers .layer-content .layer-branch::before{
+#ui-tree-container .layers .layer-content .layer-branch:hover {
+  cursor: pointer;
+  background-color: ghostwhite;
+  transition: 0.15s;
+  color: black !important;
+}
+
+#ui-tree-container .layers .layer-content .selected-layer-branch {
+  background-color: gold;
+  color: black !important;
+}
+
+#ui-tree-container .layers .layer-content .layer-branch::before {
   position: absolute;
-  left:-14px;
-  content: '';
+  left: -10px;
+  content: "";
   border-bottom: 1px gray solid;
-  top:50%;
+  top: 50%;
   height: 1px;
   width: 12px;
 }
 
-#ui-tree-container .layers .toggle-btn{
-  border:1px gray solid;
+#ui-tree-container .layers .layer-content .layer-branch .dot {
+  position: absolute;
+  left: calc(-10px - 3.5px);
+  top: calc(50% - 2.5px);
+  border-radius: 50%;
+  height: 6px;
+  width: 6px;
+}
+
+#ui-tree-container .layers .toggle-btn {
   border-radius: 0;
-  color:white;
+  color: white;
   font-size: 12px;
   padding-left: 10px;
   padding-right: 10px;

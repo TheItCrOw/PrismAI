@@ -6,7 +6,8 @@ import { getNextTokenBranches } from '../systems/api.js';
 
 class WorldTree {
     constructor(scene, loop, camera, font, maxTokens, kBranches,
-        treeStyle, decodingStrategy, temp, p, beamWidth, llm) {
+        treeStyle, decodingStrategy, temp, p, beamWidth, llm, input,
+        uiBranchHoveredCallback, uiBranchUnHoveredCallback, uiBranchClickedCallback) {
         this.queue = [];
         this.tree = {};
 
@@ -15,6 +16,7 @@ class WorldTree {
         this.font = font;
         this.camera = camera;
         this.maxTokens = maxTokens;
+        this.input = input;
         this.decodingStrategy = decodingStrategy;
         this.temp = temp;
         this.p = p;
@@ -22,6 +24,10 @@ class WorldTree {
         this.beamWidth = beamWidth;
         this.kBranches = kBranches;
         this.treeStyle = treeStyle;
+        this.uiBranchHoveredCallback = uiBranchHoveredCallback;
+        this.uiBranchUnHoveredCallback = uiBranchUnHoveredCallback;
+        this.uiBranchClickedCallback = uiBranchClickedCallback;
+        this.lastClicked2dBranch = null;
         this.finishedGrowing = false;
 
         // The amount of branches we have at the final depth
@@ -63,20 +69,20 @@ class WorldTree {
      * Adds the given branch to the 2D tree UI
      * @param {} branch 
      */
-    addTo2DWorldTree(branch){
+    addTo2DWorldTree(branch) {
         let $layersContainer = $('#ui-tree-container .layers');
         const curLayer = branch.getDepth();
 
         // Check if this layer already exists in the UI. Else, we create a container for it
         let exists = false;
-        $layersContainer.find('.layer').each(function(){
-            if($(this).data('layer') == curLayer) {
+        $layersContainer.find('.layer').each(function () {
+            if ($(this).data('layer') == curLayer) {
                 exists = true;
                 return;
             }
         });
 
-        if(!exists){
+        if (!exists) {
             $layersContainer.append(
                 `<div class="layer" data-layer=${curLayer}>
                     <div class="flexed align-items-center justify-content-between">
@@ -94,11 +100,47 @@ class WorldTree {
 
         // The layer container now definetly exists and we can fill in the branches
         let $layer = $layersContainer.find(`.layer[data-layer=${curLayer}] .layer-content`);
-        $layer.append(
-            `<div class="layer-branch" data-id=${branch.getId()}>
-                ${branch.getContext()}
-            </div>`
-        )
+
+        const prob = branch.getProb();
+        let probColor = 'lightgray';
+        if (prob < 0.15) probColor = 'tomato';
+        else if (prob > 0.5) probColor = 'limegreen';
+
+        // We want to show the branches full text without the input.
+        const text = branch.getContext().replace(this.input, '');
+        const originalWayClass = branch.getIsOriginalWay() ? 'underlined font-weight-bold' : '';
+
+        const $branchElement = $(`
+            <div class="layer-branch ${originalWayClass}" data-id="${branch.getId()}">
+                <div class="w-100 flexed align-items-center justify-content-between">
+                    <p class="mb-0 mr-2">
+                        ${text}
+                    </p>
+                    <p class="mb-0 w-auto" style="color:${probColor}">
+                        ${prob} <i class="fas fa-code-branch"></i>
+                    </p>
+                </div>
+                <div style="background-color:${probColor}" class="dot"></div>
+            </div>
+        `);
+        $layer.append($branchElement);
+
+        // Attach any events here. Here we handle the hovering over and out of the branch.
+        $branchElement.hover(
+            () => this.uiBranchHoveredCallback(branch),
+            () => this.uiBranchUnHoveredCallback(branch)
+        );
+
+        $branchElement.click(() => {
+            // When clicked, we hihglight the current clicked branch and give a callback
+            const $container = $('#ui-tree-container .layers .layer-content');
+            if (this.lastClicked2dBranch != null)
+                $container.find(`.layer-branch[data-id="${this.lastClicked2dBranch.getId()}"]`).removeClass('selected-layer-branch');
+            let $clickedUIBranch = $container.find(`.layer-branch[data-id="${branch.getId()}"]`);
+            $clickedUIBranch.addClass('selected-layer-branch');
+            this.lastClicked2dBranch = branch;
+            this.uiBranchClickedCallback(branch);
+        });
     }
 
     /**
@@ -131,7 +173,7 @@ class WorldTree {
                 branch = this.queue.pop();
 
             // We dont want the root to grow, that already exists.
-            if (branch.getDepth() != 0){
+            if (branch.getDepth() != 0) {
                 // This makes the branch grow in 3D
                 branch.grow(this.font,
                     this.scene,
