@@ -58,16 +58,10 @@ Open the host in the browser and wait a moment for three.js to load. Depending o
 
 #### Pull and run
 
-Pull the docker image:
+From Hub:
 
 ```
-docker run -d --name primsai/hyper-causal -p 5678:5678 docker.texttechnologylab.org/prismai/hyper_causal/hyper-causal:0.0.1
-```
-
-Run it:
-
-```
-docker run --name hyper-causal -p 5678:5678 hyper-causal
+docker run -d --name hyper-causal -p 5678:5678 docker.texttechnologylab.org/prismai/hyper_causal/hyper-causal:0.0.1
 ```
 
 #### Or: build image from repo
