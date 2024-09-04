@@ -6,9 +6,20 @@
 > PrismAI is a framework that aims to make AI more transparent and the outputs of language models more comprehensible. PrismAI is currently built around the 🤗 API which makes it easy to wrap around existing and new projects. The project is a collection of components, each with different functionalities but bundled under the bonnet of PrismAI's primary goal.
 The repo is split into multiple components, each of which can be used independently or together.
 
+<hr />
+
 ## HyperCausal
 
-One component of PrismAI is **HyperCausal: A Spatial Hypertext Visualisation of Causal Language Model Decision Making.**
+<div>
+  <a href="https://dl.acm.org/doi/abs/10.1145/3648188.3677049"> <img src="https://img.shields.io/static/v1?label=Paper%3A&message=ACM&color=blue&style=for-the-badge&logo=researchgate" alt="Paper: - ACM"></a>
+  <br/>
+</div>
+
+<div>
+  One component of PrismAI is <b>HyperCausal: Visualizing Causal Inference in 3D Hypertext</b>, presented and published at the 35th ACM Conference on Hypertext and Social Media, 2024.
+  <br/>
+  <br/>
+</div>
 
 ![Loop2-ezgif com-optimize](https://github.com/TheItCrOw/PrismAI/assets/49918134/9701cc27-2e13-4529-92d6-a0a48e801533)
 
@@ -47,7 +58,7 @@ cd PrismAI/src/hyper_causal
 Start the webbrowser with the given command line args
 
 ```
-python main.py --host 127.0.0.1 --port 5678 --debug True --llm GPT2 --k 3 --max_tokens 7 --input "Once upon a time there was a boy" --tree-style breadth-first
+python main.py
 ```
 
 *Please also refer to the `-h` command to get more detailled info about the parameters.* 
