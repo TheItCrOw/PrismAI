@@ -71,10 +71,11 @@ def preprocess_dataset():
 def generate_data(label, amount, ensemble):
     # https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
     detector = Detector(models=ensemble)
-    essays = get_essays(label, 0, amount)
+    essays = get_essays(label, 4000, amount)
     results = []
     # Let the detector do the work
     essays_avg = []
+    counter = 0
     for essay in essays:
         try:
             if(len(essay) < 500):
@@ -86,6 +87,8 @@ def generate_data(label, amount, ensemble):
             avg = output['ensemble_results'][0]['avg_prob']
             print(f'\n========== AVG: {avg} ==========\n')
             essays_avg.append(avg)
+            print("Done with: " + str(counter))
+            counter += 1
         except Exception as ex:
             print('Skipped one essay.')
             print(ex)
@@ -117,10 +120,9 @@ def test_detector(ensemble):
 
 
 if __name__ == '__main__':
-    #ensemble = ['gpt2', 'mistralai/Mistral-7B-v0.1', 'daryl149/llama-2-7b-chat-hf']
-    #for model in ensemble:
-    #    generate_data(0, 4000, [model])
-    #    generate_data(1, 4000, [model])
+    ensemble = ['gpt2', 'mistralai/Mistral-7B-v0.1', 'daryl149/llama-2-7b-chat-hf']
+    ensemble = ['google/gemma-2b']
+    for model in ensemble:
+        generate_data(0, 6000, [model])
+        generate_data(1, 6000, [model])
 
-    ensemble = ['gpt2']
-    test_detector(ensemble)
