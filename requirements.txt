@@ -73,7 +73,7 @@ notebook_shim==0.2.3
 numpy==1.26.3
 overrides==7.7.0
 packaging==23.2
-pandas==2.2.0
+pandas
 pandocfilters==1.5.1
 parso==0.8.3
 pillow==10.2.0
@@ -91,8 +91,6 @@ pyparsing==3.1.1
 python-dateutil==2.8.2
 python-json-logger==2.0.7
 pytz==2023.3.post1
-pywin32==306; platform_system == "Windows"
-pywinpty==2.0.12; platform_system == "Windows"
 PyYAML==6.0.1
 pyzmq==25.1.2
 referencing==0.32.1
