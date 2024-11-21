@@ -95,6 +95,7 @@ class Branch {
         // Add the edge to the parent branch
         this.edge = createEdge(this.parentBranch.getWorldObjectPos(), this.worldObjectPos);
         this.edge.userData.prob = `${this.prob}%`;
+        this.edge.userData.context = this.context;
         this.edge.userData.parentEdge = this.getParentBranch().getEdge();
         this.edge.userData.defaultColor = 'white';
         this.edge.userData.toBranch = this;

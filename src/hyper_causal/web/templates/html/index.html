@@ -12,57 +12,250 @@
             crossorigin="anonymous"></script>
         <link rel="stylesheet" type="text/css"
             href="{{ url_for('static', filename='css/style.css') }}">
-
-        <script type="importmap">
-                {
-                  "imports": {
-                    "three": "https://unpkg.com/three@v0.161.0/build/three.module.js",
-                    "three/addons/": "https://unpkg.com/three@v0.161.0/examples/jsm/"
-                  }
-                }
-              </script>
-        <title>{{llm}} - HyperCausal</title>
+        <link rel="stylesheet" type="text/css"
+            href="{{ url_for('static', filename='css/index.css') }}">
+        <title>HyperCausal - Web Interface</title>
     </head>
 
-    <body data-input="{{input}}" data-maxTokens="{{max_new_tokens}}"
-        data-k="{{k}}" data-treestyle="{{tree_style}}">
+    <body>
 
-        <div id="scene-container">
-        </div>
-
-        <div id="tooltip">
-        </div>
-
-        <div id="UI" data-branch="none">
-            <div>
-                <div class="header bg-warning p-2 text-center">
-                    <h5 class="title w-100 text-center m-0"></h5>
-                    <p class="text-center prob font-italic m-0"></p>
-                </div>
-                <div class="content p-3">
-                    <p class="full-text">
-
-                    </p>
-                </div>
-                <button class="btn btn-primary rounded-0 w-100"
-                    id="continue-branch-btn">
-                    <i class="fas fa-code-branch"></i> Continue this branch
-                </button>
-                <label class="small-font text-center text-danger p-2">
-                    A branch can only be continued if the HyperCausal-Tree has
-                    finished or was stopped growing.</label>
+        <nav class="pt-3 pb-3 card-shadow">
+            <div
+                class="container flexed align-items-center justify-content-between">
+                <h3
+                    class="mb-0 font-weight-bold text-light">HyperCausal</h3>
+                <a class="btn text-light m-0 clickable">
+                    <i
+                        class="m-0 larger-font fab fa-github text-light"></i>
+                </a>
             </div>
+        </nav>
+
+        <div class="container">
+
+            <div
+                class="flexed align-items-center justify-content-between navbar p-0">
+                <button
+                    class="btn rounded-0 show-blueprint-btn" data-id="new">
+                    <i class="fas fa-plus-circle"></i> HyperCausal
+                </button>
+                <button
+                    class="btn show-instances-btn text-center selected-navbar-btn"
+                    data-id="instances">Running
+                    Instances</button>
+            </div>
+
+            <div class="views">
+
+                <div class="params-container" data-id="instances">
+                    {% if not instances %}
+                    <p class="text text-center small-font">No HyperCausal
+                        instances found.
+                        You
+                        can add new instances by pressing the "Plus" sign at the
+                        top
+                        left.</p>
+                    {% else %}
+                    <div class="instances-list mb-3">
+                        {% for instance in instances %}
+                        <div class="instance-item">
+                            <div
+                                class="flexed align-items-center justify-content-between mb-2">
+                                <p class="mb-0 color-primary">HyperCausal: <span
+                                        class="text">{{instance.id}}</span></p>
+                                <div class="flexed">
+                                    <button class="btn open-hyper-causal-btn"
+                                        data-id="{{instance.id}}"><i
+                                            class="fas fa-external-link-alt"></i></button>
+                                </div>
+                            </div>
+                            <hr class="mt-0 mb-2" />
+                            <div class="row m-0 p-0">
+                                {% for key, value in instance.to_dict().items()
+                                %}
+                                {% if key != 'id' and key != 'input' %}
+                                <!-- Skip the 'id' field if already displayed above -->
+                                <div class="col-md-3 m-0 p-0">
+                                    <p
+                                        class="mb-1 color-primary small-font"><span>{{key}}:</span>
+                                        <span class="text">{{ value
+                                            }}</span></p>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            <label
+                                class="color-primary small-font">input:</label>
+                            <textarea class="form-control w-100 small-font"
+                                style="min-height:75px"
+                                disabled>{{instance.input}}</textarea>
+                        </div>
+                        {%endfor%}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="params-container display-none" data-id="new">
+
+                    <!-- choose llm -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">1) Choose
+                            your LLM</h6>
+                        <p class="text">
+                            You can choose any Causal LLM from the 🤗
+                            platform,
+                            see e.g.
+                            <a
+                                href="https://huggingface.co/models?pipeline_tag=text-generation&sort=trending">here</a>.
+                            Most popular:<br />
+                            <span class="llm-options">
+                                <a>gpt2</a>
+                                <a>daryl149/llama-2-7b-chat-hf</a>
+                                <a>mistralai/Mistral-7B-v0.1</a>
+                                <a>google/gemma-2b</a>
+                            </span>
+                        </p>
+                        <input type="text"
+                            class="form-control llm-name-input"
+                            class="w-100" value="gpt2"
+                            placeholder="...username/modelname" />
+                    </div>
+
+                    <!-- choose prompt -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">2) Enter the
+                            Prompt</h6>
+                        <p class="text">
+                            Enter the prompt you wish the given LLM
+                            continue.</p>
+                        <textarea class="form-control prompt-input"
+                            placeholder="E.g.: Once upon a time..."></textarea>
+                    </div>
+
+                    <!-- choose more parameter -->
+                    <div class="group">
+                        <h6 class="font-weight-bold color-primary">3) Set
+                            additional Parameters</h6>
+                        <div
+                            class="flexed justify-content-between align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">k:</i>
+                                Alternative branches per token
+                                node:</p>
+                            <input class="text-center form-control k-input"
+                                type="number" style="width:60px"
+                                value="2" max="10" min="1" />
+                        </div>
+
+                        <div
+                            class="flexed justify-content-between mt-3 align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">temp:</i>
+                                The randomness of the LLM's output: </p>
+                            <input
+                                class="text-center form-control temp-input"
+                                type="number" style="width:100px" step="0.1"
+                                value="0.9" max="2" min="0" />
+                        </div>
+
+                        <div
+                            class="mt-3 flexed justify-content-between align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">max_tokens:</i>
+                                The amount of inferred token-nodes to
+                                generate:</p>
+                            <input
+                                class="text-center form-control max-tokens-input"
+                                type="number" style="width:60px"
+                                value="5" max="100" min="1" />
+                        </div>
+
+                        <!-- tree style -->
+                        <div
+                            class="mt-3 flexed justify-content-between align-items-center">
+                            <p class="text mb-0 mr-2"><i
+                                    class="font-weight-bold font-large color-primary">tree_style:</i>
+                                The order in which the token-nodes are being
+                                inferred within the network tree:</p>
+                            <select
+                                class="form-control w-auto tree-style-select">
+                                <option>breadth-first</option>
+                                <option>depth-first</option>
+                            </select>
+                        </div>
+
+                        <!-- decoding strategies -->
+                        <div>
+                            <div
+                                class="mt-3 flexed justify-content-between align-items-center">
+                                <p class="text mb-0 mr-2"><i
+                                        class="font-weight-bold font-large color-primary">decoding_strategy:</i>
+                                    The used <a
+                                        href="https://mlabonne.github.io/blog/posts/2023-06-07-Decoding_strategies.html"
+                                        target="_blank">decoding
+                                        strategy</a>
+                                    for
+                                    text
+                                    generation:</p>
+                                <select
+                                    class="form-control w-auto decoding-strategy-select">
+                                    <option>top_k</option>
+                                    <option>greedy_top_k</option>
+                                    <option>top_p</option>
+                                    <option>beam_search</option>
+                                </select>
+                            </div>
+
+                            <div class="pl-5">
+                                <!-- p -->
+                                <div
+                                    class="flexed justify-content-between mt-3 align-items-center">
+                                    <p class="text mb-0 mr-2"><i
+                                            class="font-weight-bold font-large color-primary">p:</i>
+                                        <i>[top_p decoding]</i>
+                                        Cutoff value <i>p</i> for aggregated
+                                        probabilities
+                                        of selected tokens:</p>
+                                    <input
+                                        class="text-center form-control p-input"
+                                        type="number" style="width:100px"
+                                        step="0.1"
+                                        value="0.15" max="1" min="0" />
+                                </div>
+
+                                <!-- beam width -->
+                                <div
+                                    class="flexed justify-content-between mt-3 align-items-center">
+                                    <p class="text mb-0 mr-2"><i
+                                            class="font-weight-bold font-large color-primary">beam_width:</i>
+                                        <i>[beam_search decoding]</i>
+                                        Number of beams:</p>
+                                    <input
+                                        class="text-center form-control beam-width-input"
+                                        type="number" style="width:100px"
+                                        step="0.1"
+                                        value="5" max="20" min="1" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- go -->
+                    <button
+                        class="generate-hypercausal-btn text-center m-0 btn btn-warning rounded-0">
+                        Generate HyperCausal <i
+                            class="fas fa-project-diagram m-0"></i></button>
+                </div>
+            </div>
+
         </div>
 
-        <div id="stop-generation-btn"
-            title="Stop the growing of the HyperCausal-Tree.">
-            <i class="fas fa-stop"></i>
-        </div>
     </body>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
         crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
         integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
@@ -71,19 +264,8 @@
         src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
-    <script src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.0.0/chartjs-plugin-datalabels.min.js"
-        integrity="sha512-R/QOHLpV1Ggq22vfDAWYOaMd5RopHrJNMxi8/lJu8Oihwi4Ho4BRFeiMiCefn9rasajKjnx9/fTQ/xkWnkDACg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script
         src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
-
-    <script src="{{ url_for('static', filename='js/site.js') }}"
+    <script src="{{ url_for('static', filename='js/index.js') }}"
         type="module"></script>
 </html>
