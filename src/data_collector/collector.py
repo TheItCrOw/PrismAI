@@ -33,6 +33,12 @@ class Collector(ABC):
         }
         with open(os.path.join(self.get_data_path(), 'meta.json'), 'w') as fp:
             json.dump(self.meta, fp)
+        self.collected = True
+
+    def get_count(self):
+        if self.meta is None:
+            raise BaseException("The collector hasn't collected yet - can't get the count. Call 'collect()' first.")
+        return int(self.meta['total_collected'])
 
     @abstractmethod
     def get_folder_path(self):
