@@ -41,32 +41,42 @@ class OpenLegalDataCollector(Collector):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
         }
         pages = 4000
+        ex_catched = 0
         for i in range(1, pages + 1):
-            url = self.query_url.replace('{PAGE}', str(i))
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+            try:
+                url = self.query_url.replace('{PAGE}', str(i))
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
 
-            for article in data['results']:
-                text = article['content']
-                item = CollectedItem(
-                    text=text,
-                    chunks=text.split('\n'),
-                    domain='open_legal_data',
-                    date=article['date'],
-                    source=url,
-                    lang='de-DE'
-                )
-                items.append(item)
-                total_counter += 1
+                for article in data['results']:
+                    text = article['content']
+                    item = CollectedItem(
+                        text=text,
+                        chunks=text.split('\n'),
+                        domain='open_legal_data',
+                        date=article['date'],
+                        source=url,
+                        lang='de-DE'
+                    )
+                    items.append(item)
+                    total_counter += 1
 
-                if total_counter % 100 == 0 and total_counter != 0:
-                    df = pd.DataFrame([item.__dict__ for item in items])
-                    df.to_json(os.path.join(output, f"articles_{total_counter // 100}.json"))
-                    print(f"Legal articles collected: {i}/{pages}")
-                    items = []
+                    if total_counter % 100 == 0 and total_counter != 0:
+                        df = pd.DataFrame([item.__dict__ for item in items])
+                        df.to_json(os.path.join(output, f"articles_{total_counter // 100}.json"))
+                        print(f"Legal articles collected: {i}/{pages}")
+                        items = []
+        
+                time.sleep(3)
+            except Exception as ex:
+                print('Exception thrown while fetching legal endpoints, probably request timeout.')
+                print(ex)
+                ex_catched += 1
             
-            time.sleep(1)
+            if(ex_catched > 10):
+                print("Too many exceptions caught, we stop this collection and store the current data.")
+                break
 
         df = pd.DataFrame([item.__dict__ for item in items])
         total_counter += len(df)

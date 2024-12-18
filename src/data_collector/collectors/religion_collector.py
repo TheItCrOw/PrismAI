@@ -46,7 +46,7 @@ class ReligionCollector(Collector):
                         if chapter is None or chapter != chapter_num:
                             chapter = chapter_num
                         if book is None:
-                            book = 'Genesis' # Default
+                            book = 'Genesis'
 
                         key = (book, chapter)
                         data[key]['text'] += verse_text + ' '
