@@ -14,6 +14,9 @@ from urllib.parse import urljoin
 from datetime import datetime
 from collected_item import CollectedItem
 from data_collector.collector import Collector
+from megaparse import MegaParse
+from langchain_openai import ChatOpenAI
+from megaparse.parser.unstructured_parser import UnstructuredParser
 
 class ArxivCollector(Collector):
 
@@ -74,7 +77,18 @@ class ArxivCollector(Collector):
                 print(f"Error downloading {pdf_url}: {e}")
                 continue
 
-    def extract_text(self, pdf_file_path):
+    def extract_text_megaparse(self, pdf_file_path):
+        '''
+        Extracing text from PDF to Markdown with MegaParse:
+        https://github.com/QuivrHQ/MegaParse/tree/main
+        '''
+        parser = UnstructuredParser()
+        megaparse = MegaParse(parser)
+        response = megaparse.load(pdf_file_path)
+        print(response)
+        return "", ""
+
+    def extract_text_fitz(self, pdf_file_path):
         try:
             # Open the PDF file
             with fitz.open(pdf_file_path) as pdf:
@@ -111,7 +125,7 @@ class ArxivCollector(Collector):
             return
 
         # We search for arxiv papers using the search_url above, then we scrape   
-        self.scrape(skip=1000)
+        # self.scrape(skip=1000)
 
         # If we're done scraping the papers, we need to extract the text and do our collector thing.
         counter = 1
@@ -120,11 +134,11 @@ class ArxivCollector(Collector):
             file_path = os.path.join(input, name)
 
             try:
-                text, chunks = self.extract_text(file_path)
+                text, chunks = self.extract_text_megaparse(file_path)
                 if text == '':
                     print('Paper extraction gave empty text, skipping it.')
                     continue
-
+                return
                 item = CollectedItem(
                     text=text,
                     chunks=chunks,
