@@ -24,7 +24,7 @@ class OpenLegalDataCollector(Collector):
     def collect(self, force=False):
         super().collect('OPEN LEGAL DATA ARTICLES')
 
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(output, exist_ok=True)
         os.makedirs(input, exist_ok=True)
         total_counter = 0

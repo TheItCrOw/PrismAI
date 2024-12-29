@@ -14,9 +14,6 @@ from urllib.parse import urljoin
 from datetime import datetime
 from collected_item import CollectedItem
 from data_collector.collector import Collector
-from megaparse import MegaParse
-from langchain_openai import ChatOpenAI
-from megaparse.parser.unstructured_parser import UnstructuredParser
 
 class ArxivCollector(Collector):
 
@@ -54,7 +51,7 @@ class ArxivCollector(Collector):
         ''''
         From the Arxiv page, scrapes the pdfs and puts them into the raw input directory
         '''
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(input, exist_ok=True)
 
         for i in range(1 + skip, skip + paper_amount):
@@ -81,12 +78,9 @@ class ArxivCollector(Collector):
         '''
         Extracing text from PDF to Markdown with MegaParse:
         https://github.com/QuivrHQ/MegaParse/tree/main
+        Update: Yeah no, it's way too buggy. Appearntly it only works with python 3.11
         '''
-        parser = UnstructuredParser()
-        megaparse = MegaParse(parser)
-        response = megaparse.load(pdf_file_path)
-        print(response)
-        return "", ""
+        pass
 
     def extract_text_fitz(self, pdf_file_path):
         try:
@@ -110,7 +104,7 @@ class ArxivCollector(Collector):
     def collect(self, force=False):
         super().collect('ARXIV PAPERS')
 
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(output, exist_ok=True)
         os.makedirs(input, exist_ok=True)
 
@@ -125,7 +119,7 @@ class ArxivCollector(Collector):
             return
 
         # We search for arxiv papers using the search_url above, then we scrape   
-        # self.scrape(skip=1000)
+        self.scrape(skip=1000)
 
         # If we're done scraping the papers, we need to extract the text and do our collector thing.
         counter = 1
@@ -134,11 +128,10 @@ class ArxivCollector(Collector):
             file_path = os.path.join(input, name)
 
             try:
-                text, chunks = self.extract_text_megaparse(file_path)
+                text, chunks = self.extract_text_fitz(file_path)
                 if text == '':
                     print('Paper extraction gave empty text, skipping it.')
                     continue
-                return
                 item = CollectedItem(
                     text=text,
                     chunks=chunks,

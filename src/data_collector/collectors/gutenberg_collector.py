@@ -41,7 +41,7 @@ class GutenbergCollector(Collector):
     def collect(self, force=False):
         super().collect('GUTENBERG')
         
-        _, output, meta = self.get_paths()
+        _, output, meta = self.get_collection_paths()
         # This collector is different, as we already have the Gutenberg files in
         # XMI on our local storage, so THAT is our input directory
         inputs = [

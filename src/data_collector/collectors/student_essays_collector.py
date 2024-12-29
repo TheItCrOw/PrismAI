@@ -19,7 +19,7 @@ class StudentEssaysCollector(Collector):
     def collect(self, force=False):
         super().collect('STUDENT ESSAYS')
 
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(output, exist_ok=True)
 
         # we iterate through the exported essays and get the their texts

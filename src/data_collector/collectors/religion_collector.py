@@ -18,7 +18,7 @@ class ReligionCollector(Collector):
         pass
 
     def read_english_bible(self):
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         data = defaultdict(lambda: {'text': '', 'chunks': []})
 
         with open(os.path.join(input, 'en_bible.txt'), 'r', encoding='utf-8') as file:
@@ -65,7 +65,7 @@ class ReligionCollector(Collector):
         return pd.DataFrame(rows)
 
     def read_german_bible(self):
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         data = defaultdict(lambda: {'text': '', 'chunks': []})
 
         with open(os.path.join(input, 'de_bible.txt'), 'r', encoding='utf-8') as f:
@@ -101,7 +101,7 @@ class ReligionCollector(Collector):
     def collect(self, force=False):
         super().collect('RELIGION')
         
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(output, exist_ok=True)
 
         total_counter = 0

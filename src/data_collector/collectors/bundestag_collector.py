@@ -18,7 +18,7 @@ class BundestagCollector(Collector):
     def collect(self, force=False):
         super().collect('BUNDESTAG')
         
-        input, output, meta = self.get_paths()
+        input, output, meta = self.get_collection_paths()
         os.makedirs(output, exist_ok=True)
 
         # we iterate through the exported speeches and get the their texts
