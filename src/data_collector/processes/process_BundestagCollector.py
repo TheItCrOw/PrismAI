@@ -41,7 +41,7 @@
 # - English
 # - German
 
-# In[13]:
+# In[1]:
 
 
 import sys
@@ -51,14 +51,13 @@ import pandas as pd
 import time
 import argparse
 
-from IPython.display import Javascript
 from dotenv import load_dotenv
 from tqdm.notebook import tqdm
 
 load_dotenv()
 
 
-# In[14]:
+# In[2]:
 
 
 class CONFIG:
@@ -67,7 +66,7 @@ class CONFIG:
     DATA_ROOT_PATH = os.getenv('DATA_ROOT_PATH')
 
 
-# In[15]:
+# In[3]:
 
 
 # So that it includes local imports. This is some next level python shit import
@@ -75,7 +74,7 @@ sys.path.insert(0, CONFIG.SRC_ROOT_PATH)
 sys.path.insert(0, CONFIG.SRC_ROOT_PATH_COLL)
 
 
-# In[16]:
+# In[4]:
 
 
 import collector
@@ -122,14 +121,33 @@ reload()
 # In[ ]:
 
 
+synthesize_per_collector = 1750
+skip_per_collector = 0
+force_synth = False
 run_as_script = False
+
+
+# In[ ]:
+
+
 parser = argparse.ArgumentParser(description="Worker Script for the orchestrator.")
 
 parser.add_argument("--collectors", nargs="+", help="Pass in the collectors of this instance. Only works of --script-mode=True")
+parser.add_argument("--take", type=int, default=100, help="Determine how many items we synthesize per collector.")
+parser.add_argument("--skip", type=int, default=0, help="Determine how many items we skip per collector.")
+parser.add_argument("--force", type=bool, default=False, help="Determine if we force a synthesization.")
 
 try:
     args = parser.parse_args()
+    print('=== Passed Parameters:')
+    print('= Collectors:')
     print(args.collectors)
+    print(f'= Take: {str(args.take)}')
+    synthesize_per_collector = args.take
+    print(f'= Skip: {str(args.skip)}')
+    skip_per_collector = args.skip
+    print(f'= Force: {str(args.force)}')
+    force_synth = args.force
     run_as_script = True
 except:
     print('CLI parsing failed - this is hence run as a notebook.')
@@ -137,7 +155,7 @@ except:
 
 # ## Init the Collectors
 
-# In[18]:
+# In[6]:
 
 
 # If this is run as a script, that means the orcestrator passes in a list of collectors we are supposed to use.
@@ -147,9 +165,7 @@ if run_as_script:
     for collector_name in args.collectors:
         try:
             module_name, class_name = collector_name.rsplit(".", 1)
-            # get the class
             CollectorClass = getattr(eval(module_name), class_name)
-            # Instantiate the collector
             collector_instance = CollectorClass(CONFIG.DATA_ROOT_PATH)
             collection.append(collector_instance)
         except AttributeError as e:
@@ -157,9 +173,9 @@ if run_as_script:
 else:
     collection = [
         collectors.bundestag_collector.BundestagCollector(CONFIG.DATA_ROOT_PATH),
-        collectors.house_of_commons_collector.HouseOfCommonsCollector(CONFIG.DATA_ROOT_PATH),
-        collectors.student_essays_collector.StudentEssaysCollector(CONFIG.DATA_ROOT_PATH),
-        collectors.arxiv_collector.ArxivCollector(CONFIG.DATA_ROOT_PATH),
+        #collectors.house_of_commons_collector.HouseOfCommonsCollector(CONFIG.DATA_ROOT_PATH),
+        #collectors.student_essays_collector.StudentEssaysCollector(CONFIG.DATA_ROOT_PATH),
+        #collectors.arxiv_collector.ArxivCollector(CONFIG.DATA_ROOT_PATH),
         #collectors.spiegel_collector.SpiegelCollector(CONFIG.DATA_ROOT_PATH),
         #collectors.cnn_news_collector.CNNNewsCollector(CONFIG.DATA_ROOT_PATH),
         #collectors.open_legal_data_collector.OpenLegalDataCollector(CONFIG.DATA_ROOT_PATH),
@@ -169,14 +185,13 @@ else:
         #collectors.blog_corpus_collector.BlogCorpusCollector(CONFIG.DATA_ROOT_PATH)
     ]
 
-# Check the loaded collection
 if run_as_script:
     print(f'Dynamically created collectors: {[type(c).__name__ for c in collection]}')
 else:
     print(f'Manually defined collectors: {[type(c).__name__ for c in collection]}')
 
 
-# In[6]:
+# In[7]:
 
 
 total_items = 0
@@ -203,7 +218,7 @@ print(f'All collectors finished. Total data items: {total_items}')
 # - Trying to rewrite the whole text as an AI agent.
 # - Trying different models?
 
-# In[7]:
+# In[8]:
 
 
 agents = [
@@ -213,14 +228,7 @@ agents = [
 
 # Foreach agent, we go through all different collectors and synthesize the texts.
 
-# In[8]:
-
-
-take_per_collector = 1750
-force_synth = True
-
-
-# In[ ]:
+# In[11]:
 
 
 # Foreach collector (so foreach domain)
@@ -240,12 +248,18 @@ for coll in tqdm(collection, desc='Collectors', leave=False):
             df_count += 1
             continue
 
-        if items_count >= take_per_collector:
+        if items_count >= synthesize_per_collector:
             break
 
         for index, row in tqdm(in_df.iterrows(), desc="Current Chunk Items", total=len(in_df), leave=False):
-            if items_count >= take_per_collector:
+            if items_count >= synthesize_per_collector:
                 break
+            
+            # If we have a skip parameter, skip as long as we need to.
+            if skip_per_collector > 0 and items_count <= skip_per_collector:
+                items_count += 1
+                continue
+            
             item = collected_item.CollectedItem.from_dict(row)
 
             # We have multiple agents. Foreach agent, synthesize the item
