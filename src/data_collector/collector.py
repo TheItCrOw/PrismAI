@@ -66,7 +66,7 @@ class Collector(ABC):
         '''
         Reads the synthesized items from cache and returns a list of dataframes.
         '''
-        if len(self.)
+        pass
 
     def get_collected_items_dfs(self) -> pd.DataFrame:
         '''
