@@ -10,21 +10,24 @@ import os
 notebook_path = 'main.ipynb'
 output_dir = 'processes'
 log_dir = 'processes/logs'
+take = 10000
+skip = 1750
+force = False
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
 collectors = [
-    'collectors.bundestag_collector.BundestagCollector',
-    'collectors.house_of_commons_collector.HouseOfCommonsCollector',
-    'collectors.student_essays_collector.StudentEssaysCollector',
-    'collectors.arxiv_collector.ArxivCollector',
-    'collectors.spiegel_collector.SpiegelCollector',
-    'collectors.cnn_news_collector.CNNNewsCollector',
+    #'collectors.bundestag_collector.BundestagCollector',
+    #'collectors.house_of_commons_collector.HouseOfCommonsCollector',
+    #'collectors.student_essays_collector.StudentEssaysCollector',
+    #'collectors.arxiv_collector.ArxivCollector',
+    #'collectors.spiegel_collector.SpiegelCollector',
+    #'collectors.cnn_news_collector.CNNNewsCollector',
     #'collectors.open_legal_data_collector.OpenLegalDataCollector',
-    #'collectors.euro_court_cases_collector.EuroCourtCasesCollector',
+    'collectors.euro_court_cases_collector.EuroCourtCasesCollector',
     #'collectors.religion_collector.ReligionCollector',
-    #'collectors.gutenberg_collector.GutenbergCollector',
+    'collectors.gutenberg_collector.GutenbergCollector',
     #'collectors.blog_corpus_collector.BlogCorpusCollector'
 ]
 
@@ -55,7 +58,11 @@ if __name__ == '__main__':
         print(f'Running {script_path} in the background...')
         with open(log_path, "w") as log_file:
             subprocess.Popen(
-                ["python", '-u', script_path, '--collectors', collector],
+                ["python", '-u', script_path, 
+                 '--collectors', collector, 
+                 '--take', take, 
+                 '--skip', skip,
+                 '--force', force],
                 stdout=log_file,
                 stderr=log_file,
                 start_new_session=True  # set the process detached

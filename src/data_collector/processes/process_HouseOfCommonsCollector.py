@@ -48,6 +48,7 @@ import sys
 import importlib
 import os
 import pandas as pd
+import time
 import argparse
 
 from IPython.display import Javascript
@@ -215,7 +216,7 @@ agents = [
 # In[8]:
 
 
-take_per_collector = 250
+take_per_collector = 1750
 force_synth = True
 
 
@@ -230,18 +231,19 @@ for coll in tqdm(collection, desc='Collectors', leave=False):
     collector_progress = tqdm(items_dfs, desc=f'Processing Collector Chunks of: {coll.get_folder_path().upper()}', leave=False)
     
     # We dont have a single huge dataframe file, but smaller chunks instead.
-    for df in collector_progress:
+    for in_df in collector_progress:
+        start = time.time()
         synth_items = []
         stored_path = os.path.join(coll.get_synthesized_path(), f"items_{df_count}.json")
         if not force_synth and os.path.exists(stored_path):
-            # print('Skipping this chunk as it is already synthesized and stored. Use force=True otherwise.')
+            print('Skipping this chunk as it is already synthesized and stored. Use force=True otherwise.')
             df_count += 1
             continue
 
         if items_count >= take_per_collector:
             break
 
-        for index, row in tqdm(df.iterrows(), desc="Current Chunk Items", total=len(df), leave=False):
+        for index, row in tqdm(in_df.iterrows(), desc="Current Chunk Items", total=len(in_df), leave=False):
             if items_count >= take_per_collector:
                 break
             item = collected_item.CollectedItem.from_dict(row)
@@ -254,15 +256,22 @@ for coll in tqdm(collection, desc='Collectors', leave=False):
                         'synth_obj': agent.synthesize_collected_item(item, coll)
                     })
                     synth_items.append(item)
-                    items_count += 1
                 except Exception as ex:
                     print(f'There was an error with collector {coll.get_folder_path()} from source df chunk {df_count}')
                     print(ex)
+            items_count += 1
 
         # Save synthesized items of that collected chunk.
-        df = pd.DataFrame([item.__dict__ for item in synth_items])
-        df.to_json(stored_path)
+        out_df = pd.DataFrame([item.__dict__ for item in synth_items])
+        out_df.to_json(stored_path)
         df_count += 1
+        end = time.time()
+        if run_as_script:
+            print(f'Stored and wrote {len(out_df)} items to file {stored_path}')
+            print(f'Total items done: {str(items_count)}')
+            print(f'Chunk synthesization time: {str(end - start)}')
+
+print('Done with synthesization.')
 
 
 # In[ ]:

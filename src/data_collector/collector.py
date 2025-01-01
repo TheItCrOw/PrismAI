@@ -42,29 +42,31 @@ class Collector(ABC):
             json.dump(self.meta, fp)
         self.collected = True
 
-    def read_collected_from_cache(self, force=False):
+    def read_from_cache(self, level):
         '''
-        Reads the collected items, that are lying in the cache, into the RAM
+        Reads items of various levels (raw, collected, synthesized), that are lying in the cache, into the RAM
         '''
-        if (len(self.collected_items_dfs) > 0) and not force:
-            print('Items already read from cache, skipping. If you want to re-read them by force, use force=True')
-            return
-        
-        _, output, meta = self.get_collection_paths()
+        path = os.path.join(self.get_data_path(), level)
         dataframes = []
 
-        for filename in os.listdir(output):
+        for filename in os.listdir(path):
             if filename.endswith('.json'): 
-                file_path = os.path.join(output, filename)
+                file_path = os.path.join(path, filename)
                 with open(file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     dataframes.append(pd.DataFrame(data))
 
         if dataframes:
-            self.collected_items_dfs = dataframes
-            #self.items_df = pd.concat(dataframes, ignore_index=True)
+            return dataframes
+            #return pd.concat(dataframes, ignore_index=True)
         else:
-            self.collected_items_dfs = pd.DataFrame()
+            return pd.DataFrame()
+
+    def get_synthesized_items_dfs(self) -> pd.DataFrame:
+        '''
+        Reads the synthesized items from cache and returns a list of dataframes.
+        '''
+        if len(self.)
 
     def get_collected_items_dfs(self) -> pd.DataFrame:
         '''
@@ -72,7 +74,7 @@ class Collector(ABC):
         Each dataframe serves as a smaller chunk of the whole data as to reduce large files.
         '''
         if(len(self.collected_items_dfs) == 0):
-            self.read_collected_from_cache()
+            self.collected_items_dfs = self.read_from_cache('collected')
         return self.collected_items_dfs
 
     def get_count(self):
