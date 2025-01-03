@@ -92,7 +92,7 @@ class DecodingStrategy():
     def top_k(self, logits):
         '''Standard top k decoding with multinomial sampling'''
         softmaxed_logits = torch.nn.functional.softmax(logits, dim=-1)
-        top_k_indices = torch.multinomial(softmaxed_logits, self.k)
+        top_k_indices = torch.multinomial(softmaxed_logits, min(self.k, len(softmaxed_logits[0])))
         top_k_tokens = [self.tokenizer.decode(t ,skip_special_tokens=False).strip() for t in top_k_indices[0]]
         top_k_probs = softmaxed_logits[0][top_k_indices[0]]
         top_1_prob = top_k_probs[top_k_probs.argmax()]

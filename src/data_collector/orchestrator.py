@@ -10,16 +10,19 @@ import os
 notebook_path = 'main.ipynb'
 output_dir = 'processes'
 log_dir = 'processes/logs'
-take = 10000
-skip = 1750
-force = False
+take = 100
+skip = 0
+collect = False
+synthesize = False
+extract_features = True
+force = True
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
 collectors = [
     'collectors.bundestag_collector.BundestagCollector',
-    #'collectors.house_of_commons_collector.HouseOfCommonsCollector',
+    'collectors.house_of_commons_collector.HouseOfCommonsCollector',
     #'collectors.student_essays_collector.StudentEssaysCollector',
     #'collectors.arxiv_collector.ArxivCollector',
     #'collectors.spiegel_collector.SpiegelCollector',
@@ -29,6 +32,10 @@ collectors = [
     #'collectors.religion_collector.ReligionCollector',
     #'collectors.gutenberg_collector.GutenbergCollector',
     #'collectors.blog_corpus_collector.BlogCorpusCollector'
+]
+
+causal_llms = [
+    'GPT2'
 ]
 
 if __name__ == '__main__':
@@ -42,10 +49,10 @@ if __name__ == '__main__':
 
         # Step 1: Convert the Jupyter notebook to a Python script
         convert_command = [
-            'jupyter', 'nbconvert', '--to', 'script',
+            'jupyter', 'nbconvert', '--to', 'python',
             notebook_path,
             '--output-dir', output_dir,
-            '--output', out
+            '--output', out + '.py'
         ]
         print('Converting notebook to script...')
         subprocess.run(convert_command, check=True)
@@ -57,12 +64,25 @@ if __name__ == '__main__':
 
         print(f'Running {script_path} in the background...')
         with open(log_path, "w") as log_file:
+            command = [
+                'python', '-u', script_path,
+                '--collectors', collector,
+                '--causal_llms', ','.join(causal_llms),
+                '--take', str(take),
+                '--skip', str(skip)
+            ]
+            
+            if force:
+                command.append('--force')
+            if collect:
+                command.append('--collect')
+            if synthesize:
+                command.append('--synth')
+            if extract_features:
+                command.append('--featured')
+            
             subprocess.Popen(
-                ['python', '-u', script_path, 
-                 '--collectors', collector, 
-                 '--take', str(take), 
-                 '--skip', str(skip),
-                 '--force', str(force)],
+                command,
                 stdout=log_file,
                 stderr=log_file,
                 start_new_session=True  # set the process detached

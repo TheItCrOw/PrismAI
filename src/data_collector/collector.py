@@ -9,8 +9,9 @@ class Collector(ABC):
     
     def __init__(self, root_path):
         self.data_root_path = root_path
-        self.meta = None
+        self.meta = self.read_meta_file()
         self.collected_items_dfs = pd.DataFrame()
+        self.synthesized_items_dfs = pd.DataFrame()
         self.synthetization_prompt = None
 
     def get_collection_paths(self):
@@ -23,12 +24,21 @@ class Collector(ABC):
         path = os.path.join(self.get_data_path(), 'synthesized')
         os.makedirs(path, exist_ok=True)
         return path
+    
+    def get_feature_space_path(self):
+        path = os.path.join(self.get_data_path(), 'feature_space')
+        os.makedirs(path, exist_ok=True)
+        return path
 
     def get_data_path(self):
         return os.path.join(self.data_root_path, self.get_folder_path())
 
     def read_meta_file(self):
-        with open(os.path.join(self.get_data_path(), 'meta.json')) as handle:
+        path = os.path.join(self.get_data_path(), 'meta.json')
+        if not os.path.exists(path): 
+            return None
+
+        with open(path) as handle:
             self.meta = json.loads(handle.read())
             return self.meta
         
@@ -47,6 +57,9 @@ class Collector(ABC):
         Reads items of various levels (raw, collected, synthesized), that are lying in the cache, into the RAM
         '''
         path = os.path.join(self.get_data_path(), level)
+        if not os.path.exists(path):
+            return pd.DataFrame
+        
         dataframes = []
 
         for filename in os.listdir(path):
@@ -66,7 +79,9 @@ class Collector(ABC):
         '''
         Reads the synthesized items from cache and returns a list of dataframes.
         '''
-        pass
+        if(len(self.synthesized_items_dfs) == 0):
+            self.synthesized_items_dfs = self.read_from_cache('synthesized')
+        return self.synthesized_items_dfs
 
     def get_collected_items_dfs(self) -> pd.DataFrame:
         '''
@@ -76,6 +91,11 @@ class Collector(ABC):
         if(len(self.collected_items_dfs) == 0):
             self.collected_items_dfs = self.read_from_cache('collected')
         return self.collected_items_dfs
+
+    def get_synthesized_count(self):
+        if self.synthesized_items_dfs is None:
+            raise BaseException("The collector hasn't synthesized yet - can't get the count. Call 'collect()' first.")
+        return sum(len(df) for df in self.synthesized_items_dfs)
 
     def get_count(self):
         if self.meta is None:

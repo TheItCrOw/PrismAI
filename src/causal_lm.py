@@ -1,22 +1,25 @@
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoModelForCausalLM, AutoTokenizer
-from IPython.display import display, Markdown, Latex
 import numpy as np
 import torch
 import spacy
 import random
 
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from IPython.display import display, Markdown, Latex
 from decoding_strategy import DecodingStrategy
 
 class CausalLM():
 
     def __init__(self, model_name, include_spacy=True):
         self.model_name = model_name
+        self.nlp = None
         if(include_spacy):
             self.nlp = spacy.load("en_core_web_sm")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, 
+                                                       trust_remote_code=True)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name,
+                                                          trust_remote_code=True)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+        self.model.to(self.device).eval()
         self.set_seed(42)
         print(f'Created model {model_name} to device {self.device}')
 
@@ -28,11 +31,13 @@ class CausalLM():
         random.seed(seed)
 
     def generate(self, context, max_length=256):
-        input_ids = self.tokenizer.encode(context, return_tensors='pt').to(self.device)
-        # Check if the input sequence is longer than the model's maximum sequence length
-        if input_ids.size(1) > self.model.config.max_position_embeddings:
-            print("Input sequence is too long and will be truncated.")
-            input_ids = input_ids[:, -(self.model.config.max_position_embeddings / 2)]
+        input_ids = self.tokenizer.encode(context, return_tensors="pt").to(self.device)
+        max_input_length = self.model.config.max_position_embeddings - max_length
+        
+        # Truncate the input if it exceeds the maximum length allowed for generation
+        if input_ids.size(1) > max_input_length:
+            print(f"Input sequence is too long. Truncating to fit within {max_input_length} tokens.")
+            input_ids = input_ids[:, :max_input_length]
 
         attention_mask = torch.ones(input_ids.shape, device=input_ids.device)
         output = self.model.generate(
@@ -57,12 +62,12 @@ class CausalLM():
                               decoding_strategy='top_k'):
 
         input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
-        # Check if the input sequence is longer than the model's maximum sequence length
-        if input_ids.size(1) > self.model.config.max_position_embeddings:
-            print("Input sequence is too long and will be truncated.")
-            # TODO: current_ids is broken after truncation above if needed!
-            return None
-            input_ids = input_ids[:, -self.model.config.max_position_embeddings]
+        max_input_length = self.model.config.max_position_embeddings - max_length
+        
+        # Truncate the input if it exceeds the maximum length allowed for generation
+        if input_ids.size(1) > max_input_length:
+            #print(f"Input sequence is too long. Truncating to fit within {max_input_length} tokens.")
+            input_ids = input_ids[:, :max_input_length]
 
         current_ids = input_ids.clone()
         start_length = len(current_ids[0])
@@ -83,17 +88,24 @@ class CausalLM():
                     beam_width=beam_width, 
                     current_sequences=beam_search_sequences
                 )
-                current_ids = torch.cat([current_ids.cpu(), torch.tensor([seq[-1] for seq, _ in beam_search_sequences]).unsqueeze(0).cpu()], dim=-1)
+                if target_idx == None:
+                    current_ids = torch.cat([current_ids.cpu(), torch.tensor([seq[-1] for seq, _ in beam_search_sequences]).unsqueeze(0).cpu()], dim=-1)
             else:
                 softmaxed_logits, top_k_indices, top_k_tokens, top_k_probs, top_1_prob, top_1_index = decoder_strategy.apply_strategy(
                     strategy=decoding_strategy, 
                     logits=logits
                 )
-                current_ids = torch.cat([current_ids.cpu(), top_1_index.reshape(1, -1).cpu()], dim=-1)
+                if target_idx == None:
+                    current_ids = torch.cat([current_ids.cpu(), top_1_index.reshape(1, -1).cpu()], dim=-1)
+
+            # If we have specific target idx of tokens, then use those to continue the sequence
+            # if not, then as written as above, use the tokens we've just created.
+            if target_idx != None:
+                current_ids = torch.cat([current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()], dim=-1)
 
             target = None
             target_prob = None
-            target_pos = "UNK"
+            target_pos = "UNKOWN"
             if target_idx is not None and len(target_idx) > 0 and len(target_idx[0]) - 1 >= step:
                 target = self.tokenizer.decode(target_idx[0][step]).strip()
                 target_prob = softmaxed_logits[0][target_idx[0][step]]
