@@ -49,8 +49,8 @@ class Detector():
             # Tokenize the text
             token_idx = model.tokenizer.encode(text, return_tensors='pt')
             # I dont think we can handle very short texts. We will see.
-            if(len(token_idx[0]) < self.min_token_length):
-                raise Exception(f'The text must be at least {self.min_token_length} tokens long, got only {len(token_idx[0])}.')
+            if(len(token_idx[0]) < self.min_token_length + sample_sequence_length):
+                raise Exception(f'The text must be at least {self.min_token_length + sample_sequence_length} tokens long, got only {len(token_idx[0])}.')
 
             # We will randomly sample and delete text
             for i in range(0, sample_rate):
@@ -59,7 +59,7 @@ class Detector():
 
                     cur_token_idx = token_idx.clone()
                     # We generate a random index from which we then take a sequence
-                    random_idx = random.randint(16, len(cur_token_idx[0]) - sample_sequence_length)
+                    random_idx = random.randint(self.min_token_length, len(cur_token_idx[0]) - sample_sequence_length)
                     sample_sequence_idx = cur_token_idx[:, random_idx: random_idx + sample_sequence_length]
                     sample_sequence = model.tokenizer.decode(sample_sequence_idx[0])
                     context_idx = cur_token_idx[:, :random_idx]
