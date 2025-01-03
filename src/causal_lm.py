@@ -18,7 +18,17 @@ class CausalLM():
                                                        trust_remote_code=True)
         self.model = AutoModelForCausalLM.from_pretrained(model_name,
                                                           trust_remote_code=True)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Automatically select the GPU with the most available memory
+        if torch.cuda.is_available():
+            free_gpus = [
+                (i, torch.cuda.mem_get_info(i)[0])  # (GPU index, free memory)
+                for i in range(torch.cuda.device_count())
+            ]
+            best_gpu = max(free_gpus, key=lambda x: x[1])[0]
+            self.device = torch.device(f"cuda:{best_gpu}")
+        else:
+            self.device = torch.device("cpu")
+
         self.model.to(self.device).eval()
         self.set_seed(42)
         print(f'Created model {model_name} to device {self.device}')
