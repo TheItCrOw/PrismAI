@@ -41,12 +41,20 @@ class Collector(ABC):
         with open(path) as handle:
             self.meta = json.loads(handle.read())
             return self.meta
-        
-    def write_meta_file(self, total_collected, date, total_synthesized=0):
+
+    def get_meta_file(self):
+        return self.meta
+
+    def update_meta_file(self, meta):
+        with open(os.path.join(self.get_data_path(), 'meta.json'), 'w') as fp:
+            json.dump(meta, fp)
+
+    def write_meta_file(self, total_collected, date, total_synthesized=0, total_feature_extracted=0):
         self.meta = {
             'collected_at': str(date),
             'total_collected': total_collected,
-            'total_synthesized': total_synthesized
+            'total_synthesized': total_synthesized,
+            'total_feature_extracted': total_feature_extracted
         }
         with open(os.path.join(self.get_data_path(), 'meta.json'), 'w') as fp:
             json.dump(self.meta, fp)

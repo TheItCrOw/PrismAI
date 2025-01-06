@@ -21,7 +21,7 @@ class CausalLM():
         # Automatically select the GPU with the most available memory
         if torch.cuda.is_available():
             free_gpus = [
-                (i, torch.cuda.mem_get_info(i)[0])  # (GPU index, free memory)
+                (i, torch.cuda.mem_get_info(i)[0])
                 for i in range(torch.cuda.device_count())
             ]
             best_gpu = max(free_gpus, key=lambda x: x[1])[0]
