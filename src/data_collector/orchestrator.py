@@ -12,6 +12,7 @@ output_dir = 'processes'
 log_dir = 'processes/logs'
 take = 100
 skip = 0
+batch_size = 50
 collect = False
 synthesize = False
 extract_features = True
@@ -69,7 +70,8 @@ if __name__ == '__main__':
                 '--collectors', collector,
                 '--causal_llms', ','.join(causal_llms),
                 '--take', str(take),
-                '--skip', str(skip)
+                '--skip', str(skip),
+                '--batch_size', str(batch_size)
             ]
             
             if force:
