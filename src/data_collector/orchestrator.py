@@ -10,29 +10,29 @@ import os
 notebook_path = 'main.ipynb'
 output_dir = 'processes'
 log_dir = 'processes/logs'
-take = 100
+take = 10000000
 skip = 0
 batch_size = 50
 collect = False
 synthesize = False
 extract_features = True
-force = True
+force = False
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
 collectors = [
-    'collectors.bundestag_collector.BundestagCollector',
-    'collectors.house_of_commons_collector.HouseOfCommonsCollector',
+    #'collectors.bundestag_collector.BundestagCollector',
+    #'collectors.house_of_commons_collector.HouseOfCommonsCollector',
     #'collectors.student_essays_collector.StudentEssaysCollector',
     #'collectors.arxiv_collector.ArxivCollector',
     #'collectors.spiegel_collector.SpiegelCollector',
     #'collectors.cnn_news_collector.CNNNewsCollector',
     #'collectors.open_legal_data_collector.OpenLegalDataCollector',
-    #'collectors.euro_court_cases_collector.EuroCourtCasesCollector',
+    'collectors.euro_court_cases_collector.EuroCourtCasesCollector',
     #'collectors.religion_collector.ReligionCollector',
-    #'collectors.gutenberg_collector.GutenbergCollector',
-    #'collectors.blog_corpus_collector.BlogCorpusCollector'
+    'collectors.gutenberg_collector.GutenbergCollector',
+    'collectors.blog_corpus_collector.BlogCorpusCollector'
 ]
 
 causal_llms = [
