@@ -346,8 +346,8 @@ else:
 # In[10]:
 
 
-import detector
-import causal_lm
+from prismai import detector
+from prismai import causal_lm
 
 importlib.reload(detector)
 importlib.reload(causal_lm)

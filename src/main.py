@@ -5,8 +5,8 @@ import spacy
 import torch
 import json
 import os
-from detector import Detector
-from causal_lm import CausalLM
+from prismai.detector import Detector
+from prismai.causal_lm import CausalLM
 import warnings
 
 warnings.filterwarnings('ignore')
