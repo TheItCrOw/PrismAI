@@ -1,0 +1,33 @@
+[project]
+name = "prismai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bs4>=0.0.2",
+    "fitz>=0.0.1.dev2",
+    "frontend>=0.0.3",
+    "nltk>=3.9.1",
+    "numpy>=2.2.1",
+    "openai>=1.59.7",
+    "pandas>=2.2.3",
+    "python-dotenv>=1.0.1",
+    "requests>=2.32.3",
+    "spacy>=3.8.4",
+    "spiegel-scraper>=1.1.1",
+    "torch>=2.5.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.48.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "ipython>=8.31.0",
+    "jupyter>=1.1.1",
+    "pip>=24.3.1",
+]
+uima = [
+    "dkpro-cassis>=0.9.1",
+]
