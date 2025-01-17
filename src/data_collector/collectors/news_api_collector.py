@@ -7,7 +7,7 @@ import lxml.html
 
 from newspaper import Article
 from datetime import datetime
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
 

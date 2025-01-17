@@ -1,7 +1,7 @@
 import pandas as pd
 
-from collector import Collector
-from collected_item import CollectedItem
+from data_collector.collector import Collector
+from data_collector.collected_item import CollectedItem
 
 class CollectionVisualizer:
     '''

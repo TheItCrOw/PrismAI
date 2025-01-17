@@ -4,7 +4,7 @@ import pandas as pd
 import importlib
 
 from datetime import datetime
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
 class HouseOfCommonsCollector(Collector):

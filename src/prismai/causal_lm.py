@@ -5,7 +5,7 @@ import random
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from IPython.display import display, Markdown, Latex
-from decoding_strategy import DecodingStrategy
+from prismai.decoding_strategy import DecodingStrategy
 
 class CausalLM():
 

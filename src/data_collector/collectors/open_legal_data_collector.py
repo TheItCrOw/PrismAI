@@ -8,7 +8,7 @@ import importlib
 import time
 
 from datetime import datetime, date, timedelta
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
 class OpenLegalDataCollector(Collector):

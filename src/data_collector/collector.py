@@ -2,7 +2,7 @@ import os
 import json
 import pandas as pd
 
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from abc import ABC, abstractmethod
 
 class Collector(ABC):

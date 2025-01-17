@@ -10,7 +10,7 @@ import lxml.html
 import spiegel_scraper as spon
 
 from datetime import datetime, date, timedelta
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
 class SpiegelAPI():

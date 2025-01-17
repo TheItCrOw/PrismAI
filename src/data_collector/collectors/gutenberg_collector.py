@@ -8,7 +8,7 @@ import warnings
 
 from cassis import load_cas_from_xmi, load_typesystem, load_dkpro_core_typesystem, merge_typesystems
 from datetime import datetime
-from collected_item import CollectedItem
+from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
 warnings.filterwarnings(
