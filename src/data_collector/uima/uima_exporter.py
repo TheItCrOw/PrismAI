@@ -70,7 +70,7 @@ class UIMAExporter():
                     author='Bönisch, Kevin and Stoeckel, Manuel and Mehler, Alexander'
                 ))
                 cas.add(UceDynamicMetadata(key='date', value=row['date'], valueType='String', comment='The date this text was originally created or written by the user.'))
-                cas.add(UceDynamicMetadata(key='domain', value=row['domain'], valueType='String', comment='The domain where this document belongs to.'))
+                cas.add(UceDynamicMetadata(key='domain', value=row['domain'], valueType='Enum', comment='The domain where this document belongs to.'))
                 cas.add(UceDynamicMetadata(key='source', value=row['source'], valueType='Url', comment='Either the exact source url (if scraped) or the citation where this original human text was taken from.'))
                 cas.add(UceDynamicMetadata(key='synthetization', value=self.__sanitize_string(json.dumps(row['synthetization'])), valueType='Json', 
                                            comment='The synthetization object of this text, containing a full AI rewrite of the text and also a chunk-based replacement somewhere in the middle of the text through AI.'))
