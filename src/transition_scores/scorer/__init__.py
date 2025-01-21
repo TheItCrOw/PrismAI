@@ -3,7 +3,7 @@ from pathlib import Path
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from transition_scores.abc import TransitionScorerABC
+from transition_scores.scorer.abc import TransitionScorerABC
 
 
 class OnnxTransitionScorer(TransitionScorerABC):
@@ -30,3 +30,6 @@ class TransformersTransitionScorer(TransitionScorerABC):
             load_in_8bit=self._load_in_8bit,
         ).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model)
+
+
+__all__ = ["OnnxTransitionScorer", "TransformersTransitionScorer"]
