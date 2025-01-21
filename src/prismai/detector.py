@@ -1,56 +1,50 @@
-import random
 import hashlib
-import traceback
-import sys
+import random
 import statistics
-
-from prismai.causal_lm import CausalLM
+import traceback
 from datetime import datetime
+
 from luminar.luminar_model import Luminar
+from prismai.causal_lm import CausalLM
 
-class Detector():
-    '''A class that tries to identify AI texts'''
 
-    def __init__(self, 
-                 models=['gpt2'],
-                 min_token_length = 32,
-                 luminar_model_path = None):
-        '''
+class Detector:
+    """A class that tries to identify AI texts"""
+
+    def __init__(self, models=["gpt2"], min_token_length=32, luminar_model_path=None):
+        """
         Possible models to choose from:
         daryl149/llama-2-7b-chat-hf
         gpt2
         mistralai/Mistral-7B-v0.1
-        '''
+        """
         self.llm_ensemble = [CausalLM(m, include_spacy=False) for m in models]
         self.min_token_length = min_token_length
         self.luminar = None
         if luminar_model_path is not None:
-            self.luminar = Luminar('/home/staff_homes/kboenisc/home/prismAI/PrismAI/src/luminar/models/luminar_llama2_4k.pth')
-        print(f'Model ensemble: {[x.model_name for x in self.llm_ensemble]}\n')
+            self.luminar = Luminar(
+                "/home/staff_homes/kboenisc/home/prismAI/PrismAI/src/luminar/models/luminar_llama2_4k.pth"
+            )
+        print(f"Model ensemble: {[x.model_name for x in self.llm_ensemble]}\n")
 
-    def detect(self, 
-               text, 
-               sample_rate=6,
-               sample_sequence_length=12,
-               k=10,
-               temp=0.9,
-               seed=42):
-        '''A function that tries to detect AI sequences in a text'''
+    def detect(
+        self, text, sample_rate=6, sample_sequence_length=12, k=10, temp=0.9, seed=42
+    ):
+        """A function that tries to detect AI sequences in a text"""
 
         random.seed(seed)
         ensemble_results = []
         # We have an ensemble of models which we use to detect
         for model in self.llm_ensemble:
-            model_result = {
-                'model': model.model_name,
-                'sample_results': []
-            }
+            model_result = {"model": model.model_name, "sample_results": []}
 
             # Tokenize the text
-            token_idx = model.tokenizer.encode(text, return_tensors='pt')
+            token_idx = model.tokenizer.encode(text, return_tensors="pt")
             # I dont think we can handle very short texts. We will see.
-            if(len(token_idx[0]) < self.min_token_length + sample_sequence_length):
-                raise Exception(f'The text must be at least {self.min_token_length + sample_sequence_length} tokens long, got only {len(token_idx[0])}.')
+            if len(token_idx[0]) < self.min_token_length + sample_sequence_length:
+                raise Exception(
+                    f"The text must be at least {self.min_token_length + sample_sequence_length} tokens long, got only {len(token_idx[0])}."
+                )
 
             # We will randomly sample and delete text
             for i in range(0, sample_rate):
@@ -59,60 +53,70 @@ class Detector():
 
                     cur_token_idx = token_idx.clone()
                     # We generate a random index from which we then take a sequence
-                    random_idx = random.randint(self.min_token_length, len(cur_token_idx[0]) - sample_sequence_length)
-                    sample_sequence_idx = cur_token_idx[:, random_idx: random_idx + sample_sequence_length]
+                    random_idx = random.randint(
+                        self.min_token_length,
+                        len(cur_token_idx[0]) - sample_sequence_length,
+                    )
+                    sample_sequence_idx = cur_token_idx[
+                        :, random_idx : random_idx + sample_sequence_length
+                    ]
                     sample_sequence = model.tokenizer.decode(sample_sequence_idx[0])
                     context_idx = cur_token_idx[:, :random_idx]
                     context = model.tokenizer.decode(context_idx[0])
 
                     # Now try to regenerate that sequence with the cur model
-                    output = model.generate_k_with_probs(input_text=context, 
-                                                         target_idx=sample_sequence_idx, 
-                                                         max_length=sample_sequence_length, 
-                                                         k=k,
-                                                         temp=temp)
-                    if(output == None):
+                    output = model.generate_k_with_probs(
+                        input_text=context,
+                        target_idx=sample_sequence_idx,
+                        max_length=sample_sequence_length,
+                        k=k,
+                        temp=temp,
+                    )
+                    if output == None:
                         return None
-                    output['context'] = context
-                    output['sample_sequence'] = sample_sequence
-                    avg_prob = statistics.mean([s['target_prob'] for s in output['steps']])
-                    # print(f"Predicted sequence: {output['generated_text']}")    
-                    # print(f"Average target token probability {avg_prob}") 
-                    model_result['sample_results'].append({
-                        'avg_prob': avg_prob,
-                        'model_outputs': output
-                    })      
+                    output["context"] = context
+                    output["sample_sequence"] = sample_sequence
+                    avg_prob = statistics.mean(
+                        [s["target_prob"] for s in output["steps"]]
+                    )
+                    # print(f"Predicted sequence: {output['generated_text']}")
+                    # print(f"Average target token probability {avg_prob}")
+                    model_result["sample_results"].append(
+                        {"avg_prob": avg_prob, "model_outputs": output}
+                    )
                 except Exception as ex:
-                    print(f'Caught an exception in one sample round. Model: {model.model_name};')
+                    print(
+                        f"Caught an exception in one sample round. Model: {model.model_name};"
+                    )
                     print(ex)
                     print(traceback.format_exc())
 
-            model_result['avg_prob'] = statistics.mean(float(s['avg_prob']) for s in model_result['sample_results'])
+            model_result["avg_prob"] = statistics.mean(
+                float(s["avg_prob"]) for s in model_result["sample_results"]
+            )
             ensemble_results.append(model_result)
-    
+
         metadata = {
-            'full_text': text,
-            'ensemble': [model.model_name for model in self.llm_ensemble],
-            'sample_rate': sample_rate,
-            'sample_sequence_length': sample_sequence_length,
-            'min_token_length': self.min_token_length,
-            'date': str(datetime.now()),
-            'seed': seed,
-            'signature': hashlib.sha256(text.encode('utf-8')).hexdigest()
+            "full_text": text,
+            "ensemble": [model.model_name for model in self.llm_ensemble],
+            "sample_rate": sample_rate,
+            "sample_sequence_length": sample_sequence_length,
+            "min_token_length": self.min_token_length,
+            "date": str(datetime.now()),
+            "seed": seed,
+            "signature": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         }
 
         # After we gather intel from our model ensemble, let our model decide over AI or not
         if self.luminar is not None:
             pred = self.luminar.predict(ensemble_results)
-            metadata['is_AI'] = True if pred <= 0.4 else False
-            metadata['pred'] = pred
+            metadata["is_AI"] = True if pred <= 0.4 else False
+            metadata["pred"] = pred
 
-        return {
-            'metadata': metadata,
-            'ensemble_results': ensemble_results
-        }     
+        return {"metadata": metadata, "ensemble_results": ensemble_results}
 
-example_text_AI = '''
+
+example_text_AI = """
 In his first State of the Union address, President Joe Biden delivered an optimistic outlook on the nation's economy, celebrating its remarkable rebound while drawing a clear contrast with the policies of his predecessor, Donald Trump. Against the backdrop of ongoing challenges posed by the pandemic and geopolitical tensions, Biden sought to instill confidence in the American people and reaffirm his administration's commitment to fostering inclusive growth and resilience.
 
 Highlighting the progress made since taking office, President Biden touted the nation's robust economic recovery, citing significant job gains, declining unemployment rates, and steady GDP growth. He attributed these achievements to the successful implementation of his administration's economic agenda, including the passage of key legislation such as the American Rescue Plan and the Build Back Better Act.
@@ -123,9 +127,9 @@ Drawing a sharp distinction from the policies pursued by the Trump administratio
 
 Biden also seized the opportunity to outline his vision for the future, emphasizing the importance of addressing pressing challenges such as climate change, healthcare reform, and racial injustice. He called for bipartisan cooperation and urged lawmakers to put aside partisan differences in pursuit of common goals that benefit all Americans.
 
-As the nation grapples with the aftermath of the pandemic and seeks to chart a path forward, President Biden's State of the Union address served as a rallying cry for unity and resilience. While acknowledging the progress achieved, he acknowledged that much work remains to be done to build a more inclusive and prosperous future for all.'''
+As the nation grapples with the aftermath of the pandemic and seeks to chart a path forward, President Biden's State of the Union address served as a rallying cry for unity and resilience. While acknowledging the progress achieved, he acknowledged that much work remains to be done to build a more inclusive and prosperous future for all."""
 
-example_text_HU = '''
+example_text_HU = """
 President Biden enters his State of the Union speech on Thursday with an economic record that has defied forecasters’ gloomy expectations, avoiding recession while delivering stronger growth and lower unemployment than predicted.
 
 But polls suggest voters know relatively little about the legislation Mr. Biden has signed into law that seeks to boost the economy through spending and tax breaks for infrastructure, clean energy, semiconductors and more.
@@ -143,9 +147,13 @@ Those contrasts will include policy departures from Mr. Trump’s legacy. Mr. Bi
 Mr. Biden will also propose ending the ability of corporations to deduct compensation costs for any employee who is paid more than $1 million per year.
 
 The president’s allies in Washington diverge on what economic issues he should focus on in this week’s speech. But they roundly agree that he should claim credit for measures of economic strength on his watch, while promising to fight more to tame prices.
-'''
+"""
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Just for testing
-    detector = Detector(models=['daryl149/llama-2-7b-chat-hf'])
-    print(detector.detect(sample_sequence_length=32, text=example_text_HU)['metadata']['pred'])
+    detector = Detector(models=["daryl149/llama-2-7b-chat-hf"])
+    print(
+        detector.detect(sample_sequence_length=32, text=example_text_HU)["metadata"][
+            "pred"
+        ]
+    )

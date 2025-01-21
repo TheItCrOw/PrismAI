@@ -1,17 +1,19 @@
 import uuid
 
-class CollectedItem():
 
-    def __init__(self, 
-                 text, 
-                 chunks, 
-                 domain, 
-                 date, 
-                 source, 
-                 lang,
-                 feature_space=None, 
-                 synthetization=None, 
-                 id=None):
+class CollectedItem:
+    def __init__(
+        self,
+        text,
+        chunks,
+        domain,
+        date,
+        source,
+        lang,
+        feature_space=None,
+        synthetization=None,
+        id=None,
+    ):
         self.text = text
         self.chunks = chunks
         self.domain = domain
