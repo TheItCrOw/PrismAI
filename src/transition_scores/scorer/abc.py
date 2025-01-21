@@ -58,6 +58,8 @@ class TransitionScorerABC(ABC):
     def _tokenize(self, data: dict):
         return self.tokenizer(
             data["text"],
+            # FIXME: globally enabled truncation prevents us from drawing samples here!
+            truncation=True,
             return_length=True,
             add_special_tokens=True,
         )
@@ -71,12 +73,20 @@ class TransitionScorerABC(ABC):
 
         input_ids = pad_sequence(
             input_ids, batch_first=True, padding_value=self.pad_token_id
-        ).to(self.device)
-        attention_mask = pad_sequence(
-            attention_mask, batch_first=True, padding_value=0
-        ).to(self.device)
+        )
+        attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
-        return EncodedSequence(input_ids, attention_mask)
+        keys = set(batch[0].keys()).difference({"input_ids", "attention_mask"})
+        other_fields = {key: [] for key in keys}
+
+        for d in batch:
+            for key in keys:
+                other_fields[key].append(d[key])
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+        } | other_fields
 
     def process(
         self,
@@ -112,16 +122,25 @@ class TransitionScorerABC(ABC):
             dataset = Dataset.from_dict({"text": sequences})
 
         # NOTE: .map does not cache self._tokenize
-        dataset = dataset.map(self._tokenize, batched=True)
+        dataset = dataset.map(self._tokenize, batched=True, remove_columns=["text"])
 
         # sort by input_id length for efficient batching
-        dataset = dataset.sort("length")
+        dataset = dataset.sort("length").remove_columns("length")
 
-        for input_ids, attention_mask in DataLoader(
-            dataset.with_format(type="torch", columns=["input_ids", "attention_mask"]),
+        for batch in DataLoader(
+            dataset.with_format(
+                type="torch",
+                columns=["input_ids", "attention_mask"],
+                output_all_columns=True,
+            ),
             batch_size=self.batch_size,
             collate_fn=self._collate_fn,
         ):
+            input_ids, attention_mask = (
+                batch.pop("input_ids"),
+                batch.pop("attention_mask"),
+            )
+
             # calculate position_ids if required (source: huggingface transformers)
             position_ids = None
             if self._requires_position_ids:
@@ -130,14 +149,18 @@ class TransitionScorerABC(ABC):
 
             with torch.no_grad():
                 outputs = self.model.forward(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    position_ids=position_ids,
+                    input_ids=input_ids.to(self.device),
+                    attention_mask=attention_mask.to(self.device),
+                    position_ids=position_ids.to(self.device),
                 )
                 logits = outputs.logits.softmax(-1).cpu()
                 del outputs
 
-            for seq_probs, target_ids in zip(logits, input_ids.cpu()):
+            for seq_probs, target_ids, other_fields in zip(
+                logits,
+                input_ids,
+                (dict(zip(batch, col)) for col in zip(*batch.values())),
+            ):
                 top_k_probs, top_k_indices = seq_probs.topk(top_k)
 
                 # calculate length of the sequence and get corresponding target probabilities
@@ -168,4 +191,4 @@ class TransitionScorerABC(ABC):
                     seq_results.append(
                         LogProbs(ti.item(), tp.item(), ki.tolist(), kp.tolist())
                     )
-                yield seq_results
+                yield other_fields | {"log_probs": seq_results}
