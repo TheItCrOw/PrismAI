@@ -6,8 +6,9 @@ class OllamaAgent(Agent):
 
     def __init__(self, 
                  name, 
-                 ollama_base_url):
-        super().__init__(name=name)
+                 ollama_base_url,
+                 context_length):
+        super().__init__(name=name, context_length=context_length)
         self.name = name
         self.ollama_base_url = ollama_base_url
 
@@ -27,7 +28,8 @@ class OllamaAgent(Agent):
             "options": {
                 "temperature": temperature,
                 "seed": 42,
-                "num_predict": max_tokens
+                "num_predict": max_tokens,
+                "num_ctx": self.context_length
             }
         }
 

@@ -10,7 +10,11 @@ class OpenAIAgent(Agent):
             api_key=api_key
         )
 
-    def get_response(self, system_prompt, user_prompt, temperature=1, max_tokens=1024):
+    def get_response(self, 
+                     system_prompt, 
+                     user_prompt, 
+                     temperature=1, 
+                     max_tokens=1024):
         completion = self.client.chat.completions.create(
             model=self.name,
             messages=[

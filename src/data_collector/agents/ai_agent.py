@@ -11,13 +11,18 @@ import hashlib
 
 class Agent(ABC):
 
-    def __init__(self, name):
+    def __init__(self, name, context_length=2048):
         self.name = name
         self.information_extract_prompt = self.get_prompt('extract_information.md')
         self.ghostwriting_prompt = self.get_prompt('ghostwrite.md')
+        self.context_length = context_length
 
     @abstractmethod
-    def get_response(self, system_prompt, user_prompt, temperature=1, max_tokens=1024):
+    def get_response(self, 
+                     system_prompt, 
+                     user_prompt, 
+                     temperature=1,
+                     max_tokens=1024):
         pass
 
     def get_prompt(self, name):
