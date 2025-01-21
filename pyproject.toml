@@ -5,20 +5,26 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "accelerate>=1.2.1",
+    "bitsandbytes>=0.45.0",
     "bs4>=0.0.2",
-    "fitz>=0.0.1.dev2",
+    "datasets>=3.2.0",
+    "dkpro-cassis>=0.9.1",
     "frontend>=0.0.3",
     "nltk>=3.9.1",
     "numpy>=2.2.1",
     "openai>=1.59.7",
+    "optimum[onnxruntime-gpu]>=1.23.3",
     "pandas>=2.2.3",
+    "pymongo>=4.10.1",
+    "pymupdf>=1.25.2",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "spacy>=3.8.4",
     "spiegel-scraper>=1.1.1",
     "torch>=2.5.1",
     "tqdm>=4.67.1",
-    "transformers>=4.48.0",
+    "transformers<4.48",
 ]
 
 [dependency-groups]
