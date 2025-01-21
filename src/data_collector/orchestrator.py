@@ -15,6 +15,7 @@ skip = 0
 batch_size = 50
 collect = False
 synthesize = False
+synchronize = True
 extract_features = True
 force = False
 
@@ -80,6 +81,8 @@ if __name__ == '__main__':
                 command.append('--collect')
             if synthesize:
                 command.append('--synth')
+            if synchronize:
+                command.append('--synch')
             if extract_features:
                 command.append('--featured')
             

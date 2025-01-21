@@ -54,12 +54,6 @@ class MongoDBConnection:
         Insert many CollectedItems only if it doesnt exist already.
         '''
         self.collected_items_coll.insert_many([item.__dict__ for item in items])
-        #for item in items:
-        #    self.collected_items_coll.update_one(
-        #        {"id": item.id},
-        #        {"$setOnInsert": item.__dict__},  
-        #        upsert=True 
-        #    )
 
     def update_collected_item(self, collected_item: CollectedItem):
         try:
