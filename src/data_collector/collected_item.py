@@ -11,7 +11,8 @@ class CollectedItem():
                  lang,
                  feature_space=None, 
                  synthetization=None, 
-                 id=None):
+                 id=None,
+                 _id=None):
         self.text = text
         self.chunks = chunks
         self.domain = domain
@@ -21,6 +22,7 @@ class CollectedItem():
         self.feature_space = feature_space if feature_space is not None else []
         self.synthetization = synthetization if synthetization is not None else []
         self.id = str(uuid.uuid4()) if id is None else id
+        self._id = _id
 
     @classmethod
     def from_dict(cls, data):
