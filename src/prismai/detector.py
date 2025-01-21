@@ -72,7 +72,7 @@ class Detector:
                         k=k,
                         temp=temp,
                     )
-                    if output == None:
+                    if output is None:
                         return None
                     output["context"] = context
                     output["sample_sequence"] = sample_sequence

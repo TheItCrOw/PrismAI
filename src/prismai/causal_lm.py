@@ -114,7 +114,7 @@ class CausalLM:
                     beam_width=beam_width,
                     current_sequences=beam_search_sequences,
                 )
-                if target_idx == None:
+                if target_idx is None:
                     current_ids = torch.cat(
                         [
                             current_ids.cpu(),
@@ -135,14 +135,14 @@ class CausalLM:
                 ) = decoder_strategy.apply_strategy(
                     strategy=decoding_strategy, logits=logits
                 )
-                if target_idx == None:
+                if target_idx is None:
                     current_ids = torch.cat(
                         [current_ids.cpu(), top_1_index.reshape(1, -1).cpu()], dim=-1
                     )
 
             # If we have specific target idx of tokens, then use those to continue the sequence
             # if not, then as written as above, use the tokens we've just created.
-            if target_idx != None:
+            if target_idx is not None:
                 current_ids = torch.cat(
                     [current_ids.cpu(), target_idx[:, step].unsqueeze(dim=1).cpu()],
                     dim=-1,
