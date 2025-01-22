@@ -5,7 +5,7 @@ from typing import Any, NamedTuple
 from datasets import Dataset
 from transformers import AutoConfig, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
-from transition_scores.utils import transpose_dict_of_lists
+from transition_scores.utils import DataClassMappingMixin, transpose_dict_of_lists
 
 
 class EncodedSequence(NamedTuple):
@@ -14,14 +14,9 @@ class EncodedSequence(NamedTuple):
 
 
 @dataclass
-class LogProbs:
+class TransitionScores(DataClassMappingMixin):
     target_id: int
-    target_prob: float
-    top_k_id: list[int]
-    top_k_probs: list[float]
-
-    def __iter__(self):
-        yield from (self.target_id, self.target_prob, self.top_k_id, self.top_k_probs)
+    scores: dict[int, float]
 
 
 def infer_max_length(model_name_or_path: str):
@@ -50,6 +45,7 @@ class CustomTokenizer:
         Raises:
             ValueError: If max_length is not given and we could not infer it from the tokenizer.
         """
+        self._tokenizer = tokenizer
         max_length = max_length or tokenizer.model_max_length
         if max_length is None:
             try:
@@ -91,7 +87,8 @@ class CustomTokenizer:
         """
         return self.tokenizer(
             batch["text"],
-            truncation=self.max_length,
+            truncation=True,
+            max_length=self.max_length,
             return_length=True,
             add_special_tokens=True,
         )

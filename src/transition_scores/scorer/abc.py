@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizer
 
-from transition_scores.data import CustomTokenizer, EncodedSequence, LogProbs
+from transition_scores.data import CustomTokenizer, EncodedSequence, TransitionScores
 from transition_scores.utils import transpose_dict_of_lists
 
 
@@ -90,7 +90,7 @@ class TransitionScorerABC(ABC):
         dataset: Dataset | None = None,
         *,
         top_k: int = 5,
-    ) -> Generator[list[LogProbs], None, None]:
+    ) -> Generator[list[TransitionScores], None, None]:
         """
         Calculate transition scores for a batch of sequences.
         Yields one list of LogProbs for each sequence in the batch.
@@ -156,7 +156,7 @@ class TransitionScorerABC(ABC):
                 input_ids,
                 transpose_dict_of_lists(batch, iter=True),
             ):
-                top_k_probs, top_k_indices = seq_probs.topk(top_k)
+                batch_top_k_probs, batch_top_k_indices = seq_probs.topk(top_k)
 
                 # calculate length of the sequence and get corresponding target probabilities
                 seq_len = target_ids.ne(self.pad_token_id).long().sum() - 1
@@ -167,7 +167,9 @@ class TransitionScorerABC(ABC):
                 seq_results = []
                 first_token = target_ids[0].item()
                 if first_token not in self._all_special_id_set:
-                    seq_results.append(LogProbs(first_token, 1.0, [first_token], [1.0]))
+                    seq_results.append(
+                        TransitionScores(first_token, {first_token: 0.0})
+                    )
 
                 # omit the last token, if it is a special token, e.g. <|endoftext|>
                 seq_end = (
@@ -177,13 +179,14 @@ class TransitionScorerABC(ABC):
                 )
 
                 # always skip the first token, as we do not get predictions for it
-                for ti, tp, ki, kp in zip(
-                    target_ids[1:seq_end],
-                    target_probs,
-                    top_k_indices,
-                    top_k_probs,
+                for target_idx, target_prob, top_k_indices, top_k_probs in zip(
+                    target_ids[1:seq_end].tolist(),
+                    target_probs.tolist(),
+                    batch_top_k_indices.tolist(),
+                    batch_top_k_probs.tolist(),
                 ):
-                    seq_results.append(
-                        LogProbs(ti.item(), tp.item(), ki.tolist(), kp.tolist())
+                    scores = {target_idx: target_prob} | dict(
+                        zip(top_k_indices, top_k_probs)
                     )
-                yield other_fields | {"log_probs": seq_results}
+                    seq_results.append(TransitionScores(target_idx, scores))
+                yield other_fields | {"transition_scores": seq_results}

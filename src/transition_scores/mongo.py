@@ -3,7 +3,7 @@ from typing import Literal
 
 from bson.dbref import DBRef
 
-from transition_scores.data import LogProbs
+from transition_scores.data import TransitionScores
 from transition_scores.utils import DataClassMappingMixin
 
 # @dataclass
@@ -19,7 +19,7 @@ from transition_scores.utils import DataClassMappingMixin
 
 @dataclass
 class BaseTransitionScore(DataClassMappingMixin):
-    log_probs: list[LogProbs]
+    features: list[TransitionScores]
     type: str = field(init=False)
 
     def __post_init__(self):
