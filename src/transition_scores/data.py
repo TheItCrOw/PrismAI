@@ -1,7 +1,7 @@
 from collections import namedtuple
 from dataclasses import dataclass
 
-from transformers import AutoConfig, BatchEncoding, PreTrainedTokenizer
+from transformers import AutoConfig, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
 EncodedSequence = namedtuple("EncodedSequence", ["input_ids", "attention_mask"])
 
@@ -29,6 +29,13 @@ def infer_max_length(model_name_or_path: str):
 class RollingWindowChunkTokenizer:
     def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
         self.change_tokenizer(tokenizer, max_length)
+
+    @classmethod
+    def from_pretrained(cls, model_name_or_path: str, max_length: int | None = None):
+        return cls(
+            AutoTokenizer.from_pretrained(model_name_or_path),
+            max_length=max_length,
+        )
 
     @property
     def tokenizer(self) -> PreTrainedTokenizer:
