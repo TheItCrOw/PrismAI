@@ -75,20 +75,32 @@ class MongoDBConnection:
     def get_collected_items_by_domain(self, domain, batch_size = 1000, skip = 0):
         try:
             cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).skip(skip)
-            
             # Paginate through results to handle large datasets
             while True:
                 batch = list(cursor[:batch_size])
                 if not batch:
                     break  # Exit the loop if no more items are left
-                
                 for item in batch:
                     yield item
-                
                 cursor = cursor[batch_size:]
-
         except Exception as ex:
             print('Error while fetching items by domain: ', ex)
+        finally:
+            cursor.close()
+
+    def get_collected_items_by_text(self, text, batch_size=1000, skip=0):
+        try:
+            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).skip(skip).limit(batch_size)
+            while True:
+                batch = list(cursor)
+                if not batch:
+                    break
+                for item in batch:
+                    yield item
+                skip += batch_size
+                cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).skip(skip).limit(batch_size)
+        except Exception as ex:
+            print('Error while fetching items by text: ', ex)
         finally:
             cursor.close()
 
