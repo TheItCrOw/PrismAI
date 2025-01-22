@@ -134,10 +134,8 @@ class TransitionScorerABC(ABC):
             batch_size=self.batch_size,
             collate_fn=self._collate_fn,
         ):
-            input_ids, attention_mask = (
-                batch.pop("input_ids"),
-                batch.pop("attention_mask"),
-            )
+            input_ids: torch.Tensor = batch.pop("input_ids")
+            attention_mask: torch.Tensor = batch.pop("attention_mask")
 
             # calculate position_ids if required (source: huggingface transformers)
             position_ids = None
@@ -151,7 +149,7 @@ class TransitionScorerABC(ABC):
                     attention_mask=attention_mask.to(self.device),
                     position_ids=position_ids.to(self.device),
                 )
-                logits = outputs.logits.softmax(-1).cpu()
+                logits: torch.Tensor = outputs.logits.softmax(-1).cpu()
                 del outputs
 
             for seq_probs, target_ids, other_fields in zip(
