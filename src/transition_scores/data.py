@@ -1,10 +1,16 @@
-from abc import ABC, abstractmethod
-from collections import namedtuple
 from dataclasses import dataclass
+from hashlib import sha256
+from typing import Any, NamedTuple
 
+from datasets import Dataset
 from transformers import AutoConfig, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
-EncodedSequence = namedtuple("EncodedSequence", ["input_ids", "attention_mask"])
+from transition_scores.utils import transpose_dict_of_lists
+
+
+class EncodedSequence(NamedTuple):
+    input_ids: list[int]
+    attention_mask: list[int]
 
 
 @dataclass
@@ -27,30 +33,23 @@ def infer_max_length(model_name_or_path: str):
     raise ValueError(f"Could not infer max length from {model_name_or_path}")
 
 
-class CustomTokenizerABC(ABC):
-    @abstractmethod
-    @classmethod
-    def from_pretrained(cls, model_name_or_path: str): ...
-
-    @abstractmethod
-    def __call__(self, *args, **kwargs) -> BatchEncoding: ...
+def chunks_to_text(chunks: list[str]) -> str:
+    return " ".join(chunk.strip() for chunk in chunks)
 
 
-class RollingWindowChunkTokenizer(CustomTokenizerABC):
+class CustomTokenizer:
     def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
-        """Rolling-Window chunk tokenizer.
-        Creates prefix-windows of chunks that fit within the max_length.
+        """Custom tokenizer wrapping a `PreTrainedTokenizer`.
 
         Args:
-            tokenizer (PreTrainedTokenizer): The new tokenizer.
-            max_length (int, optional): The new max_length.
-                Will try to infer max_length from the tokenizer if not given.
+            tokenizer (PreTrainedTokenizer): The tokenizer to wrap.
+            max_length (int, optional):
+            max_length (int, optional): The max_length for each tokenized sequence.
+                Will try to infer max_length from the tokenizer if not specified.
 
         Raises:
             ValueError: If max_length is not given and we could not infer it from the tokenizer.
         """
-        self._tokenizer = tokenizer
-
         max_length = max_length or tokenizer.model_max_length
         if max_length is None:
             try:
@@ -61,6 +60,72 @@ class RollingWindowChunkTokenizer(CustomTokenizerABC):
                 ) from e
         self.max_length = max_length
 
+    @property
+    def tokenizer(self) -> PreTrainedTokenizer:
+        return self._tokenizer
+
+    @classmethod
+    def from_pretrained(cls, model_name_or_path: str):
+        return cls(AutoTokenizer.from_pretrained(model_name_or_path))
+
+    def tokenize(self, batch: dict[str, list]) -> BatchEncoding:
+        """Tokenize a *batch* of samples.
+        Expects a dictionary with a "text" field containing a list of strings.
+
+        Note:
+            Effectively calls:
+            ```python
+            tokenizer(
+                batch["text"],
+                truncation=True,
+                return_length=True,
+                add_special_tokens=True,
+            )
+            ```
+
+        Args:
+            batch (dict[str, list]): Batch of samples to tokenize.
+
+        Returns:
+            BatchEncoding | dict[str, list]: Tokenized batch.
+        """
+        return self.tokenizer(
+            batch["text"],
+            truncation=self.max_length,
+            return_length=True,
+            add_special_tokens=True,
+        )
+
+    def tokenize_dataset(self, dataset: Dataset) -> Dataset:
+        """Tokenize the `text` of the samples in a dataset.
+        Adds `text_sha256` field to the dataset.
+
+        Args:
+            dataset (Dataset): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+
+        Returns:
+            Dataset: Tokenized dataset. The `text` and `chunks` fields are removed.
+        """
+        return dataset.map(
+            lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
+        ).map(self.tokenize, batched=True, remove_columns=["text", "chunks"])
+
+
+class RollingWindowChunkTokenizer(CustomTokenizer):
+    def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
+        """Rolling-Window chunk tokenizer.
+        Creates prefix-windows of chunks that fit within the max_length.
+
+        Args:
+            tokenizer (PreTrainedTokenizer): The new tokenizer.
+            max_length (int, optional): The max_length for each tokenized sequence.
+                Will try to infer max_length from the tokenizer if not specified.
+
+        Raises:
+            ValueError: If max_length is not given and we could not infer it from the tokenizer.
+        """
+        super().__init__(tokenizer, max_length=max_length)
+
     @classmethod
     def from_pretrained(cls, model_name_or_path: str, max_length: int | None = None):
         return cls(
@@ -68,21 +133,35 @@ class RollingWindowChunkTokenizer(CustomTokenizerABC):
             max_length=max_length,
         )
 
-    @property
-    def tokenizer(self) -> PreTrainedTokenizer:
-        return self._tokenizer
+    def tokenize(self, row: dict[str, Any]) -> BatchEncoding:
+        """Tokenize a list of chunks from a single document.
+        Will apply a rolling-window to create prefix-windows of chunks that fit within the max_length.
 
-    def __call__(self, chunks: list[str]) -> BatchEncoding:
+        Args:
+            row (dict[str, Any]): A dictionary with a "chunks" field containing a list of strings.
+
+        Raises:
+            ValueError: If the start token of a chunk could not be found in the encoding.
+
+        Returns:
+            BatchEncoding: Tokenized batch. Has the following additional fields:
+              - `text`: The entire text, including prefix.
+              - `prefix_idx`: The index of the first chunk in the prefix.
+              - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
+                  Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
+              - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
+        """
+        chunks = row["chunks"]
         batch_encoding = BatchEncoding(
             {
                 "input_ids": [],
                 "attention_mask": [],
                 "length": [],
-                "chunk_text": [],
-                "chunk_prefix_idx": [],
-                "chunk_start_idx": [],
-                "chunk_end_idx": [],
-                "chunk_start_token_idx": [],
+                "text": [],
+                "prefix_idx": [],
+                "start_idx": [],
+                "end_idx": [],
+                "start_token_idx": [],
             }
         )
 
@@ -91,7 +170,7 @@ class RollingWindowChunkTokenizer(CustomTokenizerABC):
         for chunk_idx in range(len(chunks)):
             while True:
                 buffer = chunks[prefix_start : chunk_idx + 1]
-                text = self.chunks_to_text(buffer)
+                text = chunks_to_text(buffer)
                 encoding = self._tokenizer(
                     text,
                     return_length=True,
@@ -115,17 +194,59 @@ class RollingWindowChunkTokenizer(CustomTokenizerABC):
                     f"Could not find the start token of chunk {chunk_idx}:'{chunks[chunk_idx]}' in the encoding of '{text}'."
                 ) from e
 
+            if encoding["length"][0] > self.max_length:
+                encoding = self._tokenizer(
+                    text,
+                    truncation=True,
+                    max_length=self.max_length,
+                    return_length=True,
+                    add_special_tokens=True,
+                )
+
             batch_encoding["input_ids"].append(encoding["input_ids"])
             batch_encoding["attention_mask"].append(encoding["attention_mask"])
             batch_encoding["length"].extend(encoding["length"])
-            batch_encoding["chunk_text"].append(text)
-            batch_encoding["chunk_prefix_idx"].append(prefix_start)
-            batch_encoding["chunk_start_idx"].append(chunk_idx)
-            batch_encoding["chunk_end_idx"].append(chunk_idx + 1)
-            batch_encoding["chunk_start_token_idx"].append(token_idx)
+            batch_encoding["text"].append(text)
+            batch_encoding["prefix_idx"].append(prefix_start)
+            batch_encoding["start_idx"].append(chunk_idx)
+            batch_encoding["end_idx"].append(chunk_idx + 1)
+            batch_encoding["start_token_idx"].append(token_idx)
 
-        return batch_encoding
+        return {"encoding": batch_encoding}
 
-    @staticmethod
-    def chunks_to_text(chunks: list[str]) -> str:
-        return " ".join(chunk.strip() for chunk in chunks)
+    def tokenize_dataset(self, dataset: Dataset) -> Dataset:
+        """Tokenize a dataset of chunks from multiple documents.
+        Will return a new dataset of different length, where each row contains a single prefix-window.
+        Other fields are duplicated for each prefix-window.
+
+        Args:
+            dataset (Dataset): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+
+        Returns:
+            Dataset: Tokenized dataset. Each row contains a single prefix-window.
+                The `text` and `chunks` fields are removed.
+        """
+        dataset = dataset.map(
+            lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
+            remove_columns=["text"],
+        ).map(
+            self.tokenize,
+            remove_columns=["chunks"],
+        )
+        return dataset.map(
+            flatten_encoding_batch_of_one,
+            batched=True,
+            batch_size=1,
+            remove_columns=dataset.column_names,
+        )
+
+
+def flatten_encoding_batch_of_one(row: dict[str, list]) -> dict[str, list]:
+    encoding = row.pop("encoding")[0]
+    flattend = {key: [] for key in row.keys() | encoding.keys()}
+    for transposed in transpose_dict_of_lists(encoding, iter=True):
+        for key, [value] in row.items():
+            flattend[key].append(value)
+        for key, value in transposed.items():
+            flattend[key].append(value)
+    return flattend
