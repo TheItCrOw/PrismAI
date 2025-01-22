@@ -7,7 +7,7 @@ from transition_scores.scorer.abc import TransitionScorerABC
 
 
 class OnnxTransitionScorer(TransitionScorerABC):
-    def _init_model_and_tokenizer(self, model: str | Path):
+    def _init_model(self, model: str | Path):
         self.model = ORTModelForCausalLM.from_pretrained(
             model,
             provider=(
@@ -24,7 +24,7 @@ class TransformersTransitionScorer(TransitionScorerABC):
         self._load_in_8bit = load_in_8bit
         super().__init__(*args, **kwargs)
 
-    def _init_model_and_tokenizer(self, model: str | Path):
+    def _init_model(self, model: str | Path):
         self.model = AutoModelForCausalLM.from_pretrained(
             model,
             load_in_8bit=self._load_in_8bit,

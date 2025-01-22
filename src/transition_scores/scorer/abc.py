@@ -9,7 +9,8 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizer
 
-from transition_scores.data import EncodedSequence, LogProbs
+from transition_scores.data import CustomTokenizer, EncodedSequence, LogProbs
+from transition_scores.utils import transpose_dict_of_lists
 
 
 class TransitionScorerABC(ABC):
@@ -18,6 +19,7 @@ class TransitionScorerABC(ABC):
     def __init__(
         self,
         model: str | Path,
+        tokenizer: CustomTokenizer | None,
         batch_size: int,
         skip_prefix_tokens: int = 0,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
@@ -27,7 +29,10 @@ class TransitionScorerABC(ABC):
         self._device = torch.device(device)
         self._allocated = False
 
-        self._init_model_and_tokenizer(model)
+        self.tokenizer: CustomTokenizer = tokenizer or CustomTokenizer.from_pretrained(
+            model
+        )
+        self._init_model(model)
 
         self._requires_position_ids = "position_ids" in set(
             inspect.signature(self.model.forward).parameters.keys()
@@ -37,7 +42,7 @@ class TransitionScorerABC(ABC):
         self.pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
 
     @abstractmethod
-    def _init_model_and_tokenizer(self, model: str | Path): ...
+    def _init_model(self, model: str | Path): ...
 
     @property
     def device(self) -> torch.device:
@@ -54,15 +59,6 @@ class TransitionScorerABC(ABC):
     def to(self, device: str | torch.device):
         self.device = device
         return self
-
-    def _tokenize(self, data: dict):
-        return self.tokenizer(
-            data["text"],
-            # FIXME: globally enabled truncation prevents us from drawing samples here!
-            truncation=True,
-            return_length=True,
-            add_special_tokens=True,
-        )
 
     def _collate_fn(
         self, batch: list[dict]
@@ -121,8 +117,7 @@ class TransitionScorerABC(ABC):
         if sequences is not None:
             dataset = Dataset.from_dict({"text": sequences})
 
-        # NOTE: .map does not cache self._tokenize
-        dataset = dataset.map(self._tokenize, batched=True, remove_columns=["text"])
+        dataset = self.tokenizer.tokenize_dataset(dataset)
 
         # sort by input_id length for efficient batching
         dataset = dataset.sort("length").remove_columns("length")
@@ -159,7 +154,7 @@ class TransitionScorerABC(ABC):
             for seq_probs, target_ids, other_fields in zip(
                 logits,
                 input_ids,
-                (dict(zip(batch, col)) for col in zip(*batch.values())),
+                transpose_dict_of_lists(batch, iter=True),
             ):
                 top_k_probs, top_k_indices = seq_probs.topk(top_k)
 
