@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from dataclasses import dataclass
 
@@ -26,25 +27,19 @@ def infer_max_length(model_name_or_path: str):
     raise ValueError(f"Could not infer max length from {model_name_or_path}")
 
 
-class RollingWindowChunkTokenizer:
-    def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
-        self.change_tokenizer(tokenizer, max_length)
-
+class CustomTokenizerABC(ABC):
+    @abstractmethod
     @classmethod
-    def from_pretrained(cls, model_name_or_path: str, max_length: int | None = None):
-        return cls(
-            AutoTokenizer.from_pretrained(model_name_or_path),
-            max_length=max_length,
-        )
+    def from_pretrained(cls, model_name_or_path: str): ...
 
-    @property
-    def tokenizer(self) -> PreTrainedTokenizer:
-        return self._tokenizer
+    @abstractmethod
+    def __call__(self, *args, **kwargs) -> BatchEncoding: ...
 
-    def change_tokenizer(
-        self, tokenizer: PreTrainedTokenizer, max_length: int | None = None
-    ):
-        """Change tokenizer and update max_length.
+
+class RollingWindowChunkTokenizer(CustomTokenizerABC):
+    def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
+        """Rolling-Window chunk tokenizer.
+        Creates prefix-windows of chunks that fit within the max_length.
 
         Args:
             tokenizer (PreTrainedTokenizer): The new tokenizer.
@@ -65,6 +60,17 @@ class RollingWindowChunkTokenizer:
                     f"max_length was not given and we could not infer the max_length from {type(tokenizer)}({tokenizer.name_or_path}). Please provide a max_length to the {type(self).__name__} constructor."
                 ) from e
         self.max_length = max_length
+
+    @classmethod
+    def from_pretrained(cls, model_name_or_path: str, max_length: int | None = None):
+        return cls(
+            AutoTokenizer.from_pretrained(model_name_or_path),
+            max_length=max_length,
+        )
+
+    @property
+    def tokenizer(self) -> PreTrainedTokenizer:
+        return self._tokenizer
 
     def __call__(self, chunks: list[str]) -> BatchEncoding:
         batch_encoding = BatchEncoding(
