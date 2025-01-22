@@ -23,7 +23,7 @@ class BaseTransitionScore(DataClassMappingMixin):
     type: str = field(init=False)
 
     def __post_init__(self):
-        self.log_probs = [tuple(log_prob) for log_prob in self.log_probs]
+        self.features = [dict(scores) for scores in self.features]
 
 
 @dataclass
