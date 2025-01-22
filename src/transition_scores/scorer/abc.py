@@ -37,9 +37,12 @@ class TransitionScorerABC(ABC):
         self._requires_position_ids = "position_ids" in set(
             inspect.signature(self.model.forward).parameters.keys()
         )
-        self._all_special_id_set = set(self.tokenizer.all_special_ids)
+        self._all_special_id_set = set(self.tokenizer.tokenizer.all_special_ids)
 
-        self.pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+        self.pad_token_id = (
+            self.tokenizer.tokenizer.pad_token_id
+            or self.tokenizer.tokenizer.eos_token_id
+        )
 
     @abstractmethod
     def _init_model(self, model: str | Path): ...
