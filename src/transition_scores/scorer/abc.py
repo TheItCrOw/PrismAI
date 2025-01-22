@@ -19,8 +19,8 @@ class TransitionScorerABC(ABC):
     def __init__(
         self,
         model: str | Path,
-        tokenizer: CustomTokenizer | None,
-        batch_size: int,
+        tokenizer: CustomTokenizer | None = None,
+        batch_size: int = 128,
         skip_prefix_tokens: int = 0,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
     ):
