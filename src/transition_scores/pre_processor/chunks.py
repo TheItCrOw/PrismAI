@@ -1,5 +1,3 @@
-from typing import Any
-
 from datasets import Dataset
 from transformers import BatchEncoding
 
@@ -15,8 +13,9 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
     Creates prefix-windows of chunks that fit within the max_length.
     """
 
-    def process(self, row: dict[str, Any]) -> BatchEncoding:
-        """Process a list of chunks from a single document.
+    def process(self, row: dict[str, list[str]]) -> BatchEncoding:
+        """
+        Process a list of chunks from a single document.
         Will apply a rolling-window to create prefix-windows of chunks that fit within the max_length.
 
         Args:
@@ -27,7 +26,7 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
 
         Returns:
             BatchEncoding: Tokenized batch. Has the following additional fields:
-              - `text`: The entire text, including prefix.
+              - `text`: The chunk text, including prefix.
               - `prefix_idx`: The index of the first chunk in the prefix.
               - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
                   Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
@@ -104,9 +103,18 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
         Args:
             dataset (Dataset): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
+        Raises:
+            ValueError: If the start token of a chunk could not be found in the encoding.
+
         Returns:
             Dataset: Tokenized dataset. Each row contains a single prefix-window.
-                The `text` and `chunks` fields are removed.
+                The original `text` and `chunks` fields are removed.
+                New fields are added:
+                  - `text`: The chunk text, including prefix.
+                  - `prefix_idx`: The index of the first chunk in the prefix.
+                  - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
+                      Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
+                  - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
         return (
             dataset.map(text_sha256, remove_columns=["text"])
