@@ -17,12 +17,10 @@ class TransitionScorerABC(ABC):
         pre_processor: PreProcessor | None = None,
         batch_size: int = 128,
         top_k: int = 100,
-        skip_prefix_tokens: int = 0,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
     ):
         self.batch_size = batch_size
         self.top_k = top_k
-        self.skip_prefix_tokens = skip_prefix_tokens
         self.device = torch.device(device)
 
         self.pre_processor: PreProcessor = (

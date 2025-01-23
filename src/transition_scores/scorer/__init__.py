@@ -15,7 +15,6 @@ class OnnxTransitionScorer(TransitionScorerABC):
         pre_processor: PreProcessor | None = None,
         batch_size: int = 128,
         top_k: int = 100,
-        skip_prefix_tokens: int = 0,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
         provider: str | None = None,
         **kwargs,
@@ -25,7 +24,6 @@ class OnnxTransitionScorer(TransitionScorerABC):
             pre_processor=pre_processor,
             batch_size=batch_size,
             top_k=top_k,
-            skip_prefix_tokens=skip_prefix_tokens,
             device=device,
         )
         self.model = ORTModelForCausalLM.from_pretrained(
@@ -49,7 +47,6 @@ class TransformersTransitionScorer(TransitionScorerABC):
         pre_processor: PreProcessor | None = None,
         batch_size: int = 128,
         top_k: int = 100,
-        skip_prefix_tokens: int = 0,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
         load_in_8bit=False,
         **kwargs,
@@ -59,7 +56,6 @@ class TransformersTransitionScorer(TransitionScorerABC):
             pre_processor=pre_processor,
             batch_size=batch_size,
             top_k=top_k,
-            skip_prefix_tokens=skip_prefix_tokens,
             device=device,
         )
         self.model = AutoModelForCausalLM.from_pretrained(
