@@ -7,7 +7,9 @@ import torch
 from datasets import Dataset, DatasetDict
 from torch.nn.utils.rnn import pad_sequence
 
-from transition_scores.data import PreProcessor, TextPreProcessor, TransitionScores
+from transition_scores.data import TransitionScores
+from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.pre_processor.text import TextPreProcessor
 
 
 class TransitionScorerABC(ABC):
