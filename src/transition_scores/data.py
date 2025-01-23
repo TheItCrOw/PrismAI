@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections import UserDict
 from hashlib import sha256
 from typing import Any, NamedTuple
 
@@ -14,7 +13,7 @@ class EncodedSequence(NamedTuple):
     attention_mask: list[int]
 
 
-class TransitionScores(UserDict):
+class TransitionScores(dict):
     def __init__(
         self,
         target_id: int,
@@ -30,6 +29,12 @@ class TransitionScores(UserDict):
                 "top_k_scores": top_k_scores,
             }
         )
+
+    @classmethod
+    def new(cls, tuple_or_target_id: tuple | int, *args):
+        if isinstance(tuple_or_target_id, tuple):
+            return cls(*tuple_or_target_id)
+        return cls(tuple_or_target_id, *args)
 
 
 def infer_max_length(model_name_or_path: str):
