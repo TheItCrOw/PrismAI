@@ -1,5 +1,7 @@
 from typing import Generator
 
+from transformers import AutoConfig
+
 
 class ModelIntializationError(Exception):
     pass
@@ -39,3 +41,16 @@ def transpose_dict_of_lists[K, V](
         yield from _gen
     else:
         return list(_gen)
+
+
+def chunks_to_text(chunks: list[str]) -> str:
+    return " ".join(chunk.strip() for chunk in chunks)
+
+
+def infer_max_length(model_name_or_path: str):
+    config = AutoConfig.from_pretrained(model_name_or_path)
+    if hasattr(config, "max_position_embeddings"):
+        return config.max_position_embeddings
+    if hasattr(config, "n_positions"):
+        return config.n_positions
+    raise ValueError(f"Could not infer max length from {model_name_or_path}")

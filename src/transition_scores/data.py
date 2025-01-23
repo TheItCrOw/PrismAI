@@ -3,9 +3,13 @@ from hashlib import sha256
 from typing import Any, NamedTuple
 
 from datasets import Dataset
-from transformers import AutoConfig, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
+from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
-from transition_scores.utils import transpose_dict_of_lists
+from transition_scores.utils import (
+    chunks_to_text,
+    infer_max_length,
+    transpose_dict_of_lists,
+)
 
 
 class EncodedSequence(NamedTuple):
@@ -35,19 +39,6 @@ class TransitionScores(dict):
         if isinstance(tuple_or_target_id, tuple):
             return cls(*tuple_or_target_id)
         return cls(tuple_or_target_id, *args)
-
-
-def infer_max_length(model_name_or_path: str):
-    config = AutoConfig.from_pretrained(model_name_or_path)
-    if hasattr(config, "max_position_embeddings"):
-        return config.max_position_embeddings
-    if hasattr(config, "n_positions"):
-        return config.n_positions
-    raise ValueError(f"Could not infer max length from {model_name_or_path}")
-
-
-def chunks_to_text(chunks: list[str]) -> str:
-    return " ".join(chunk.strip() for chunk in chunks)
 
 
 class PreProcessor(ABC):
