@@ -1,9 +1,7 @@
-from hashlib import sha256
-
 from datasets import Dataset
 from transformers import BatchEncoding
 
-from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.pre_processor.abc import PreProcessor, text_sha256
 
 
 class TextPreProcessor(PreProcessor):
@@ -52,9 +50,7 @@ class TextPreProcessor(PreProcessor):
             Dataset: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
         return (
-            dataset.map(
-                lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
-            )
+            dataset.map(text_sha256)
             .map(self.process, batched=True, remove_columns=["text", "chunks"])
             .sort("length")
             .remove_columns("length")

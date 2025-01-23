@@ -1,10 +1,10 @@
-from hashlib import sha256
 from typing import Any
 
 from datasets import Dataset
 from transformers import BatchEncoding
 
 from transition_scores.data import flatten_batch_encoding_of_one
+from transition_scores.pre_processor.abc import text_sha256
 from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import chunks_to_text
 
@@ -108,15 +108,10 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             Dataset: Tokenized dataset. Each row contains a single prefix-window.
                 The `text` and `chunks` fields are removed.
         """
-        dataset = dataset.map(
-            lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
-            remove_columns=["text"],
-        ).map(
-            self.process,
-            remove_columns=["chunks"],
-        )
         return (
-            dataset.map(
+            dataset.map(text_sha256, remove_columns=["text"])
+            .map(self.process, remove_columns=["chunks"])
+            .map(
                 flatten_batch_encoding_of_one,
                 batched=True,
                 batch_size=1,

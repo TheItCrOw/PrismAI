@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from hashlib import sha256
+from typing import Any
 
 from datasets import Dataset
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
@@ -42,3 +44,7 @@ class PreProcessor(ABC):
 
     @abstractmethod
     def prepare_dataset(self, dataset: Dataset) -> Dataset: ...
+
+
+def text_sha256(row: dict[str, Any]) -> dict[str, str]:
+    return {"text_sha256": sha256(row["text"].encode()).hexdigest()}
