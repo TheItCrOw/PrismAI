@@ -1,11 +1,11 @@
-from dataclasses import dataclass
+from collections import UserDict
 from hashlib import sha256
 from typing import Any, NamedTuple
 
 from datasets import Dataset
 from transformers import AutoConfig, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
-from transition_scores.utils import DataClassMappingMixin, transpose_dict_of_lists
+from transition_scores.utils import transpose_dict_of_lists
 
 
 class EncodedSequence(NamedTuple):
@@ -13,10 +13,22 @@ class EncodedSequence(NamedTuple):
     attention_mask: list[int]
 
 
-@dataclass
-class TransitionScores(DataClassMappingMixin):
-    target_id: int
-    scores: dict[int, float]
+class TransitionScores(UserDict):
+    def __init__(
+        self,
+        target_id: int,
+        target_prob: float,
+        top_k_ids: list[int],
+        top_k_scores: list[float],
+    ):
+        super().__init__(
+            {
+                "target_id": target_id,
+                "target_prob": target_prob,
+                "top_k_ids": top_k_ids,
+                "top_k_scores": top_k_scores,
+            }
+        )
 
 
 def infer_max_length(model_name_or_path: str):
