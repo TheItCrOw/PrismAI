@@ -1,6 +1,7 @@
 from datasets import Dataset
 from transformers import BatchEncoding
 
+from transition_scores.data import PreProcessorMetadata
 from transition_scores.pre_processor.abc import text_sha256
 from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import chunks_to_text, transpose_dict_of_lists
@@ -145,4 +146,10 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             )
             .sort("length")
             .remove_columns("length")
+        )
+
+    def get_metadata(self) -> PreProcessorMetadata:
+        return PreProcessorMetadata.new(
+            "chunk-in-context",
+            max_length=self.max_length,
         )

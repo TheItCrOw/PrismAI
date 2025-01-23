@@ -5,6 +5,7 @@ from typing import Any
 from datasets import Dataset
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
+from transition_scores.data import PreProcessorMetadata
 from transition_scores.utils import infer_max_length
 
 
@@ -49,6 +50,9 @@ class PreProcessor(ABC):
     def additional_fields(self) -> None | tuple[str, ...]:
         """The additional fields that this pre-processor adds to the dataset, if any."""
         return None
+
+    @abstractmethod
+    def get_metadata(self) -> PreProcessorMetadata: ...
 
 
 def text_sha256(row: dict[str, Any]) -> dict[str, str]:

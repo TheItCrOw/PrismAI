@@ -1,6 +1,7 @@
 from datasets import Dataset
 from transformers import BatchEncoding
 
+from transition_scores.data import PreProcessorMetadata
 from transition_scores.pre_processor.abc import PreProcessor, text_sha256
 
 
@@ -54,4 +55,10 @@ class TextPreProcessor(PreProcessor):
             .map(self.process, batched=True, remove_columns=["text", "chunks"])
             .sort("length")
             .remove_columns("length")
+        )
+
+    def get_metadata(self) -> PreProcessorMetadata:
+        return PreProcessorMetadata.new(
+            "text",
+            max_length=self.max_length,
         )
