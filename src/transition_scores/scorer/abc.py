@@ -1,5 +1,5 @@
 import inspect
-from abc import ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterable
 
@@ -7,7 +7,12 @@ import torch
 from datasets import Dataset, DatasetDict
 from torch.nn.utils.rnn import pad_sequence
 
-from transition_scores.data import TransitionScores
+from transition_scores.data import (
+    FeaturesDict,
+    ModelMetadata,
+    ScoresDict,
+    TransitionScores,
+)
 from transition_scores.pre_processor.abc import PreProcessor
 from transition_scores.pre_processor.text import TextPreProcessor
 
@@ -63,6 +68,9 @@ class TransitionScorerABC(ABC):
         self.model.to(self.device)
         return self
 
+    @abstractmethod
+    def get_model_metadata(self) -> ModelMetadata: ...
+
     def process(
         self,
         dataset: Dataset | Iterable[str],
@@ -108,6 +116,7 @@ class TransitionScorerABC(ABC):
                 remove_columns=["input_ids", "attention_mask"],
             )
             .with_format(None)
+            .map(self._to_mongo)
         )
 
     def _process_batch(
@@ -143,13 +152,13 @@ class TransitionScorerABC(ABC):
             # If this model does not use a BOS token, the first token is not predicted,
             # so we add a dummy result with a zero probability
             if (first_token := target_ids[0].item()) not in self._all_special_id_set:
-                seq_scores.append(TransitionScores(first_token, 0.0, [], []))
+                seq_scores.append(TransitionScores.new(first_token, 0.0, [], []))
 
             # Omit the last token if it is a special token, e.g. <|endoftext|>
             seq_end = -1 if target_ids[-1] in self._all_special_id_set else None
             seq_scores.extend(
                 map(
-                    TransitionScores.new,
+                    TransitionScores.from_tuple,
                     zip(
                         # We skip the first token,
                         # as we will not get predictions for it
@@ -191,3 +200,10 @@ class TransitionScorerABC(ABC):
                 position_ids=position_ids.to(self.device),
             )
             return outputs.logits.softmax(-1).cpu()
+
+    def _to_mongo(self, row: dict) -> dict:
+        return FeaturesDict.from_scores(
+            ScoresDict.new(**row),
+            model_metadata=self.get_model_metadata(),
+            pre_processor_metadata=self.pre_processor.get_metadata(),
+        )
