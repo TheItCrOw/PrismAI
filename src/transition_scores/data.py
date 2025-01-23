@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import UserDict
 from hashlib import sha256
 from typing import Any, NamedTuple
@@ -44,13 +45,12 @@ def chunks_to_text(chunks: list[str]) -> str:
     return " ".join(chunk.strip() for chunk in chunks)
 
 
-class CustomTokenizer:
+class PreProcessor(ABC):
     def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
-        """Custom tokenizer wrapping a `PreTrainedTokenizer`.
+        """Pre-Processor base class wrapping a `PreTrainedTokenizer`.
 
         Args:
             tokenizer (PreTrainedTokenizer): The tokenizer to wrap.
-            max_length (int, optional):
             max_length (int, optional): The max_length for each tokenized sequence.
                 Will try to infer max_length from the tokenizer if not specified.
 
@@ -73,22 +73,35 @@ class CustomTokenizer:
         return self._tokenizer
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path: str):
-        return cls(AutoTokenizer.from_pretrained(model_name_or_path))
+    def from_pretrained(cls, model_name_or_path: str, **kwargs):
+        return cls(AutoTokenizer.from_pretrained(model_name_or_path), **kwargs)
 
-    def tokenize(self, batch: dict[str, list]) -> BatchEncoding:
-        """Tokenize a *batch* of samples.
+    @abstractmethod
+    def process(self, batch: dict[str, list]) -> BatchEncoding: ...
+
+    @abstractmethod
+    def prepare_dataset(self, dataset: Dataset) -> Dataset: ...
+
+
+class TextPreProcessor(PreProcessor):
+    """
+    Simple `text` pre-processor.
+    Sequences are tokenized and truncated to `max_length`.
+    """
+
+    def process(self, batch: dict[str, list]) -> BatchEncoding:
+        """Process a *batch* of samples.
         Expects a dictionary with a "text" field containing a list of strings.
 
         Note:
             Effectively calls:
-            ```python
-            tokenizer(
-                batch["text"],
-                truncation=True,
-                return_length=True,
-                add_special_tokens=True,
-            )
+            ```py
+            >>> tokenizer(
+            >>>     batch["text"],
+            >>>     truncation=True,
+            >>>     return_length=True,
+            >>>     add_special_tokens=True,
+            >>> )
             ```
 
         Args:
@@ -105,8 +118,8 @@ class CustomTokenizer:
             add_special_tokens=True,
         )
 
-    def tokenize_dataset(self, dataset: Dataset) -> Dataset:
-        """Tokenize the `text` of the samples in a dataset.
+    def prepare_dataset(self, dataset: Dataset) -> Dataset:
+        """Prepare the `text` of the samples in a dataset.
         Adds `text_sha256` field to the dataset.
 
         Args:
@@ -115,35 +128,24 @@ class CustomTokenizer:
         Returns:
             Dataset: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
-        return dataset.map(
-            lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
-        ).map(self.tokenize, batched=True, remove_columns=["text", "chunks"])
-
-
-class RollingWindowChunkTokenizer(CustomTokenizer):
-    def __init__(self, tokenizer: PreTrainedTokenizer, max_length: int | None = None):
-        """Rolling-Window chunk tokenizer.
-        Creates prefix-windows of chunks that fit within the max_length.
-
-        Args:
-            tokenizer (PreTrainedTokenizer): The new tokenizer.
-            max_length (int, optional): The max_length for each tokenized sequence.
-                Will try to infer max_length from the tokenizer if not specified.
-
-        Raises:
-            ValueError: If max_length is not given and we could not infer it from the tokenizer.
-        """
-        super().__init__(tokenizer, max_length=max_length)
-
-    @classmethod
-    def from_pretrained(cls, model_name_or_path: str, max_length: int | None = None):
-        return cls(
-            AutoTokenizer.from_pretrained(model_name_or_path),
-            max_length=max_length,
+        return (
+            dataset.map(
+                lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
+            )
+            .map(self.process, batched=True, remove_columns=["text", "chunks"])
+            .sort("length")
+            .remove_columns("length")
         )
 
-    def tokenize(self, row: dict[str, Any]) -> BatchEncoding:
-        """Tokenize a list of chunks from a single document.
+
+class RollingWindowChunkPreProcessor(TextPreProcessor):
+    """
+    Rolling-Window chunk pre-processor.
+    Creates prefix-windows of chunks that fit within the max_length.
+    """
+
+    def process(self, row: dict[str, Any]) -> BatchEncoding:
+        """Process a list of chunks from a single document.
         Will apply a rolling-window to create prefix-windows of chunks that fit within the max_length.
 
         Args:
@@ -223,7 +225,7 @@ class RollingWindowChunkTokenizer(CustomTokenizer):
 
         return {"encoding": batch_encoding}
 
-    def tokenize_dataset(self, dataset: Dataset) -> Dataset:
+    def prepare_dataset(self, dataset: Dataset) -> Dataset:
         """Tokenize a dataset of chunks from multiple documents.
         Will return a new dataset of different length, where each row contains a single prefix-window.
         Other fields are duplicated for each prefix-window.
@@ -239,18 +241,22 @@ class RollingWindowChunkTokenizer(CustomTokenizer):
             lambda row: {"text_sha256": sha256(row["text"].encode()).hexdigest()},
             remove_columns=["text"],
         ).map(
-            self.tokenize,
+            self.process,
             remove_columns=["chunks"],
         )
-        return dataset.map(
-            flatten_encoding_batch_of_one,
-            batched=True,
-            batch_size=1,
-            remove_columns=dataset.column_names,
+        return (
+            dataset.map(
+                flatten_batch_encoding_of_one,
+                batched=True,
+                batch_size=1,
+                remove_columns=dataset.column_names,
+            )
+            .sort("length")
+            .remove_columns("length")
         )
 
 
-def flatten_encoding_batch_of_one(row: dict[str, list]) -> dict[str, list]:
+def flatten_batch_encoding_of_one(row: dict[str, list]) -> dict[str, list]:
     encoding = row.pop("encoding")[0]
     flattend = {key: [] for key in row.keys() | encoding.keys()}
     for transposed in transpose_dict_of_lists(encoding, iter=True):
