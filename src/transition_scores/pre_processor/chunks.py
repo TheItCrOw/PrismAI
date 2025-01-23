@@ -1,10 +1,20 @@
 from datasets import Dataset
 from transformers import BatchEncoding
 
-from transition_scores.data import flatten_batch_encoding_of_one
 from transition_scores.pre_processor.abc import text_sha256
 from transition_scores.pre_processor.text import TextPreProcessor
-from transition_scores.utils import chunks_to_text
+from transition_scores.utils import chunks_to_text, transpose_dict_of_lists
+
+
+def flatten_batch_encoding_of_one(row: dict[str, list]) -> dict[str, list]:
+    encoding = row.pop("encoding")[0]
+    flattend = {key: [] for key in row.keys() | encoding.keys()}
+    for transposed in transpose_dict_of_lists(encoding, iter=True):
+        for key, [value] in row.items():
+            flattend[key].append(value)
+        for key, value in transposed.items():
+            flattend[key].append(value)
+    return flattend
 
 
 class RollingWindowChunkPreProcessor(TextPreProcessor):
