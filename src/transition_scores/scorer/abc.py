@@ -103,6 +103,7 @@ class TransitionScorerABC(ABC):
                 batch_size=self.batch_size,
                 remove_columns=["input_ids", "attention_mask"],
             )
+            .with_format(None)
         )
 
     def _process_batch(self, batch: dict[str, list]) -> dict[str, list]:
