@@ -33,6 +33,9 @@ class TransitionScorerABC(ABC):
 
     @model.setter
     def model(self, model):
+        self.set_model(model)
+
+    def set_model(self, model):
         self._model = model
         self._requires_position_ids = "position_ids" in set(
             inspect.signature(self.model.forward).parameters.keys()
@@ -44,6 +47,9 @@ class TransitionScorerABC(ABC):
 
     @pre_processor.setter
     def pre_processor(self, pre_processor: PreProcessor):
+        self.set_pre_processor(pre_processor)
+
+    def set_pre_processor(self, pre_processor: PreProcessor):
         self._pre_processor = pre_processor
         self._all_special_id_set = set(pre_processor.tokenizer.all_special_ids)
         self._pad_token_id = (
