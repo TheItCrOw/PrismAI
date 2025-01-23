@@ -45,6 +45,11 @@ class PreProcessor(ABC):
     @abstractmethod
     def prepare_dataset(self, dataset: Dataset) -> Dataset: ...
 
+    @property
+    def additional_fields(self) -> None | tuple[str, ...]:
+        """The additional fields that this pre-processor adds to the dataset, if any."""
+        return None
+
 
 def text_sha256(row: dict[str, Any]) -> dict[str, str]:
     return {"text_sha256": sha256(row["text"].encode()).hexdigest()}

@@ -23,6 +23,16 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
     Creates prefix-windows of chunks that fit within the max_length.
     """
 
+    @property
+    def additional_fields(self) -> tuple[str, ...]:
+        return (
+            "text",
+            "prefix_idx",
+            "start_idx",
+            "end_idx",
+            "start_token_idx",
+        )
+
     def process(self, row: dict[str, list[str]]) -> BatchEncoding:
         """
         Process a list of chunks from a single document.
@@ -45,14 +55,13 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
         chunks = row["chunks"]
         batch_encoding = BatchEncoding(
             {
-                "input_ids": [],
-                "attention_mask": [],
-                "length": [],
-                "text": [],
-                "prefix_idx": [],
-                "start_idx": [],
-                "end_idx": [],
-                "start_token_idx": [],
+                key: []
+                for key in (
+                    "input_ids",
+                    "attention_mask",
+                    "length",
+                    *self.additional_fields,
+                )
             }
         )
 
@@ -133,7 +142,6 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                 flatten_batch_encoding_of_one,
                 batched=True,
                 batch_size=1,
-                remove_columns=dataset.column_names,
             )
             .sort("length")
             .remove_columns("length")
