@@ -5,7 +5,6 @@ from itertools import batched
 from pathlib import Path
 
 import datasets
-import torch
 from datasets import Dataset
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -30,7 +29,7 @@ if __name__ == "__main__":
 
     model_group = parser.add_argument_group("Model")
     model_group.add_argument("model", type=str, help="Model name or path")
-    provider_group_me = model_group.add_mutually_exclusive_group("Provider")
+    provider_group_me = model_group.add_mutually_exclusive_group()
     provider_group_me.add_argument(
         "--provider",
         choices=["hf", "onnx"],
@@ -68,12 +67,12 @@ if __name__ == "__main__":
         help="Batch size for dataset processing. Defaults to the MongoDB batch size.",
     )
 
-    device_group = model_group.add_mutually_exclusive_group("Device")
+    device_group = model_group.add_mutually_exclusive_group()
     device_group.add_argument(
         "--device",
         type=str,
         help="Device to use",
-        default="cuda" if torch.cuda.is_available() else "cpu",
+        default=None,
     )
     device_group.add_argument("--cpu", action="store_const", const="cpu", dest="device")
     device_group.add_argument(
@@ -171,13 +170,13 @@ if __name__ == "__main__":
             scorer = TransformersTransitionScorer(
                 args.model,
                 batch_size=args.model_batch_size,
-                device="cuda",
+                device=args.device,
             )
         case "onnx":
             scorer = OnnxTransitionScorer(
                 args.model,
                 batch_size=args.model_batch_size,
-                device="cuda",
+                device=args.device,
             )
         case _:
             raise RuntimeError
