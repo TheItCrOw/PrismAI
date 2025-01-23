@@ -84,9 +84,15 @@ class TransitionScorerABC(ABC):
         if not isinstance(dataset, (Dataset, DatasetDict)):
             dataset = Dataset.from_dict({"text": dataset})
 
+        try:
+            dataset = self._pre_processor.prepare_dataset(dataset)
+        except KeyError as e:
+            raise KeyError(
+                f"Pre-processor {type(self._pre_processor).__name__} requires the field {e.args[0]} in the dataset."
+            ) from e
+
         return (
-            self._pre_processor.prepare_dataset(dataset)
-            .with_format(
+            dataset.with_format(
                 type="torch",
                 columns=["input_ids", "attention_mask"],
                 output_all_columns=True,
