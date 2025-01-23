@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from hashlib import sha256
-from typing import Any, NamedTuple
+from typing import Any
 
 from datasets import Dataset
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
@@ -10,11 +10,6 @@ from transition_scores.utils import (
     infer_max_length,
     transpose_dict_of_lists,
 )
-
-
-class EncodedSequence(NamedTuple):
-    input_ids: list[int]
-    attention_mask: list[int]
 
 
 class TransitionScores(dict):
