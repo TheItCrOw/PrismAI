@@ -106,15 +106,66 @@ class TransitionScorerABC(ABC):
             .with_format(None)
         )
 
-    def _process_batch(self, batch: dict[str, list]) -> dict[str, list]:
-        input_ids = pad_sequence(
-            batch["input_ids"], batch_first=True, padding_value=self._pad_token_id
-        )
-        attention_mask = pad_sequence(
-            batch["attention_mask"], batch_first=True, padding_value=0
-        )
+    def _process_batch(
+        self, batch: dict[str, list]
+    ) -> dict[str, list[list[TransitionScores]]]:
+        input_ids: list[torch.Tensor] = batch["input_ids"]
 
-        # calculate position_ids if required (source: huggingface transformers)
+        output_probs = self._forward(input_ids, batch["attention_mask"])
+
+        transition_scores = []
+        for seq_probs, target_ids in zip(output_probs, input_ids):
+            # Truncate the sequence to the last non-pad token
+            seq_len = target_ids.ne(self._pad_token_id).long().sum() - 1
+            seq_probs = seq_probs[:seq_len]
+
+            # Get target token and top k probabilities
+            target_probs = seq_probs[
+                torch.arange(seq_len), target_ids[1 : seq_len + 1]
+            ].flatten()
+            batch_top_k_probs, batch_top_k_indices = seq_probs.topk(self.top_k)
+
+            seq_scores = []
+
+            # If this model does not use a BOS token, the first token is not predicted,
+            # so we add a dummy result with a zero probability
+            if (first_token := target_ids[0].item()) not in self._all_special_id_set:
+                seq_scores.append(TransitionScores(first_token, 0.0, [], []))
+
+            # Omit the last token if it is a special token, e.g. <|endoftext|>
+            seq_end = -1 if target_ids[-1] in self._all_special_id_set else None
+            seq_scores.extend(
+                map(
+                    TransitionScores.new,
+                    zip(
+                        # We skip the first token,
+                        # as we will not get predictions for it
+                        target_ids[1:seq_end],
+                        target_probs,
+                        batch_top_k_indices,
+                        batch_top_k_probs,
+                    ),
+                )
+            )
+            transition_scores.append(seq_scores)
+        return {"transition_scores": transition_scores}
+
+    def _forward(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Run the model forward pass and return the output SoftMax probabilities.
+
+        Returns:
+            torch.Tensor: SoftMax probabilities (on CPU).
+        """
+        input_ids = pad_sequence(
+            input_ids, batch_first=True, padding_value=self._pad_token_id
+        )
+        attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+
+        # Create `position_ids` on the fly, if required
+        # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
         position_ids = None
         if self._requires_position_ids:
             position_ids = attention_mask.long().cumsum(-1) - 1
@@ -126,45 +177,4 @@ class TransitionScorerABC(ABC):
                 attention_mask=attention_mask.to(self.device),
                 position_ids=position_ids.to(self.device),
             )
-            output_probabilities: torch.Tensor = outputs.logits.softmax(-1).cpu()
-            del outputs
-
-        transition_scores = []
-        for seq_probs, target_ids in zip(
-            output_probabilities,
-            batch["input_ids"],
-        ):
-            # calculate length of the sequence and get corresponding target probabilities
-            seq_len = target_ids.ne(self._pad_token_id).long().sum() - 1
-            batch_top_k_probs, batch_top_k_indices = seq_probs[:seq_len].topk(
-                self.top_k
-            )
-            target_probs = seq_probs[:seq_len][
-                torch.arange(seq_len), target_ids[1 : seq_len + 1]
-            ].flatten()
-
-            seq_results = []
-            first_token = target_ids[0].item()
-            if first_token not in self._all_special_id_set:
-                seq_results.append(TransitionScores(first_token, 0.0, [], []))
-
-            # omit the last token, if it is a special token, e.g. <|endoftext|>
-            seq_end = -1 if target_ids[-1] not in self._all_special_id_set else None
-
-            # always skip the first token, as we do not get predictions for it
-            for target_idx, target_prob, top_k_indices, top_k_probs in zip(
-                target_ids[1:seq_end].tolist(),
-                target_probs.tolist(),
-                batch_top_k_indices.tolist(),
-                batch_top_k_probs.tolist(),
-            ):
-                seq_results.append(
-                    TransitionScores(
-                        target_idx,
-                        target_prob,
-                        top_k_indices,
-                        top_k_probs,
-                    )
-                )
-            transition_scores.append(seq_results)
-        return {"transition_scores": transition_scores}
+            return outputs.logits.softmax(-1).cpu()
