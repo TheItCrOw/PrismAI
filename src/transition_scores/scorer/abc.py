@@ -63,23 +63,25 @@ class TransitionScorerABC(ABC):
 
     def process(
         self,
-        dataset: Iterable[str] | Dataset,
+        dataset: Dataset | Iterable[str],
     ) -> Dataset:
         """
-        Calculate transition scores for a batch of sequences.
-        Yields one list of LogProbs for each sequence in the batch.
-        Each list contains the target token and top-k token
-        probabilities for each prediction step.
+        Calculate transition scores for the given dataset.
+        Will use the currently set `pre_processor` to prepare the dataset.
 
         Note:
-            You must give either `sequences` or `dataset` but not both.
+            - Use `set_pre_processor` to change the pre-processor.
+            - Some pre-processors may require specific fields in the dataset (like `chunks`) &ndash; refer to the pre-processor's documentation.
 
         Args:
-            sequences: A batch of text sequences to process.
-                May
+            dataset (Dataset | Iterable[str]): Either a dataset or a sequence of texts to be processed.
 
-        Yields:
-            list[LogProbs]: A list of LogProbs for each sequence in the batch.
+        Raises:
+            KeyError: If the pre-processor requires a field that is not present in the given dataset.
+
+        Returns:
+            Dataset: A new dataset with the calculated transition scores.
+                All rows contain the original sequence `_id`, the `transition_scores` and additional information that depends on the pre-processor.
         """
         if not isinstance(dataset, (Dataset, DatasetDict)):
             dataset = Dataset.from_dict({"text": dataset})
@@ -109,6 +111,15 @@ class TransitionScorerABC(ABC):
     def _process_batch(
         self, batch: dict[str, list]
     ) -> dict[str, list[list[TransitionScores]]]:
+        """
+        Calculate transition scores for a batch of input sequences.
+
+        Args:
+            batch (dict[str, list]): A batch of samples containing `input_ids` and `attention_mask` for each sequence.
+
+        Returns:
+            dict[str, list[list[TransitionScores]]]: A list of transition scores for each sequence in the batch.
+        """
         input_ids: list[torch.Tensor] = batch["input_ids"]
 
         output_probs = self._forward(input_ids, batch["attention_mask"])
