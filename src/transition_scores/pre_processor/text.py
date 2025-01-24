@@ -11,15 +11,14 @@ class TextPreProcessor(PreProcessor):
     Sequences are tokenized and truncated to `max_length`.
     """
 
-    def process(self, batch: dict[str, list]) -> BatchEncoding:
+    def process(self, text: list[str]) -> BatchEncoding:
         """Process a *batch* of samples.
-        Expects a dictionary with a "text" field containing a list of strings.
 
         Note:
             Effectively calls:
             ```py
             >>> tokenizer(
-            >>>     batch["text"],
+            >>>     text,
             >>>     truncation=True,
             >>>     return_length=True,
             >>>     add_special_tokens=True,
@@ -33,7 +32,7 @@ class TextPreProcessor(PreProcessor):
             BatchEncoding | dict[str, list]: Tokenized batch.
         """
         return self.tokenizer(
-            batch["text"],
+            text,
             truncation=True,
             max_length=self.max_length,
             return_length=True,
@@ -51,8 +50,18 @@ class TextPreProcessor(PreProcessor):
             Dataset: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
         return (
-            dataset.map(text_sha256)
-            .map(self.process, batched=True, remove_columns=["text", "chunks"])
+            dataset.map(
+                text_sha256,
+                input_columns=["text"],
+                desc=f"{type(self).__name__}: Calculating Text Hash",
+            )
+            .map(
+                self.process,
+                batched=True,
+                input_columns=["text", "chunks"],
+                remove_columns=["text", "chunks"],
+                desc=f"{type(self).__name__}: Tokenizing Texts",
+            )
             .sort("length")
             .remove_columns("length")
         )

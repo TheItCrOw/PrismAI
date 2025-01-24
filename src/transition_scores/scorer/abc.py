@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterable
 
+import multiprocess
 import torch
 from datasets import Dataset, DatasetDict
 from torch.nn.utils.rnn import pad_sequence
@@ -10,6 +11,7 @@ from torch.nn.utils.rnn import pad_sequence
 from transition_scores.data import (
     FeaturesDict,
     ModelMetadata,
+    PreProcessorMetadata,
     ScoresDict,
     TransitionScores,
 )
@@ -100,43 +102,55 @@ class TransitionScorerABC(ABC):
             dataset = self._pre_processor.prepare_dataset(dataset)
         except KeyError as e:
             raise KeyError(
-                f"Pre-processor {type(self._pre_processor).__name__} requires the field {e.args[0]} in the dataset."
+                f"PreProcessor {type(self._pre_processor).__name__} requires the field {e.args[0]} in the dataset."
             ) from e
 
-        return (
-            dataset.with_format(
-                type="torch",
-                columns=["input_ids", "attention_mask"],
-                output_all_columns=True,
-            )
-            .map(
-                self._process_batch,
-                batched=True,
-                batch_size=self.batch_size,
-                remove_columns=["input_ids", "attention_mask"],
-            )
-            .with_format(None)
-            .map(self._to_mongo)
+        dataset.set_format(
+            type="torch",
+            columns=["input_ids", "attention_mask"],
+            output_all_columns=True,
+        )
+        dataset = dataset.map(
+            self._process_batch,
+            batched=True,
+            batch_size=self.batch_size,
+            input_columns=["input_ids", "attention_mask"],
+            remove_columns=["input_ids", "attention_mask"],
+            desc="Scorer: Processing Sequences",
+        )
+        dataset.set_format(None)
+
+        return dataset.map(
+            convert_to_mongo,
+            desc="Scorer: Convert to Mongo Format",
+            fn_kwargs={
+                "model_metadata": self.get_model_metadata(),
+                "pre_processor_metadata": self._pre_processor.get_metadata(),
+            },
+            num_proc=multiprocess.cpu_count() // 2,
         )
 
     def _process_batch(
-        self, batch: dict[str, list]
-    ) -> dict[str, list[list[TransitionScores]]]:
+        self,
+        input_ids: list[torch.Tensor],
+        attention_mask: list[torch.Tensor],
+    ) -> dict[str, list[torch.Tensor]]:
         """
-        Calculate transition scores for a batch of input sequences.
+        Process the a batch of input sequences and calculate transition scores.
+        Runs a forward pass on the model and extracts the top k probabilities.
 
         Args:
-            batch (dict[str, list]): A batch of samples containing `input_ids` and `attention_mask` for each sequence.
+            batch (dict[str, list]): A batch of samples containing `input_ids` and
+            `attention_mask` for each sequence.
 
         Returns:
-            dict[str, list[list[TransitionScores]]]: A list of transition scores for each sequence in the batch.
+            dict[str, list[list[TransitionScores]]]: A list of transition scores
+                for each sequence in the batch.
         """
-        input_ids: list[torch.Tensor] = batch["input_ids"]
-
-        output_probs = self._forward(input_ids, batch["attention_mask"])
+        outputs = self._forward(input_ids, attention_mask)
 
         transition_scores = []
-        for seq_probs, target_ids in zip(output_probs, input_ids):
+        for target_ids, seq_probs in zip(input_ids, outputs):
             # Truncate the sequence to the last non-pad token
             seq_len = target_ids.ne(self._pad_token_id).long().sum() - 1
             seq_probs = seq_probs[:seq_len]
@@ -145,7 +159,8 @@ class TransitionScorerABC(ABC):
             target_probs = seq_probs[
                 torch.arange(seq_len), target_ids[1 : seq_len + 1]
             ].flatten()
-            batch_top_k_probs, batch_top_k_indices = seq_probs.topk(self.top_k)
+
+            top_k_probs, top_k_indices = seq_probs.topk(self.top_k)
 
             seq_scores = []
 
@@ -164,8 +179,8 @@ class TransitionScorerABC(ABC):
                         # as we will not get predictions for it
                         target_ids[1:seq_end],
                         target_probs,
-                        batch_top_k_indices,
-                        batch_top_k_probs,
+                        top_k_indices,
+                        top_k_probs,
                     ),
                 )
             )
@@ -176,10 +191,13 @@ class TransitionScorerABC(ABC):
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> torch.Tensor:
         """
-        Run the model forward pass and return the output SoftMax probabilities.
+        Run a model forward pass for a batch of input sequences and return the output probabilities.
+
+        Args:
+            batch (dict[str, list]): A batch of samples containing `input_ids` and `attention_mask` for each sequence.
 
         Returns:
-            torch.Tensor: SoftMax probabilities (on CPU).
+            dict[str, list[torch.Tensor]]: A dictionary containing `target_probs`, `top_k_probs` and `top_k_indices` for each sequence.
         """
         input_ids = pad_sequence(
             input_ids, batch_first=True, padding_value=self._pad_token_id
@@ -194,16 +212,24 @@ class TransitionScorerABC(ABC):
             position_ids.masked_fill_(attention_mask == 0, 1)
 
         with torch.no_grad():
-            outputs = self._model.forward(
-                input_ids=input_ids.to(self.device),
-                attention_mask=attention_mask.to(self.device),
-                position_ids=position_ids.to(self.device),
+            return (
+                self._model.forward(
+                    input_ids=input_ids.to(self.device),
+                    attention_mask=attention_mask.to(self.device),
+                    position_ids=position_ids.to(self.device),
+                )
+                .logits.softmax(-1)
+                .cpu()
             )
-            return outputs.logits.softmax(-1).cpu()
 
-    def _to_mongo(self, row: dict) -> dict:
-        return FeaturesDict.from_scores(
-            ScoresDict.new(**row),
-            model_metadata=self.get_model_metadata(),
-            pre_processor_metadata=self.pre_processor.get_metadata(),
-        )
+
+def convert_to_mongo(
+    row: dict,
+    model_metadata: ModelMetadata,
+    pre_processor_metadata: PreProcessorMetadata,
+) -> FeaturesDict:
+    return FeaturesDict.from_scores(
+        ScoresDict.new(**row),
+        model_metadata=model_metadata,
+        pre_processor_metadata=pre_processor_metadata,
+    )

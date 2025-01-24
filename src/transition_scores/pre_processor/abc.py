@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from hashlib import sha256
-from typing import Any
 
 from datasets import Dataset
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
@@ -55,5 +54,5 @@ class PreProcessor(ABC):
     def get_metadata(self) -> PreProcessorMetadata: ...
 
 
-def text_sha256(row: dict[str, Any]) -> dict[str, str]:
-    return {"text_sha256": sha256(row["text"].encode()).hexdigest()}
+def text_sha256(text: str) -> dict[str, str]:
+    return {"text_sha256": sha256(text.encode()).hexdigest()}

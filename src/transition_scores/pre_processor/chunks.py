@@ -1,3 +1,5 @@
+import datasets
+import multiprocess
 from datasets import Dataset
 from transformers import BatchEncoding
 
@@ -34,13 +36,13 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             "start_token_idx",
         )
 
-    def process(self, row: dict[str, list[str]]) -> BatchEncoding:
+    def process(self, chunks: list[str]) -> BatchEncoding:
         """
         Process a list of chunks from a single document.
         Will apply a rolling-window to create prefix-windows of chunks that fit within the max_length.
 
         Args:
-            row (dict[str, Any]): A dictionary with a "chunks" field containing a list of strings.
+            chunks (list[str]): List of chunks from a single document.
 
         Raises:
             ValueError: If the start token of a chunk could not be found in the encoding.
@@ -53,7 +55,6 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                   Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
               - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
-        chunks = row["chunks"]
         batch_encoding = BatchEncoding(
             {
                 key: []
@@ -137,12 +138,25 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                   - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
         return (
-            dataset.map(text_sha256, remove_columns=["text"])
-            .map(self.process, remove_columns=["chunks"])
+            dataset.map(
+                text_sha256,
+                input_columns=["text"],
+                remove_columns=["text"],
+                desc=f"{type(self).__name__}: Calculating Text Hash",
+            )
+            .map(
+                self.process,
+                input_columns=["chunks"],
+                remove_columns=["chunks"],
+                desc=f"{type(self).__name__}: Tokenizing Rolling Windows",
+            )
             .map(
                 flatten_batch_encoding_of_one,
                 batched=True,
                 batch_size=1,
+                desc=f"{type(self).__name__}: Flattening Nested Encoding",
+                num_proc=multiprocess.cpu_count() // 2,
+                keep_in_memory=not datasets.is_caching_enabled(),
             )
             .sort("length")
             .remove_columns("length")

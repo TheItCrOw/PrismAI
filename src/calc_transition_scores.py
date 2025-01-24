@@ -1,21 +1,18 @@
 import json
 import os
 from argparse import ArgumentParser, Namespace
-from itertools import batched
 from pathlib import Path
 
 import datasets
 from datasets import Dataset
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 if Path(".env").exists():
     load_dotenv()
 elif Path("../.env").exists():
     load_dotenv("../.env")
-
-datasets.disable_progress_bars()
 
 
 def parse_pre_processors(args: Namespace):
@@ -192,8 +189,38 @@ if __name__ == "__main__":
         type=str,
         default="transition_scores",
     )
+    mongodb_group.add_argument(
+        "--limit",
+        dest="mongodb_limit",
+        type=int,
+        default=None,
+    )
+    mongodb_group.add_argument(
+        "--skip",
+        dest="mongodb_skip",
+        type=int,
+        default=0,
+    )
+
+    datasets_group = parser.add_argument_group("Datasets")
+    datasets_group.add_argument(
+        "--enable_progress_bars",
+        action="store_true",
+        help="enable tqdm progress bars for datasets.",
+    )
+    datasets_group.add_argument(
+        "--enable_cache",
+        action="store_true",
+        help="Enable caching for datasets.",
+    )
 
     args = parser.parse_args()
+
+    # if not args.enable_progress_bars:
+    #     datasets.disable_progress_bars()
+    # if not args.enable_cache:
+    #     datasets.disable_caching()
+    #     # datasets.config.IN_MEMORY_MAX_SIZE = 32 * 1024**2
 
     mongodb_batch_size = args.mongodb_batch_size
     mongodb_filter_query = args.mongodb_filter or {}
@@ -208,20 +235,26 @@ if __name__ == "__main__":
 
     pre_processors = parse_pre_processors(args)
 
-    num_documents = source_collection.count_documents(mongodb_filter_query)
-    tq_fetch = tqdm(
-        source_collection.find(
+    num_documents = args.mongodb_limit or source_collection.count_documents(
+        mongodb_filter_query
+    )
+    tq_fetch = trange(
+        args.mongodb_skip,
+        args.mongodb_skip + num_documents,
+        dataset_batch_size,
+        desc=f"Processing Documents from {args.source_collection}",
+    )
+    for offset in tq_fetch:
+        batch = source_collection.find(
             mongodb_filter_query,
             projection=[
                 "text",
                 "chunks",
             ],
             batch_size=mongodb_batch_size,
-        ),
-        total=num_documents,
-        desc=f"Processing Documents from {args.source_collection}",
-    )
-    for batch in batched(tq_fetch, dataset_batch_size):
+            limit=dataset_batch_size,
+            skip=offset,
+        )
         batch = [
             {
                 "source": {
@@ -232,7 +265,10 @@ if __name__ == "__main__":
             | row
             for row in batch
         ]
-        dataset = Dataset.from_list(batch).filter(lambda x: x["text"] and x["chunks"])
+        dataset = Dataset.from_list(batch).filter(
+            lambda x: x["text"] and x["chunks"],
+            keep_in_memory=not datasets.is_caching_enabled(),
+        )
 
         for pre_processor in pre_processors:
             scorer.set_pre_processor(pre_processor)
