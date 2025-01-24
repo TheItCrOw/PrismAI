@@ -1,6 +1,6 @@
 import json
 import os
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
@@ -10,19 +10,56 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm
 
-from transition_scores.pre_processor.abc import PreProcessor
-from transition_scores.pre_processor.chunks import (
-    RollingWindowChunkPreProcessor,
-)
-from transition_scores.pre_processor.text import TextPreProcessor
-from transition_scores.scorer import OnnxTransitionScorer, TransformersTransitionScorer
-
 if Path(".env").exists():
     load_dotenv()
 elif Path("../.env").exists():
     load_dotenv("../.env")
 
 datasets.disable_progress_bars()
+
+
+def parse_pre_processors(args: Namespace):
+    from transition_scores.pre_processor import (
+        PreProcessor,
+        RollingWindowChunkPreProcessor,
+        TextPreProcessor,
+    )
+
+    pre_processors: list[PreProcessor] = []
+    for pre_processor_str in set(args.pre_processors):
+        match pre_processor_str:
+            case "TextPreProcessor":
+                pre_processors.append(TextPreProcessor.from_pretrained(args.model))
+            case "RollingWindowChunkPreProcessor":
+                pre_processors.append(
+                    RollingWindowChunkPreProcessor.from_pretrained(args.model)
+                )
+            case _:
+                raise RuntimeError
+    return pre_processors
+
+
+def parse_scorer_provider(args: Namespace):
+    match args.provider:
+        case "hf":
+            from transition_scores.scorer import TransformersTransitionScorer
+
+            return TransformersTransitionScorer(
+                args.model,
+                batch_size=args.model_batch_size,
+                device=args.device,
+            )
+        case "onnx":
+            from transition_scores.scorer import OnnxTransitionScorer
+
+            return OnnxTransitionScorer(
+                args.model,
+                batch_size=args.model_batch_size,
+                device=args.device,
+            )
+        case _:
+            raise RuntimeError
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -158,43 +195,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    mongodb_batch_size = args.mongodb_batch_size
     mongodb_filter_query = args.mongodb_filter or {}
+    dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
+
     mongodb_client = MongoClient(args.mongodb_uri)
     mongodb_database = mongodb_client.get_database(args.mongodb_database)
     source_collection = mongodb_database.get_collection(args.source_collection)
-
     target_collection = mongodb_database.get_collection(args.target_collection)
 
-    match args.provider:
-        case "hf":
-            scorer = TransformersTransitionScorer(
-                args.model,
-                batch_size=args.model_batch_size,
-                device=args.device,
-            )
-        case "onnx":
-            scorer = OnnxTransitionScorer(
-                args.model,
-                batch_size=args.model_batch_size,
-                device=args.device,
-            )
-        case _:
-            raise RuntimeError
+    scorer = parse_scorer_provider(args)
 
-    pre_processors: list[PreProcessor] = []
-    for pre_processor_str in args.pre_processors:
-        match pre_processor_str:
-            case "TextPreProcessor":
-                pre_processors.append(TextPreProcessor.from_pretrained(args.model))
-            case "RollingWindowChunkPreProcessor":
-                pre_processors.append(
-                    RollingWindowChunkPreProcessor.from_pretrained(args.model)
-                )
-            case _:
-                raise RuntimeError
-
-    mongodb_batch_size = args.mongodb_batch_size
-    dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
+    pre_processors = parse_pre_processors(args)
 
     num_documents = source_collection.count_documents(mongodb_filter_query)
     tq_fetch = tqdm(
@@ -220,8 +232,7 @@ if __name__ == "__main__":
             | row
             for row in batch
         ]
-        dataset = Dataset.from_list(batch)
-        dataset = dataset.filter(lambda x: x["text"] and x["chunks"])
+        dataset = Dataset.from_list(batch).filter(lambda x: x["text"] and x["chunks"])
 
         for pre_processor in pre_processors:
             scorer.set_pre_processor(pre_processor)
