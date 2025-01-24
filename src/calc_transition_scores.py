@@ -158,10 +158,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    mongodb_filter_query = args.mongodb_filter or {}
     mongodb_client = MongoClient(args.mongodb_uri)
     mongodb_database = mongodb_client.get_database(args.mongodb_database)
     source_collection = mongodb_database.get_collection(args.source_collection)
-    num_documents = source_collection.count_documents(args.mongodb_filter)
 
     target_collection = mongodb_database.get_collection(args.target_collection)
 
@@ -196,8 +196,10 @@ if __name__ == "__main__":
     mongodb_batch_size = args.mongodb_batch_size
     dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
 
+    num_documents = source_collection.count_documents(mongodb_filter_query)
     tq_fetch = tqdm(
         source_collection.find(
+            mongodb_filter_query,
             projection=[
                 "text",
                 "chunks",
