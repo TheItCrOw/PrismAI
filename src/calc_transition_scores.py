@@ -209,13 +209,13 @@ if __name__ == "__main__":
     )
     for batch in batched(tq_fetch, dataset_batch_size):
         batch = [
-            row
-            | {
-                "ref": {
+            {
+                "source": {
                     "$ref": args.source_collection,
-                    "$id": row.pop("_id"),
+                    "$id": str(row.pop("_id")),
                 }
             }
+            | row
             for row in batch
         ]
         dataset = Dataset.from_list(batch)
