@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import torch
-from numpy import var
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 
@@ -14,7 +13,6 @@ class OnnxTransitionScorer(TransitionScorerABC):
     def __init__(
         self,
         model: str | Path,
-        pre_processor: PreProcessor | None = None,
         batch_size: int = 128,
         top_k: int = 100,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
@@ -22,8 +20,6 @@ class OnnxTransitionScorer(TransitionScorerABC):
         **kwargs,
     ):
         super().__init__(
-            model,
-            pre_processor=pre_processor,
             batch_size=batch_size,
             top_k=top_k,
             device=device,
@@ -66,7 +62,6 @@ class TransformersTransitionScorer(TransitionScorerABC):
     def __init__(
         self,
         model: str | Path,
-        pre_processor: PreProcessor | None = None,
         batch_size: int = 128,
         top_k: int = 100,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
@@ -74,8 +69,6 @@ class TransformersTransitionScorer(TransitionScorerABC):
         **kwargs,
     ):
         super().__init__(
-            model,
-            pre_processor=pre_processor,
             batch_size=batch_size,
             top_k=top_k,
             device=device,

@@ -1,6 +1,7 @@
 import json
 import os
 from argparse import ArgumentParser, Namespace
+from itertools import batched
 from pathlib import Path
 
 import datasets
@@ -252,7 +253,7 @@ if __name__ == "__main__":
                 "chunks",
             ],
             batch_size=mongodb_batch_size,
-            limit=dataset_batch_size,
+            limit=args.mongodb_limit,
             skip=offset,
         )
         batch = [
@@ -271,14 +272,17 @@ if __name__ == "__main__":
         )
 
         for pre_processor in pre_processors:
-            scorer.set_pre_processor(pre_processor)
-            processed_dataset = scorer.process(dataset)
-            target_collection.insert_many(
+            processed_dataset = scorer.process(dataset, pre_processor)
+            for batch in batched(
                 tqdm(
-                    processed_dataset.to_list(),
+                    processed_dataset,
                     desc="Inserting Batch Results",
                     position=1,
                     leave=False,
                 ),
-                ordered=False,
-            )
+                mongodb_batch_size,
+            ):
+                target_collection.insert_many(
+                    batch,
+                    ordered=False,
+                )
