@@ -1,14 +1,14 @@
+import asyncio
 import json
 import os
 from argparse import ArgumentParser, Namespace
-from itertools import batched
 from pathlib import Path
 
 import datasets
 from datasets import Dataset
 from dotenv import load_dotenv
-from pymongo import MongoClient
-from tqdm import tqdm, trange
+from pymongo import AsyncMongoClient
+from tqdm import trange
 
 if Path(".env").exists():
     load_dotenv()
@@ -57,6 +57,76 @@ def parse_scorer_provider(args: Namespace):
             )
         case _:
             raise RuntimeError
+
+
+async def run(args: Namespace):
+    # if not args.enable_progress_bars:
+    #     datasets.disable_progress_bars()
+    # if not args.enable_cache:
+    #     datasets.disable_caching()
+    #     # datasets.config.IN_MEMORY_MAX_SIZE = 32 * 1024**2
+
+    mongodb_batch_size = args.mongodb_batch_size
+    mongodb_filter_query = args.mongodb_filter or {}
+    dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
+
+    mongodb_client = AsyncMongoClient(args.mongodb_uri)
+    mongodb_database = mongodb_client.get_database(args.mongodb_database)
+    source_collection = mongodb_database.get_collection(args.source_collection)
+    target_collection = mongodb_database.get_collection(args.target_collection)
+
+    scorer = parse_scorer_provider(args)
+
+    pre_processors = parse_pre_processors(args)
+
+    num_documents = args.mongodb_limit or (
+        await source_collection.count_documents(mongodb_filter_query)
+    )
+    tq_fetch = trange(
+        args.mongodb_skip,
+        args.mongodb_skip + num_documents,
+        dataset_batch_size,
+        desc=f"Processing Documents from {args.source_collection}",
+    )
+    async_insert = None
+    for offset in tq_fetch:
+        batch = []
+        async for row in source_collection.find(
+            mongodb_filter_query,
+            projection=[
+                "text",
+                "chunks",
+            ],
+            batch_size=mongodb_batch_size,
+            limit=args.mongodb_limit,
+            skip=offset,
+        ):
+            batch.append(
+                {
+                    "source": {
+                        "$ref": args.source_collection,
+                        "$id": str(row.pop("_id")),
+                    }
+                }
+                | row
+            )
+
+        dataset = Dataset.from_list(batch).filter(
+            lambda x: x["text"] and x["chunks"],
+            keep_in_memory=not datasets.is_caching_enabled(),
+        )
+
+        for pre_processor in pre_processors:
+            processed_dataset = scorer.process(dataset, pre_processor).to_list()
+            if async_insert is not None:
+                await async_insert
+            async_insert = target_collection.insert_many(
+                processed_dataset,
+                ordered=False,
+            )
+
+    if async_insert is not None:
+        await async_insert
 
 
 if __name__ == "__main__":
@@ -215,74 +285,4 @@ if __name__ == "__main__":
         help="Enable caching for datasets.",
     )
 
-    args = parser.parse_args()
-
-    # if not args.enable_progress_bars:
-    #     datasets.disable_progress_bars()
-    # if not args.enable_cache:
-    #     datasets.disable_caching()
-    #     # datasets.config.IN_MEMORY_MAX_SIZE = 32 * 1024**2
-
-    mongodb_batch_size = args.mongodb_batch_size
-    mongodb_filter_query = args.mongodb_filter or {}
-    dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
-
-    mongodb_client = MongoClient(args.mongodb_uri)
-    mongodb_database = mongodb_client.get_database(args.mongodb_database)
-    source_collection = mongodb_database.get_collection(args.source_collection)
-    target_collection = mongodb_database.get_collection(args.target_collection)
-
-    scorer = parse_scorer_provider(args)
-
-    pre_processors = parse_pre_processors(args)
-
-    num_documents = args.mongodb_limit or source_collection.count_documents(
-        mongodb_filter_query
-    )
-    tq_fetch = trange(
-        args.mongodb_skip,
-        args.mongodb_skip + num_documents,
-        dataset_batch_size,
-        desc=f"Processing Documents from {args.source_collection}",
-    )
-    for offset in tq_fetch:
-        batch = source_collection.find(
-            mongodb_filter_query,
-            projection=[
-                "text",
-                "chunks",
-            ],
-            batch_size=mongodb_batch_size,
-            limit=args.mongodb_limit,
-            skip=offset,
-        )
-        batch = [
-            {
-                "source": {
-                    "$ref": args.source_collection,
-                    "$id": str(row.pop("_id")),
-                }
-            }
-            | row
-            for row in batch
-        ]
-        dataset = Dataset.from_list(batch).filter(
-            lambda x: x["text"] and x["chunks"],
-            keep_in_memory=not datasets.is_caching_enabled(),
-        )
-
-        for pre_processor in pre_processors:
-            processed_dataset = scorer.process(dataset, pre_processor)
-            for batch in batched(
-                tqdm(
-                    processed_dataset,
-                    desc="Inserting Batch Results",
-                    position=1,
-                    leave=False,
-                ),
-                mongodb_batch_size,
-            ):
-                target_collection.insert_many(
-                    batch,
-                    ordered=False,
-                )
+    asyncio.run(run(parser.parse_args()))
