@@ -72,14 +72,16 @@ class ScoresDict(dict):
     @classmethod
     def new(
         cls,
-        source: DBRef | dict,
+        _ref_id: DBRef | dict,
+        ref_id: str,
         text_sha256: str,
         transition_scores: list[TransitionScores],
         **metadata,
     ):
         return cls(
             {
-                "source": source,
+                "_ref_id": _ref_id,
+                "ref_id": ref_id,
                 "text_sha256": text_sha256,
                 "transition_scores": transition_scores,
                 "metadata": metadata,
@@ -105,7 +107,8 @@ class FeaturesDict(dict):
     @classmethod
     def new(
         cls,
-        source: DBRef | dict,
+        _ref_id: DBRef | dict,
+        ref_id: str,
         text_sha256: str,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
@@ -114,7 +117,8 @@ class FeaturesDict(dict):
     ) -> Self:
         return cls(
             {
-                "source": source,
+                "_ref_id": _ref_id,
+                "ref_id": ref_id,
                 "text_sha256": text_sha256,
                 "model": model,
                 "pre_processor": pre_processor,
@@ -133,11 +137,9 @@ class FeaturesDict(dict):
         scores: "ScoresDict",
         model_metadata: ModelMetadata,
         pre_processor_metadata: PreProcessorMetadata,
-        **metadata,
     ) -> Self:
         return cls.new(
             **scores,
             model=model_metadata,
             pre_processor=pre_processor_metadata,
-            **metadata,
         )

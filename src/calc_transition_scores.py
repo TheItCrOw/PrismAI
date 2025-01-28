@@ -246,26 +246,38 @@ if __name__ == "__main__":
         desc=f"Processing Documents from {args.source_collection}",
     )
     for offset in tq_fetch:
-        batch = source_collection.find(
+        batch = []
+        for row in source_collection.find(
             mongodb_filter_query,
             projection=[
                 "text",
                 "chunks",
+                "id",
             ],
             batch_size=mongodb_batch_size,
-            limit=args.mongodb_limit,
+            limit=min(dataset_batch_size, num_documents),
             skip=offset,
-        )
-        batch = [
-            {
-                "source": {
+        ):
+            refs = {
+                "_ref_id": {
                     "$ref": args.source_collection,
                     "$id": str(row.pop("_id")),
                 }
             }
-            | row
-            for row in batch
-        ]
+            if "id" in row:
+                refs["ref_id"] = {
+                    "$ref": args.source_collection,
+                    "$id": row.pop("id"),
+                }
+            else:
+                refs["ref_id"] = None
+
+            if "_ref_id" in row:
+                refs["_orig_ref_id"] = row.pop("_ref_id")
+            if "ref_id" in row:
+                refs["orig_ref_id"] = row.pop("ref_id")
+
+            batch.append(refs | row)
         dataset = Dataset.from_list(batch).filter(
             lambda x: x["text"] and x["chunks"],
             keep_in_memory=not datasets.is_caching_enabled(),
