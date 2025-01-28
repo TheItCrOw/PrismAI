@@ -6,9 +6,21 @@ from pathlib import Path
 
 import datasets
 from datasets import Dataset
+from datasets import tqdm as datasets_tqdm
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm, trange
+
+_old_init = datasets_tqdm.__init__
+
+
+def _init_tqdm(*args, **kwargs):
+    kwargs["position"] = 1
+    kwargs["leave"] = False
+    return _old_init(*args, **kwargs)
+
+
+datasets_tqdm.__init__ = _init_tqdm
 
 if Path(".env").exists():
     load_dotenv()
@@ -46,6 +58,7 @@ def parse_scorer_provider(args: Namespace):
                 args.model,
                 batch_size=args.model_batch_size,
                 device=args.device,
+                load_in_8bit=args.load_in_8bit,
             )
         case "onnx":
             from transition_scores.scorer import OnnxTransitionScorer
@@ -98,7 +111,7 @@ if __name__ == "__main__":
     model_group.add_argument(
         "-bsd",
         "--dataset_batch_size",
-        default=None,
+        default=128,
         help="Batch size for dataset processing. Defaults to the MongoDB batch size.",
     )
 
@@ -167,7 +180,7 @@ if __name__ == "__main__":
         "-bsdb",
         "--mongodb_batch_size",
         type=int,
-        default=128,
+        default=512,
         help="Batch size for MongoDB query.",
     )
     mongodb_group.add_argument(
@@ -217,10 +230,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # if not args.enable_progress_bars:
-    #     datasets.disable_progress_bars()
-    # if not args.enable_cache:
-    #     datasets.disable_caching()
+    if not args.enable_progress_bars:
+        datasets.disable_progress_bars()
+    if not args.enable_cache:
+        datasets.disable_caching()
     #     # datasets.config.IN_MEMORY_MAX_SIZE = 32 * 1024**2
 
     mongodb_batch_size = args.mongodb_batch_size
@@ -243,7 +256,7 @@ if __name__ == "__main__":
         args.mongodb_skip,
         args.mongodb_skip + num_documents,
         dataset_batch_size,
-        desc=f"Processing Documents from {args.source_collection}",
+        desc=f"Processing Document Batches of {dataset_batch_size} from {args.source_collection}",
     )
     for offset in tq_fetch:
         batch = []
@@ -285,7 +298,7 @@ if __name__ == "__main__":
 
         for pre_processor in pre_processors:
             processed_dataset = scorer.process(dataset, pre_processor)
-            for batch in batched(
+            for r_batch in batched(
                 tqdm(
                     processed_dataset,
                     desc="Inserting Batch Results",
@@ -294,7 +307,4 @@ if __name__ == "__main__":
                 ),
                 mongodb_batch_size,
             ):
-                target_collection.insert_many(
-                    batch,
-                    ordered=False,
-                )
+                target_collection.insert_many(r_batch, ordered=False)
