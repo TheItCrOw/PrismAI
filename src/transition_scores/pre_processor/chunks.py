@@ -70,6 +70,9 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
         # For each span, try to find the largest possible prefix-span that fits within the max_length.
         prefix_start = 0
         for chunk_idx in range(len(chunks)):
+            if not chunks[chunk_idx].strip():
+                continue
+
             while True:
                 buffer = chunks[prefix_start : chunk_idx + 1]
                 text = chunks_to_text(buffer)
