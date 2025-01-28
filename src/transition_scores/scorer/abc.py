@@ -1,11 +1,13 @@
 import inspect
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import Iterable
 
 import multiprocess
 import torch
-from datasets import Dataset, DatasetDict
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from transition_scores.data import (
     FeaturesDict,
@@ -52,9 +54,9 @@ class TransitionScorerABC(ABC):
 
     def process(
         self,
-        dataset: Dataset | Iterable[str],
+        dataset: Iterable[str | dict],
         pre_processor: PreProcessor,
-    ) -> Dataset:
+    ) -> list[dict]:
         """
         Calculate transition scores for the given dataset.
         Will use the currently set `pre_processor` to prepare the dataset.
@@ -64,7 +66,7 @@ class TransitionScorerABC(ABC):
             - Some pre-processors may require specific fields in the dataset (like `chunks`) &ndash; refer to the pre-processor's documentation.
 
         Args:
-            dataset (Dataset | Iterable[str]): Either a dataset or a sequence of texts to be processed.
+            dataset (Iterable[str]): A sequence of texts to be processed.
 
         Raises:
             KeyError: If the pre-processor requires a field that is not present in the given dataset.
@@ -73,8 +75,9 @@ class TransitionScorerABC(ABC):
             Dataset: A new dataset with the calculated transition scores.
                 All rows contain the original sequence `_id`, the `transition_scores` and additional information that depends on the pre-processor.
         """
-        if not isinstance(dataset, (Dataset, DatasetDict)):
-            dataset = Dataset.from_dict({"text": dataset})
+        _first = next(iter(dataset))
+        if isinstance(_first, str):
+            dataset = [{"text": text} for text in dataset]
 
         try:
             all_special_ids = set(pre_processor.tokenizer.all_special_ids)
@@ -88,71 +91,54 @@ class TransitionScorerABC(ABC):
                 f"PreProcessor {type(pre_processor).__name__} requires the field {e.args[0]} in the dataset."
             ) from e
 
-        metadata = {
-            "model_metadata": self.get_model_metadata(),
-            "pre_processor_metadata": pre_processor.get_metadata(),
-        }
+        model_metadata = self.get_model_metadata()
+        pre_processor_metadata = pre_processor.get_metadata()
 
-        dataset = dataset.map(
-            self._process_batch,
-            batched=True,
-            batch_size=self.batch_size,
-            fn_kwargs={"pad_token_id": pad_token_id},
-            input_columns=["input_ids", "attention_mask"],
-            remove_columns=["attention_mask"],
-            desc="Scorer: Processing Sequences",
-        )
-        dataset = dataset.map(
-            process_probabilities,
-            batched=True,
-            desc="Scorer: Processing Probabilities",
-            fn_kwargs={"all_special_ids": all_special_ids},
-            remove_columns=[
-                "input_ids",
-                "target_probs",
-                "top_k_probs",
-                "top_k_indices",
-            ],
-            num_proc=multiprocess.cpu_count() // 2,
-        )
-        return dataset.map(
-            convert_to_mongo,
-            desc="Scorer: Convert to Mongo Format",
-            fn_kwargs=metadata,
-            remove_columns=dataset.column_names,
-            num_proc=multiprocess.cpu_count() // 2,
+        processed_dataset = []
+        _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
+        for input_ids, attention_mask in tqdm(
+            DataLoader(
+                dataset,
+                shuffle=False,
+                collate_fn=_collate_fn,
+                batch_size=self.batch_size,
+                num_workers=multiprocess.cpu_count() // 2,
+            ),
+            position=1,
+            desc="Processing Sequences",
+        ):
+            processed_dataset.extend(self._process_batch(input_ids, attention_mask))
+
+        return process_probabilities(
+            tqdm(
+                dataset, position=1, leave=False, desc="Post-Processing Probabilities"
+            ),
+            processed_dataset,
+            all_special_ids,
+            model_metadata,
+            pre_processor_metadata,
         )
 
     def _process_batch(
         self,
-        input_ids: list[list[int]],
-        attention_mask: list[list[int]],
-        *,
-        pad_token_id: int = None,
-    ) -> dict[str, list[torch.Tensor]]:
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+    ) -> list[tuple[list[float, list[int, list[float]]]]]:
         """
         Process the a batch of input sequences and calculate transition scores.
         Runs a forward pass on the model and extracts the top k probabilities.
 
         Args:
-            input_ids (list[list[int]]): A list of input sequences, each represented as a list of token IDs.
-            attention_mask (list[list[int]]): A list of attention masks for each input sequence.
-            pad_token_id (int, kwarg): The ID of the padding token.
+            input_ids (torch.Tensor): A list of input sequences, each represented as a list of token IDs.
+            attention_mask (torch.Tensor): A list of attention masks for each input sequence.
 
         Returns:
             dict[str, list[list[TransitionScores]]]: A list of transition scores
                 for each sequence in the batch.
         """
-        if pad_token_id is None:
-            raise ValueError("pad_token_id must be provided.")
+        outputs = self._forward(input_ids, attention_mask)
 
-        outputs = self._forward(input_ids, attention_mask, pad_token_id)
-
-        probs = {
-            "target_probs": [],
-            "top_k_probs": [],
-            "top_k_indices": [],
-        }
+        probs = []
         for target_ids, seq_probs in zip(input_ids, outputs):
             # Truncate the sequence to the last non-pad token
             seq_len = len(target_ids) - 1
@@ -163,38 +149,26 @@ class TransitionScorerABC(ABC):
 
             top_k_probs, top_k_indices = seq_probs.topk(self.top_k)
 
-            probs["target_probs"].append(target_probs.tolist())
-            probs["top_k_probs"].append(top_k_probs.tolist())
-            probs["top_k_indices"].append(top_k_indices.tolist())
+            probs.append(
+                (target_probs.tolist(), top_k_indices.tolist(), top_k_probs.tolist())
+            )
         return probs
 
     def _forward(
         self,
-        input_ids: list[list[int]],
-        attention_mask: list[list[int]],
-        pad_token_id: int,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
     ) -> torch.Tensor:
         """
         Run a model forward pass for a batch of input sequences and return the output probabilities.
 
         Args:
-            input_ids (list[list[int]]): A list of input sequences, each represented as a list of token IDs.
-            attention_mask (list[list[int]]): A list of attention masks for each input sequence.
+            input_ids (torch.Tensor): A list of input sequences, each represented as a list of token IDs.
+            attention_mask (torch.Tensor): A list of attention masks for each input sequence.
 
         Returns:
             dict[str, list[torch.Tensor]]: A dictionary containing `target_probs`, `top_k_probs` and `top_k_indices` for each sequence.
         """
-        input_ids = pad_sequence(
-            [torch.tensor(seq_ids) for seq_ids in input_ids],
-            batch_first=True,
-            padding_value=pad_token_id,
-        )
-        attention_mask = pad_sequence(
-            [torch.tensor(mask) for mask in attention_mask],
-            batch_first=True,
-            padding_value=0,
-        )
-
         # Create `position_ids` on the fly, if required
         # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
         position_ids = None
@@ -214,36 +188,22 @@ class TransitionScorerABC(ABC):
             )
 
 
-def convert_to_mongo(
-    row: dict,
+def process_probabilities(
+    dataset: list[dict],
+    processed_dataset: list[tuple[list[float, list[int, list[float]]]]],
+    all_special_ids: set[int],
     model_metadata: ModelMetadata,
     pre_processor_metadata: PreProcessorMetadata,
-) -> FeaturesDict:
-    return FeaturesDict.from_scores(
-        ScoresDict.new(**row),
-        model_metadata=model_metadata,
-        pre_processor_metadata=pre_processor_metadata,
-    )
-
-
-def process_probabilities(
-    batch: dict[str, list[list[int | float]]],
-    *,
-    all_special_ids: set[int] = None,
 ) -> dict[str, list]:
-    all_special_ids = all_special_ids or set()
-
     transition_scores = []
-    for target_ids, target_probs, top_k_probs, top_k_indices in zip(
-        batch["input_ids"],
-        batch["target_probs"],
-        batch["top_k_probs"],
-        batch["top_k_indices"],
+    for row, (target_probs, top_k_indices, top_k_probs) in zip(
+        dataset, processed_dataset
     ):
         seq_scores = []
 
         # If this model does not use a BOS token, the first token is not predicted,
         # so we add a dummy result with a zero probability
+        target_ids = row.pop("input_ids")
         if (first_token := target_ids[0]) not in all_special_ids:
             seq_scores.append(TransitionScores.new(first_token, 0.0, [], []))
 
@@ -262,5 +222,43 @@ def process_probabilities(
                 ),
             )
         )
-        transition_scores.append(seq_scores)
-    return {"transition_scores": transition_scores}
+        transition_scores.append(
+            convert_to_mongo(
+                row | {"transition_scores": seq_scores},
+                model_metadata,
+                pre_processor_metadata,
+            )
+        )
+    return transition_scores
+
+
+def convert_to_mongo(
+    row: dict,
+    model_metadata: ModelMetadata,
+    pre_processor_metadata: PreProcessorMetadata,
+) -> FeaturesDict:
+    return FeaturesDict.from_scores(
+        ScoresDict.new(**row),
+        model_metadata=model_metadata,
+        pre_processor_metadata=pre_processor_metadata,
+    )
+
+
+def collate_fn(
+    batch: list[dict],
+    pad_token_id: int,
+) -> list[dict]:
+    input_ids, attention_mask = zip(
+        *[(row["input_ids"], row.pop("attention_mask")) for row in batch]
+    )
+    input_ids = pad_sequence(
+        [torch.tensor(seq_ids) for seq_ids in input_ids],
+        batch_first=True,
+        padding_value=pad_token_id,
+    )
+    attention_mask = pad_sequence(
+        [torch.tensor(mask) for mask in attention_mask],
+        batch_first=True,
+        padding_value=0,
+    )
+    return input_ids, attention_mask

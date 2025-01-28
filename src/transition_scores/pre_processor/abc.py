@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from hashlib import sha256
+from typing import Any
 
-from datasets import Dataset
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
 from transition_scores.data import PreProcessorMetadata
@@ -43,12 +43,19 @@ class PreProcessor(ABC):
     def process(self, batch: dict[str, list]) -> BatchEncoding: ...
 
     @abstractmethod
-    def prepare_dataset(self, dataset: Dataset) -> Dataset: ...
+    def prepare_dataset(
+        self, dataset: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]: ...
 
     @property
     def additional_fields(self) -> None | tuple[str, ...]:
         """The additional fields that this pre-processor adds to the dataset, if any."""
         return None
+
+    @property
+    def required_fields(self) -> tuple[str, ...]:
+        """The fields that this pre-processor requires."""
+        return ()
 
     @abstractmethod
     def get_metadata(self) -> PreProcessorMetadata: ...

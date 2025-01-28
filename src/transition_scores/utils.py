@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Generator, Iterable
 
 from transformers import AutoConfig
 
@@ -54,3 +54,7 @@ def infer_max_length(model_name_or_path: str):
     if hasattr(config, "n_positions"):
         return config.n_positions
     raise ValueError(f"Could not infer max length from {model_name_or_path}")
+
+
+def flatten[T](nested: Iterable[Iterable[T]]) -> Generator[T, None, None]:
+    yield from (item for inner in nested for item in inner)

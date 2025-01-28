@@ -4,23 +4,9 @@ from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
-import datasets
-from datasets import Dataset
-from datasets import tqdm as datasets_tqdm
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm, trange
-
-_old_init = datasets_tqdm.__init__
-
-
-def _init_tqdm(*args, **kwargs):
-    kwargs["position"] = 1
-    kwargs["leave"] = False
-    return _old_init(*args, **kwargs)
-
-
-datasets_tqdm.__init__ = _init_tqdm
 
 if Path(".env").exists():
     load_dotenv()
@@ -216,25 +202,7 @@ if __name__ == "__main__":
         default=0,
     )
 
-    datasets_group = parser.add_argument_group("Datasets")
-    datasets_group.add_argument(
-        "--enable_progress_bars",
-        action="store_true",
-        help="enable tqdm progress bars for datasets.",
-    )
-    datasets_group.add_argument(
-        "--enable_cache",
-        action="store_true",
-        help="Enable caching for datasets.",
-    )
-
     args = parser.parse_args()
-
-    if not args.enable_progress_bars:
-        datasets.disable_progress_bars()
-    if not args.enable_cache:
-        datasets.disable_caching()
-    #     # datasets.config.IN_MEMORY_MAX_SIZE = 32 * 1024**2
 
     mongodb_batch_size = args.mongodb_batch_size
     mongodb_filter_query = args.mongodb_filter or {}
@@ -258,19 +226,26 @@ if __name__ == "__main__":
         dataset_batch_size,
         desc=f"Processing Document Batches of {dataset_batch_size} from {args.source_collection}",
     )
+
+    fields_req_by_pre_processors = {
+        field
+        for pre_processor in pre_processors
+        for field in pre_processor.required_fields
+    }
+    fields_projection = list({"id"} | fields_req_by_pre_processors)
     for offset in tq_fetch:
-        batch = []
+        dataset = []
         for row in source_collection.find(
             mongodb_filter_query,
-            projection=[
-                "text",
-                "chunks",
-                "id",
-            ],
+            projection=fields_projection,
             batch_size=mongodb_batch_size,
             limit=min(dataset_batch_size, num_documents),
             skip=offset,
         ):
+            # Skip rows that do not have all required fields
+            if not all(row.get(field, False) for field in fields_req_by_pre_processors):
+                continue
+
             refs = {
                 "_ref_id": {
                     "$ref": args.source_collection,
@@ -290,15 +265,11 @@ if __name__ == "__main__":
             if "ref_id" in row:
                 refs["orig_ref_id"] = row.pop("ref_id")
 
-            batch.append(refs | row)
-        dataset = Dataset.from_list(batch).filter(
-            lambda x: x["text"] and x["chunks"],
-            keep_in_memory=not datasets.is_caching_enabled(),
-        )
+            dataset.append(refs | row)
 
         for pre_processor in pre_processors:
             processed_dataset = scorer.process(dataset, pre_processor)
-            for r_batch in batched(
+            for batch in batched(
                 tqdm(
                     processed_dataset,
                     desc="Inserting Batch Results",
@@ -307,4 +278,4 @@ if __name__ == "__main__":
                 ),
                 mongodb_batch_size,
             ):
-                target_collection.insert_many(r_batch, ordered=False)
+                target_collection.insert_many(batch, ordered=False)

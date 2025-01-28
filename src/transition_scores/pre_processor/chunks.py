@@ -1,16 +1,15 @@
-import datasets
-import multiprocess
-from datasets import Dataset
+from hashlib import sha256
+
+from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import PreProcessorMetadata
-from transition_scores.pre_processor.abc import text_sha256
 from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import chunks_to_text, transpose_dict_of_lists
 
 
-def flatten_batch_encoding_of_one(row: dict[str, list]) -> dict[str, list]:
-    encoding = row.pop("encoding")[0]
+def explode_column(row: dict[str, list], column: str = "encoding") -> dict[str, list]:
+    encoding = row.pop(column)
     flattend = {key: [] for key in row.keys() | encoding.keys()}
     for transposed in transpose_dict_of_lists(encoding, iter=True):
         for key, [value] in row.items():
@@ -34,6 +33,13 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             "start_idx",
             "end_idx",
             "start_token_idx",
+        )
+
+    @property
+    def required_fields(self) -> tuple[str, ...]:
+        return (
+            "text",
+            "chunks",
         )
 
     def process(self, chunks: list[str]) -> BatchEncoding:
@@ -117,21 +123,21 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             batch_encoding["end_idx"].append(chunk_idx + 1)
             batch_encoding["start_token_idx"].append(token_idx)
 
-        return {"encoding": batch_encoding}
+        return batch_encoding
 
-    def prepare_dataset(self, dataset: Dataset) -> Dataset:
+    def prepare_dataset(self, dataset: list[dict]) -> list[dict]:
         """Tokenize a dataset of chunks from multiple documents.
         Will return a new dataset of different length, where each row contains a single prefix-window.
         Other fields are duplicated for each prefix-window.
 
         Args:
-            dataset (Dataset): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+            dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
         Raises:
             ValueError: If the start token of a chunk could not be found in the encoding.
 
         Returns:
-            Dataset: Tokenized dataset. Each row contains a single prefix-window.
+            list[dict]: Tokenized dataset. Each row contains a single prefix-window.
                 The original `text` and `chunks` fields are removed.
                 New fields are added:
                   - `text`: The chunk text, including prefix.
@@ -140,30 +146,56 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                       Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
                   - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
-        return (
-            dataset.map(
-                text_sha256,
-                input_columns=["text"],
-                remove_columns=["text"],
-                desc=f"{type(self).__name__}: Calculating Text Hash",
+        with tqdm(
+            total=4, desc="Pre-Processing Dataset", position=1, leave=False
+        ) as tq:
+            # dataset = (
+            #     text_sha256(row.pop("text")) | row
+            #     for row in tqdm(dataset, position=1, desc="Calculating Text Hash")
+            # )
+            # dataset = (
+            #     self.process(row.pop("chunks")) | row
+            #     for row in tqdm(dataset, position=1, desc="Tokenizing Rolling Windows")
+            # )
+            # dataset = flatten(
+            #     explode_column(row, "encoding")
+            #     for row in tqdm(dataset, position=1, desc="Flattening Nested Encoding")
+            # )
+
+            tq.set_postfix_str("Calculating Text Hash")
+            text_hashes = [
+                sha256(row.pop("text").encode()).hexdigest() for row in dataset
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Tokenizing Rolling Windows")
+            encodings = [
+                self.process(row.pop("chunks"))
+                for row in tqdm(dataset, position=2, leave=False)
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Exploding Samples from Encoding")
+            dataset = (
+                dict(
+                    **row,
+                    **transposed,
+                    text_sha256=txt_hsh,
+                )
+                for row, txt_hsh, encoding in zip(
+                    tqdm(dataset, position=2, leave=False),
+                    text_hashes,
+                    encodings,
+                )
+                for transposed in transpose_dict_of_lists(encoding, iter=True)
             )
-            .map(
-                self.process,
-                input_columns=["chunks"],
-                remove_columns=["chunks"],
-                desc=f"{type(self).__name__}: Tokenizing Rolling Windows",
-            )
-            .map(
-                flatten_batch_encoding_of_one,
-                batched=True,
-                batch_size=1,
-                desc=f"{type(self).__name__}: Flattening Nested Encoding",
-                num_proc=multiprocess.cpu_count() // 2,
-                keep_in_memory=not datasets.is_caching_enabled(),
-            )
-            .sort("length")
-            .remove_columns("length")
-        )
+            tq.update(1)
+
+            tq.set_postfix_str("Sorting Dataset by Length")
+            dataset = list(sorted(dataset, key=lambda row: row.pop("length")))
+            tq.update(1)
+
+        return dataset
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(

@@ -1,8 +1,11 @@
-from datasets import Dataset
+from hashlib import sha256
+
+from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import PreProcessorMetadata
-from transition_scores.pre_processor.abc import PreProcessor, text_sha256
+from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.utils import transpose_dict_of_lists
 
 
 class TextPreProcessor(PreProcessor):
@@ -10,6 +13,10 @@ class TextPreProcessor(PreProcessor):
     Simple `text` pre-processor.
     Sequences are tokenized and truncated to `max_length`.
     """
+
+    @property
+    def required_fields(self) -> tuple[str, ...]:
+        return ("text",)
 
     def process(self, text: list[str]) -> BatchEncoding:
         """Process a *batch* of samples.
@@ -39,32 +46,53 @@ class TextPreProcessor(PreProcessor):
             add_special_tokens=True,
         )
 
-    def prepare_dataset(self, dataset: Dataset) -> Dataset:
+    def prepare_dataset(self, dataset: list[dict]) -> list[dict]:
         """Prepare the `text` of the samples in a dataset.
         Adds `text_sha256` field to the dataset.
 
         Args:
-            dataset (Dataset): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+            dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
         Returns:
-            Dataset: Tokenized dataset. The `text` and `chunks` fields are removed.
+            list[dict]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
-        return (
-            dataset.map(
-                text_sha256,
-                input_columns=["text"],
-                desc=f"{type(self).__name__}: Calculating Text Hash",
+        with tqdm(
+            total=4, desc="Pre-Processing Dataset", position=1, leave=False
+        ) as tq:
+            tq.set_postfix_str("Calculating Text Hash")
+            text_hashes = [
+                sha256(row.pop("text").encode()).hexdigest() for row in dataset
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Tokenizing Rolling Windows")
+            encodings = [
+                self.process(row.pop("text"))
+                for row in tqdm(dataset, position=2, leave=False)
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Exploding Samples from Encoding")
+            dataset = (
+                dict(
+                    **row,
+                    **transposed,
+                    text_sha256=txt_hsh,
+                )
+                for row, txt_hsh, encoding in zip(
+                    tqdm(dataset, position=2, leave=False),
+                    text_hashes,
+                    encodings,
+                )
+                for transposed in transpose_dict_of_lists(encoding, iter=True)
             )
-            .map(
-                self.process,
-                batched=True,
-                input_columns=["text", "chunks"],
-                remove_columns=["text", "chunks"],
-                desc=f"{type(self).__name__}: Tokenizing Texts",
-            )
-            .sort("length")
-            .remove_columns("length")
-        )
+            tq.update(1)
+
+            tq.set_postfix_str("Sorting Dataset by Length")
+            dataset = list(sorted(dataset, key=lambda row: row.pop("length")))
+            tq.update(1)
+
+        return dataset
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(

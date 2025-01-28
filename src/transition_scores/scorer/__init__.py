@@ -5,7 +5,6 @@ from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 
 from transition_scores.data import ModelMetadata
-from transition_scores.pre_processor.abc import PreProcessor
 from transition_scores.scorer.abc import TransitionScorerABC
 
 
