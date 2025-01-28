@@ -72,9 +72,9 @@ class MongoDBConnection:
             print(f'Error while updating item with id {item_id}: {ex}')
             return None
 
-    def get_collected_items_by_domain(self, domain, batch_size=5000, skip=0):
+    def get_collected_items_by_domain(self, domain, batch_size=100000, skip=0):
         try:
-            cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).skip(skip)
+            cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).sort({'id', -1}).skip(skip)
             while True:
                 batch = []
                 for _ in range(batch_size):
@@ -91,9 +91,9 @@ class MongoDBConnection:
         finally:
             cursor.close()
 
-    def get_collected_items_by_text(self, text, batch_size=5000, skip=0):
+    def get_collected_items_by_text(self, text, batch_size=100000, skip=0):
         try:
-            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).skip(skip)
+            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).sort({'id', -1}).skip(skip)
             while True:
                 batch = []
                 for _ in range(batch_size):
