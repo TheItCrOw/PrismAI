@@ -93,11 +93,6 @@ class TransitionScorerABC(ABC):
             "pre_processor_metadata": pre_processor.get_metadata(),
         }
 
-        # dataset.set_format(
-        #     type="torch",
-        #     columns=["input_ids", "attention_mask"],
-        #     output_all_columns=True,
-        # )
         dataset = dataset.map(
             self._process_batch,
             batched=True,
@@ -120,8 +115,6 @@ class TransitionScorerABC(ABC):
             ],
             num_proc=multiprocess.cpu_count() // 2,
         )
-        # dataset.set_format(None)
-
         return dataset.map(
             convert_to_mongo,
             desc="Scorer: Convert to Mongo Format",
@@ -170,9 +163,9 @@ class TransitionScorerABC(ABC):
 
             top_k_probs, top_k_indices = seq_probs.topk(self.top_k)
 
-            probs["target_probs"].append(target_probs)
-            probs["top_k_probs"].append(top_k_probs)
-            probs["top_k_indices"].append(top_k_indices)
+            probs["target_probs"].append(target_probs.tolist())
+            probs["top_k_probs"].append(top_k_probs.tolist())
+            probs["top_k_indices"].append(top_k_indices.tolist())
         return probs
 
     def _forward(
