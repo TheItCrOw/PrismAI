@@ -77,7 +77,9 @@ class TransformersTransitionScorer(TransitionScorerABC):
             model,
             load_in_8bit=load_in_8bit,
             **kwargs,
-        ).to(self.device)
+        )
+        if not load_in_8bit:
+            self.model = self.model.to(self.device)
         self._load_in_8bit = load_in_8bit
 
     def get_model_metadata(self) -> ModelMetadata:
