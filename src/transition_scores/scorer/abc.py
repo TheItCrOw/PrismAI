@@ -118,6 +118,7 @@ class TransitionScorerABC(ABC):
                 num_workers=multiprocess.cpu_count() // 2,
             ),
             position=1,
+            leave=False,
             desc="Processing Sequences",
         ):
             processed_dataset.extend(self._process_batch(input_ids, attention_mask))

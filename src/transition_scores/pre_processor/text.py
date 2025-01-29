@@ -62,9 +62,7 @@ class TextPreProcessor(PreProcessor):
         Returns:
             list[dict]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
-        with tqdm(
-            total=4, desc="Pre-Processing Dataset", position=1, leave=False
-        ) as tq:
+        with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
             tq.set_postfix_str("Calculating Text Hash")
             text_hashes = [
                 sha256(row.pop("text").encode()).hexdigest() for row in dataset
@@ -72,10 +70,7 @@ class TextPreProcessor(PreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Tokenizing Rolling Windows")
-            encodings = [
-                self._process(row.pop("text"))
-                for row in tqdm(dataset, position=2, leave=False)
-            ]
+            encodings = [self._process(row.pop("text")) for row in dataset]
             tq.update(1)
 
             tq.set_postfix_str("Exploding Samples from Encoding")
@@ -85,11 +80,7 @@ class TextPreProcessor(PreProcessor):
                     **transposed,
                     text_sha256=txt_hsh,
                 )
-                for row, txt_hsh, encoding in zip(
-                    tqdm(dataset, position=2, leave=False),
-                    text_hashes,
-                    encodings,
-                )
+                for row, txt_hsh, encoding in zip(dataset, text_hashes, encodings)
                 for transposed in transpose_dict_of_lists(encoding, iter=True)
             )
             tq.update(1)
