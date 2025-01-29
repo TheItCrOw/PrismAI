@@ -1,0 +1,226 @@
+from hashlib import sha256
+from typing import Any
+
+from tqdm import tqdm
+from transformers import BatchEncoding
+
+from transition_scores.data import OutputProbabilities, PreProcessorMetadata
+from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.utils import (
+    group_by_column,
+    sort_by_column,
+    transpose_dict_of_lists,
+)
+
+
+class SlidingWindowTextPreProcessor(PreProcessor):
+    def __init__(
+        self,
+        tokenizer,
+        stride: int | None = None,
+        max_length: int | None = None,
+    ):
+        """
+        Sliding-Window text pre-processor.
+        Creates sliding text windows of a fixed length with configurable stride/overlap.
+
+        Args:
+            tokenizer (PreTrainedTokenizer): The tokenizer to wrap.
+            stride (int, optional): The stride for the sliding window.
+                Defaults to 1/4 of the max_length.
+            max_length (int, optional): The max_length for each tokenized sequence.
+                Will try to infer max_length from the tokenizer if not specified.
+        """
+        super().__init__(tokenizer, max_length)
+        self.stride = stride or (self.max_length // 4)
+
+    @property
+    def required_fields(self) -> dict[str, type]:
+        return {"text": str}
+
+    @property
+    def additional_fields(self) -> dict[str, type]:
+        return {
+            "text": str,
+            "prefix": str,
+            "start_token_idx": int,
+            "prefix_token_offset": int,
+            "window_size": int,
+        }
+
+    def get_metadata(self) -> PreProcessorMetadata:
+        return PreProcessorMetadata.new(
+            "sliding-window",
+            stride=self.stride,
+            max_length=self.max_length,
+        )
+
+    @property
+    def num_special_tokens_to_add(self) -> int:
+        return self._tokenizer.num_special_tokens_to_add(False)
+
+    def _process(self, text: str) -> BatchEncoding:
+        """
+        Process a single text sample.
+        Will apply a sliding-window to create prefix-windows of chunks that fit within the max_length.
+
+        Args:
+            text (str): The text to tokenize.
+
+        Returns:
+            BatchEncoding: Tokenized batch. Has the following additional fields:
+              - `text`: The sliding window text.
+              - `prefix`: The sliding window text prefix.
+              - `start_token_idx`: The index of the first token in the window.
+              - `prefix_token_offset`: The offset of the first token from the entire text.
+              - `window_size`: The number of tokens in the window.
+        """
+        batch_encoding = self._tokenizer(
+            text,
+            stride=self.max_length - self.stride,
+            max_length=self.max_length,
+            truncation=True,
+            return_overflowing_tokens=True,
+            add_special_tokens=True,
+        )
+        del batch_encoding["overflow_to_sample_mapping"]
+
+        # As the first window is not a sliding window, it covers all tokens,
+        # so we set the `start_token_idx` to 0.
+        # The rest of the windows cover only the last `stride` tokens.
+        batch_encoding["start_token_idx"] = [0] + [
+            max(0, self.max_length - self.stride)
+            for _ in range(len(batch_encoding.input_ids[1:]))
+        ]
+        batch_encoding["window_size"] = [len(batch_encoding.input_ids[0])] + [
+            len(input_ids) - self.max_length + self.stride
+            for input_ids in batch_encoding.input_ids[1:]
+        ]
+        batch_encoding["prefix_token_offset"] = [
+            i * self.stride for i, _ in enumerate(batch_encoding.input_ids)
+        ]
+
+        batch_encoding["text"] = self._tokenizer.batch_decode(
+            [
+                input_ids[start_token_idx:]
+                for input_ids, start_token_idx in zip(
+                    batch_encoding.input_ids, batch_encoding.start_token_idx
+                )
+            ],
+            skip_special_tokens=True,
+        )
+        batch_encoding["prefix"] = self._tokenizer.batch_decode(
+            [
+                input_ids[:start_token_idx]
+                for input_ids, start_token_idx in zip(
+                    batch_encoding.input_ids, batch_encoding.start_token_idx
+                )
+            ],
+            skip_special_tokens=True,
+        )
+
+        return batch_encoding
+
+    def pre_process(self, dataset: list[dict]) -> list[dict]:
+        """Tokenize a dataset of chunks from multiple documents.
+        Will return a new dataset of different length, where each row contains a single prefix-window.
+        Other fields are duplicated for each prefix-window.
+
+        Args:
+            dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+
+        Raises:
+            ValueError: If the start token of a chunk could not be found in the encoding.
+
+        Returns:
+            list[dict]: Tokenized dataset. Each row contains a single prefix-window.
+                The original `text` and `chunks` fields are removed.
+                New fields are added:
+                  - `text`: The chunk text, excluding the prefix.
+                  - `prefix`: The chunk text prefix.
+                  - `start_token_idx`: The index of the first token in the window.
+                  - `prefix_token_offset`: The offset of the first token from the entire text.
+                  - `window_size`: The number of tokens in the window.
+        """
+        with tqdm(
+            total=4, desc="Pre-Processing Dataset", position=1, leave=False
+        ) as tq:
+            tq.set_postfix_str("Calculating Text Hash")
+            text_hashes = [sha256(row["text"].encode()).hexdigest() for row in dataset]
+            tq.update(1)
+
+            tq.set_postfix_str("Tokenizing Sliding Windows")
+            encodings = [
+                self._process(row.pop("text"))
+                for row in tqdm(dataset, position=2, leave=False)
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Exploding Samples from Encoding")
+            dataset = (
+                dict(
+                    **row,
+                    **transposed,
+                    text_sha256=txt_hsh,
+                )
+                for row, txt_hsh, encoding in zip(
+                    tqdm(dataset, position=2, leave=False),
+                    text_hashes,
+                    encodings,
+                )
+                for transposed in transpose_dict_of_lists(encoding, iter=True)
+            )
+            tq.update(1)
+
+            tq.set_postfix_str("Sorting Dataset by Length")
+            dataset = self._sort_dataset_by_length(dataset)
+            tq.update(1)
+
+        return dataset
+
+    def post_process(
+        self,
+        dataset: list[dict[str, Any]],
+        output_probabilities: list[OutputProbabilities],
+    ) -> list[dict]:
+        with tqdm(total=4, position=1, leave=False, desc="Post-Processing") as tq:
+            dataset = super().post_process(dataset, output_probabilities)
+            tq.update(1)
+
+            # TODO: Extract the transition scores for the first couple of windows from the output probabilities.
+            tq.set_postfix_str("Truncating Transition Scores")
+            dataset = [
+                row
+                | {
+                    "transition_scores": row.pop("transition_scores")[
+                        row["start_token_idx"] :
+                    ]
+                }
+                for row in dataset
+            ]
+            tq.update(1)
+
+            tq.set_postfix_str("Grouping Transition Scores")
+            dataset = group_by_column(
+                dataset,
+                "_ref_id",
+                deduplicate=(
+                    "_ref_id",
+                    "ref_id",
+                    "_orig_ref_id",
+                    "orig_ref_id",
+                    "text_sha256",
+                ),
+                aggregate=tuple(self.additional_fields) + ("transition_scores",),
+            )
+            tq.update(1)
+
+            tq.set_postfix_str("Sorting Transition Scores")
+            dataset = sort_by_column(
+                dataset,
+                "prefix_token_offset",
+                tuple(self.additional_fields) + ("transition_scores",),
+            )
+            tq.update(1)
+
+        return dataset
