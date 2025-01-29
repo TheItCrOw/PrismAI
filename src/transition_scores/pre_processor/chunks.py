@@ -5,7 +5,7 @@ from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import OutputProbabilities, PreProcessorMetadata
-from transition_scores.pre_processor.text import TextPreProcessor
+from transition_scores.pre_processor.abc import PreProcessor
 from transition_scores.utils import (
     chunks_to_text,
     group_by_column,
@@ -14,7 +14,7 @@ from transition_scores.utils import (
 )
 
 
-class RollingWindowChunkPreProcessor(TextPreProcessor):
+class RollingWindowChunkPreProcessor(PreProcessor):
     """
     Rolling-Window chunk pre-processor.
     Creates prefix-windows of chunks that fit within the max_length.
@@ -22,21 +22,21 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
 
     @property
     def required_fields(self) -> tuple[str, ...]:
-        return (
-            "text",
-            "chunks",
-        )
+        return {
+            "text": str,
+            "chunks": list[str],
+        }
 
     @property
     def additional_fields(self) -> tuple[str, ...]:
-        return (
-            "text",
-            "prefix",
-            "prefix_idx",
-            "start_idx",
-            "end_idx",
-            "start_token_idx",
-        )
+        return {
+            "text": str,
+            "prefix": str,
+            "prefix_chunk_idx": int,
+            "start_chunk_idx": int,
+            "end_chunk_idx": int,
+            "start_token_idx": int,
+        }
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(
@@ -59,9 +59,9 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             BatchEncoding: Tokenized batch. Has the following additional fields:
               - `text`: The chunk text, excluding the prefix.
               - `prefix`: The chunk text prefix.
-              - `prefix_idx`: The index of the first chunk in the prefix.
-              - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
-                  Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
+              - `prefix_chunk_idx`: The index of the first chunk in the prefix.
+              - `start_chunk_idx`/`end_chunk_idx`: The index of the first/last chunk in the window.
+                  Here, `end_chunk_idx` is always `start_chunk_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
               - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
         batch_encoding = BatchEncoding(
@@ -122,9 +122,9 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             batch_encoding["length"].extend(encoding["length"])
             batch_encoding["text"].append(text[char_idx:])
             batch_encoding["prefix"].append(text[:char_idx])
-            batch_encoding["prefix_idx"].append(prefix_start)
-            batch_encoding["start_idx"].append(chunk_idx)
-            batch_encoding["end_idx"].append(chunk_idx + 1)
+            batch_encoding["prefix_chunk_idx"].append(prefix_start)
+            batch_encoding["start_chunk_idx"].append(chunk_idx)
+            batch_encoding["end_chunk_idx"].append(chunk_idx + 1)
             batch_encoding["start_token_idx"].append(token_idx)
 
         return batch_encoding
@@ -146,9 +146,9 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                 New fields are added:
                   - `text`: The chunk text, excluding the prefix.
                   - `prefix`: The chunk text prefix.
-                  - `prefix_idx`: The index of the first chunk in the prefix.
-                  - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
-                      Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
+                  - `prefix_chunk_idx`: The index of the first chunk in the prefix.
+                  - `start_chunk_idx`/`end_chunk_idx`: The index of the first/last chunk in the window.
+                      Here, `end_chunk_idx` is always `start_chunk_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
                   - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
         with tqdm(
@@ -221,13 +221,15 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
                     "orig_ref_id",
                     "text_sha256",
                 ),
-                aggregate=self.additional_fields + ("transition_scores",),
+                aggregate=tuple(self.additional_fields) + ("transition_scores",),
             )
             tq.update(1)
 
             tq.set_postfix_str("Sorting Transition Scores")
             dataset = sort_by_column(
-                dataset, "start_idx", self.additional_fields + ("transition_scores",)
+                dataset,
+                "start_chunk_idx",
+                tuple(self.additional_fields) + ("transition_scores",),
             )
             tq.update(1)
 

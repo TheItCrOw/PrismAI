@@ -15,8 +15,8 @@ class TextPreProcessor(PreProcessor):
     """
 
     @property
-    def required_fields(self) -> tuple[str, ...]:
-        return ("text",)
+    def required_fields(self) -> dict[str, type]:
+        return {"text": str}
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(

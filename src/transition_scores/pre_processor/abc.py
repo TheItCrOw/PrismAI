@@ -44,12 +44,12 @@ class PreProcessor(ABC):
         return cls(AutoTokenizer.from_pretrained(model_name_or_path), **kwargs)
 
     @property
-    def required_fields(self) -> tuple[str, ...]:
+    def required_fields(self) -> dict[str, type]:
         """The fields that this pre-processor requires."""
-        return ()
+        raise NotImplementedError
 
     @property
-    def additional_fields(self) -> None | tuple[str, ...]:
+    def additional_fields(self) -> None | dict[str, type]:
         """The additional fields that this pre-processor adds to the dataset, if any."""
         return None
 
