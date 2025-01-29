@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
+import pymongo
 from bson import DBRef
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -19,6 +20,7 @@ def parse_pre_processors(args: Namespace):
     from transition_scores.pre_processor import (
         PreProcessor,
         RollingWindowChunkPreProcessor,
+        SlidingWindowTextPreProcessor,
         TextPreProcessor,
     )
 
@@ -26,10 +28,22 @@ def parse_pre_processors(args: Namespace):
     for pre_processor_str in set(args.pre_processors):
         match pre_processor_str:
             case "TextPreProcessor":
-                pre_processors.append(TextPreProcessor.from_pretrained(args.model))
+                pre_processors.append(
+                    TextPreProcessor.from_pretrained(
+                        args.model, max_length=args.max_length
+                    )
+                )
             case "RollingWindowChunkPreProcessor":
                 pre_processors.append(
-                    RollingWindowChunkPreProcessor.from_pretrained(args.model)
+                    RollingWindowChunkPreProcessor.from_pretrained(
+                        args.model, max_length=args.max_length
+                    )
+                )
+            case "SlidingWindowTextPreProcessor":
+                pre_processors.append(
+                    SlidingWindowTextPreProcessor.from_pretrained(
+                        args.model, max_length=args.max_length, stride=args.stride
+                    )
                 )
             case _:
                 raise RuntimeError
@@ -76,12 +90,14 @@ if __name__ == "__main__":
         action="store_const",
         const="hf",
         dest="provider",
+        help="Use huggingface transformers as the model provider.",
     )
     provider_group_me.add_argument(
         "--onnx",
         action="store_const",
         const="onnx",
         dest="provider",
+        help="Use ONNX Runtime via optimum as the model provider.",
     )
 
     model_group.add_argument(
@@ -93,12 +109,15 @@ if __name__ == "__main__":
         "-bsm",
         "--model_batch_size",
         type=int,
+        metavar="N",
         default=32,
     )
     model_group.add_argument(
         "-bsd",
         "--dataset_batch_size",
+        type=int,
         default=128,
+        metavar="N",
         help="Batch size for dataset processing. Defaults to the MongoDB batch size.",
     )
 
@@ -109,9 +128,20 @@ if __name__ == "__main__":
         help="Device to use",
         default=None,
     )
-    device_group.add_argument("--cpu", action="store_const", const="cpu", dest="device")
     device_group.add_argument(
-        "--cuda", "--gpu", action="store_const", const="cuda", dest="device"
+        "--cpu",
+        action="store_const",
+        const="cpu",
+        dest="device",
+        help="Use the CPU.",
+    )
+    device_group.add_argument(
+        "--cuda",
+        "--gpu",
+        action="store_const",
+        const="cuda",
+        dest="device",
+        help="Use CUDA GPUs.",
     )
 
     group_pre_processor = parser.add_argument_group("Pre-Processors")
@@ -119,47 +149,63 @@ if __name__ == "__main__":
         "pre_processors",
         nargs="+",
         choices=[
-            "TextPreProcessor",
             "RollingWindowChunkPreProcessor",
+            "SlidingWindowTextPreProcessor",
+            "TextPreProcessor",
         ],
+        help="Pre-processor to use.",
     )
     group_pre_processor.add_argument(
         "-tp",
         "--text_pre_processor",
         action="append_const",
         const="TextPreProcessor",
+        help="Use the TextPreProcessor.",
     )
     group_pre_processor.add_argument(
         "-rwc",
         "--rolling_window_chunks",
         action="append_const",
         const="RollingWindowChunkPreProcessor",
+        help="Use the RollingWindowChunkPreProcessor.",
+    )
+    group_pre_processor.add_argument(
+        "-slt",
+        "--sliding_window_text",
+        action="append_const",
+        const="SlidingWindowTextPreProcessor",
+        help="Use the SlidingWindowTextPreProcessor.",
     )
     group_pre_processor.add_argument(
         "--max_length",
         type=int,
+        metavar="N",
         help="Maximum length of the tokenized sequences. Unless specified, will use the model's maximum input size.",
         default=None,
     )
-    # group_pre_processor.add_argument(
-    #     "--skip_prefix_tokens",
-    #     type=int,
-    #     help="Skip the first n tokens of the input sequence.",
-    # )
+    group_pre_processor.add_argument(
+        "--stride",
+        type=int,
+        metavar="N",
+        help="SlidingWindowTextPreProcessor: set the stride for the sliding window. Defaults to 1/4 of the max_length.",
+        default=None,
+    )
 
     mongodb_group = parser.add_argument_group("MongoDB")
     mongodb_group.add_argument(
         "--filter",
-        dest="mongodb_filter",
         type=json.loads,
+        metavar="{...}",
+        dest="mongodb_filter",
         help="Filter for MongoDB query as JSON string.",
         default=None,
     )
     mongodb_group.add_argument(
         "--uri",
         "--mongodb_uri",
-        dest="mongodb_uri",
         type=str,
+        metavar="mongodb://...",
+        dest="mongodb_uri",
         default=os.environ.get("MONGO_DB_CONNECTION", None),
         help="MongoDB connection URI. Defaults to the `MONGO_DB_CONNECTION` environment variable if set.",
     )
@@ -167,40 +213,50 @@ if __name__ == "__main__":
         "-bsdb",
         "--mongodb_batch_size",
         type=int,
+        metavar="N",
         default=512,
         help="Batch size for MongoDB query.",
     )
     mongodb_group.add_argument(
         "-db",
         "--database",
-        dest="mongodb_database",
         type=str,
+        metavar="NAME",
+        dest="mongodb_database",
         default="prismai",
+        help="MongoDB database name.",
     )
     mongodb_group.add_argument(
         "-sc",
-        dest="source_collection",
         type=str,
+        metavar="NAME",
+        dest="source_collection",
         default="collected_items",
+        help="Source collection name.",
     )
     mongodb_group.add_argument(
         "-tc",
-        "--target_collection",
-        dest="target_collection",
         type=str,
+        metavar="NAME",
+        dest="target_collection",
         default="transition_scores",
+        help="Target collection name.",
     )
     mongodb_group.add_argument(
         "--limit",
-        dest="mongodb_limit",
         type=int,
+        metavar="N",
+        dest="mongodb_limit",
         default=None,
+        help="Limit query to N documents.",
     )
     mongodb_group.add_argument(
         "--skip",
-        dest="mongodb_skip",
         type=int,
+        metavar="N",
+        dest="mongodb_skip",
         default=0,
+        help="Skip the first N documents.",
     )
 
     args = parser.parse_args()
