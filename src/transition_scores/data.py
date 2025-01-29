@@ -1,6 +1,12 @@
-from typing import Any, Literal, Self
+from typing import Any, Literal, NamedTuple, Self
 
 from bson.dbref import DBRef
+
+
+class OutputProbabilities(NamedTuple):
+    target_probs: list[float]
+    top_k_indices: list[list[int]]
+    top_k_probs: list[list[float]]
 
 
 class TransitionScores(dict):

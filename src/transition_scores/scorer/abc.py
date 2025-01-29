@@ -12,9 +12,9 @@ from tqdm import tqdm
 from transition_scores.data import (
     FeaturesDict,
     ModelMetadata,
+    OutputProbabilities,
     PreProcessorMetadata,
     ScoresDict,
-    TransitionScores,
 )
 from transition_scores.pre_processor.abc import PreProcessor
 
@@ -80,7 +80,6 @@ class TransitionScorerABC(ABC):
             dataset = [{"text": text} for text in dataset]
 
         try:
-            all_special_ids = set(pre_processor.tokenizer.all_special_ids)
             pad_token_id = (
                 pre_processor.tokenizer.pad_token_id
                 or pre_processor.tokenizer.eos_token_id
@@ -94,8 +93,22 @@ class TransitionScorerABC(ABC):
         model_metadata = self.get_model_metadata()
         pre_processor_metadata = pre_processor.get_metadata()
 
-        processed_dataset = []
         _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
+
+        processed_dataset = self._process(dataset, _collate_fn)
+
+        transition_scores = pre_processor.post_process(dataset, processed_dataset)
+        return [
+            convert_to_mongo(
+                row,
+                model_metadata,
+                pre_processor_metadata,
+            )
+            for row in transition_scores
+        ]
+
+    def _process(self, dataset, _collate_fn):
+        processed_dataset = []
         for input_ids, attention_mask in tqdm(
             DataLoader(
                 dataset,
@@ -108,22 +121,13 @@ class TransitionScorerABC(ABC):
             desc="Processing Sequences",
         ):
             processed_dataset.extend(self._process_batch(input_ids, attention_mask))
-
-        return process_probabilities(
-            tqdm(
-                dataset, position=1, leave=False, desc="Post-Processing Probabilities"
-            ),
-            processed_dataset,
-            all_special_ids,
-            model_metadata,
-            pre_processor_metadata,
-        )
+        return processed_dataset
 
     def _process_batch(
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
-    ) -> list[tuple[list[float, list[int, list[float]]]]]:
+    ) -> list[OutputProbabilities]:
         """
         Process the a batch of input sequences and calculate transition scores.
         Runs a forward pass on the model and extracts the top k probabilities.
@@ -133,8 +137,7 @@ class TransitionScorerABC(ABC):
             attention_mask (torch.Tensor): A list of attention masks for each input sequence.
 
         Returns:
-            dict[str, list[list[TransitionScores]]]: A list of transition scores
-                for each sequence in the batch.
+            list[OutputProbabilities]: A list output probability tuples.
         """
         outputs = self._forward(input_ids, attention_mask)
 
@@ -150,7 +153,9 @@ class TransitionScorerABC(ABC):
             top_k_probs, top_k_indices = seq_probs.topk(self.top_k)
 
             probs.append(
-                (target_probs.tolist(), top_k_indices.tolist(), top_k_probs.tolist())
+                OutputProbabilities(
+                    target_probs.tolist(), top_k_indices.tolist(), top_k_probs.tolist()
+                )
             )
         return probs
 
@@ -186,50 +191,6 @@ class TransitionScorerABC(ABC):
                 .logits.softmax(-1)
                 .cpu()
             )
-
-
-def process_probabilities(
-    dataset: list[dict],
-    processed_dataset: list[tuple[list[float, list[int, list[float]]]]],
-    all_special_ids: set[int],
-    model_metadata: ModelMetadata,
-    pre_processor_metadata: PreProcessorMetadata,
-) -> dict[str, list]:
-    transition_scores = []
-    for row, (target_probs, top_k_indices, top_k_probs) in zip(
-        dataset, processed_dataset
-    ):
-        seq_scores = []
-
-        # If this model does not use a BOS token, the first token is not predicted,
-        # so we add a dummy result with a zero probability
-        target_ids = row.pop("input_ids")
-        if (first_token := target_ids[0]) not in all_special_ids:
-            seq_scores.append(TransitionScores.new(first_token, 0.0, [], []))
-
-        # Omit the last token if it is a special token, e.g. <|endoftext|>
-        seq_end = -1 if target_ids[-1] in all_special_ids else None
-        seq_scores.extend(
-            map(
-                TransitionScores.from_tuple,
-                zip(
-                    # We skip the first token,
-                    # as we will not get predictions for it
-                    target_ids[1:seq_end],
-                    target_probs,
-                    top_k_indices,
-                    top_k_probs,
-                ),
-            )
-        )
-        transition_scores.append(
-            convert_to_mongo(
-                row | {"transition_scores": seq_scores},
-                model_metadata,
-                pre_processor_metadata,
-            )
-        )
-    return transition_scores
 
 
 def convert_to_mongo(

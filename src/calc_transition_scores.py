@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
+from bson import DBRef
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm, trange
@@ -247,16 +248,16 @@ if __name__ == "__main__":
                 continue
 
             refs = {
-                "_ref_id": {
-                    "$ref": args.source_collection,
-                    "$id": str(row.pop("_id")),
-                }
+                "_ref_id": DBRef(
+                    args.source_collection,
+                    row.pop("_id"),
+                )
             }
             if "id" in row:
-                refs["ref_id"] = {
-                    "$ref": args.source_collection,
-                    "$id": row.pop("id"),
-                }
+                refs["ref_id"] = DBRef(
+                    args.source_collection,
+                    row.pop("id"),
+                )
             else:
                 refs["ref_id"] = None
 

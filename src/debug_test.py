@@ -1,85 +1,58 @@
-import os
-from itertools import batched
+import json
 
-import datasets
-from datasets import Dataset
-from pymongo import MongoClient
-from tqdm import tqdm, trange
+from bson import DBRef
 
 from transition_scores.pre_processor.chunks import RollingWindowChunkPreProcessor
 from transition_scores.scorer import OnnxTransitionScorer
 
-mongodb_batch_size = 16
-mongodb_filter_query = {}
-dataset_batch_size = 32
-
-mongodb_client = MongoClient(os.environ.get("MONGO_DB_CONNECTION"))
-mongodb_database = mongodb_client.get_database("prismai")
-source_collection = mongodb_database.get_collection("collected_items")
-target_collection = mongodb_database.get_collection("test")
-
-
+pre_processor = RollingWindowChunkPreProcessor.from_pretrained(
+    "/hot_storage/models/onnx/gpt2_onnx_o4/",
+    max_length=128,
+)
 scorer = OnnxTransitionScorer(
     "/hot_storage/models/onnx/gpt2_onnx_o4/",
-    batch_size=4,
+    batch_size=1,
     device="cuda",
+    top_k=4,
 )
 
-pre_processors = RollingWindowChunkPreProcessor.from_pretrained("gpt2")
-num_documents = source_collection.count_documents(mongodb_filter_query)
-tq_fetch = trange(
-    0,
-    128,
-    32,
-    desc=f"Processing Document Batches of {dataset_batch_size} from {source_collection}",
-)
-for offset in tq_fetch:
-    batch = []
-    for row in source_collection.find(
-        mongodb_filter_query,
-        projection=[
-            "text",
-            "chunks",
-            "id",
+dataset = [
+    {
+        "_ref_id": str(DBRef("lorem-ipsum", "paragraph-1")),
+        "ref_id": str(DBRef("lorem-ipsum", "paragraph-1")),
+        "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean a velit at nisl sagittis accumsan sit amet ut neque. Pellentesque a elit nec erat venenatis ultricies. Maecenas ac consequat velit, bibendum facilisis lorem. Duis est neque, molestie et pellentesque vitae, consectetur quis arcu. Vivamus eros neque, egestas non pretium ac, varius vel enim. Curabitur convallis vitae odio et egestas. Quisque rutrum augue vitae metus cursus consequat nec id elit. Mauris fringilla non justo et bibendum. ",
+        "chunks": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            "Aenean a velit at nisl sagittis accumsan sit amet ut neque.",
+            "Pellentesque a elit nec erat venenatis ultricies.",
+            "Maecenas ac consequat velit, bibendum facilisis lorem.",
+            "Duis est neque, molestie et pellentesque vitae, consectetur quis arcu.",
+            "Vivamus eros neque, egestas non pretium ac, varius vel enim.",
+            "Curabitur convallis vitae odio et egestas.",
+            "Quisque rutrum augue vitae metus cursus consequat nec id elit.",
+            "Mauris fringilla non justo et bibendum.",
         ],
-        batch_size=mongodb_batch_size,
-        limit=min(dataset_batch_size, num_documents),
-        skip=offset,
-    ):
-        refs = {
-            "_ref_id": {
-                "$ref": "collected_items",
-                "$id": str(row.pop("_id")),
-            }
-        }
-        if "id" in row:
-            refs["ref_id"] = {
-                "$ref": "collected_items",
-                "$id": row.pop("id"),
-            }
-        else:
-            refs["ref_id"] = None
+    },
+    {
+        "_ref_id": str(DBRef("lorem-ipsum", "paragraph-2")),
+        "ref_id": str(DBRef("lorem-ipsum", "paragraph-2")),
+        "text": "Duis blandit, arcu nec facilisis molestie, elit tortor pretium neque, interdum tincidunt eros ligula eu diam. Aenean arcu massa, consequat quis sodales sed, vestibulum a dui. Pellentesque luctus aliquam dui a vehicula. Nunc commodo ante sed ante facilisis euismod. Donec ultrices ornare massa gravida pharetra. Sed iaculis velit in justo lacinia, quis rhoncus dolor tincidunt. Ut quam ligula, porttitor sit amet urna ac, aliquam efficitur mauris. Praesent et mollis felis. Suspendisse a facilisis mauris. Quisque enim tellus, varius sit amet interdum nec, blandit vel lectus. Suspendisse eget felis non enim vestibulum vehicula id eu odio. Nunc aliquet felis eget elit aliquam eleifend. Curabitur sed metus felis.",
+        "chunks": [
+            "Duis blandit, arcu nec facilisis molestie, elit tortor pretium neque, interdum tincidunt eros ligula eu diam.",
+            "Aenean arcu massa, consequat quis sodales sed, vestibulum a dui.",
+            "Pellentesque luctus aliquam dui a vehicula.",
+            "Nunc commodo ante sed ante facilisis euismod.",
+            "Donec ultrices ornare massa gravida pharetra.",
+            "Sed iaculis velit in justo lacinia, quis rhoncus dolor tincidunt.",
+            "Ut quam ligula, porttitor sit amet urna ac, aliquam efficitur mauris.",
+            "Praesent et mollis felis.",
+            "Suspendisse a facilisis mauris.",
+            "Quisque enim tellus, varius sit amet interdum nec, blandit vel lectus.",
+            "Suspendisse eget felis non enim vestibulum vehicula id eu odio.",
+            "Nunc aliquet felis eget elit aliquam eleifend.",
+            "Curabitur sed metus felis. ",
+        ],
+    },
+]
 
-        if "_ref_id" in row:
-            refs["_orig_ref_id"] = row.pop("_ref_id")
-        if "ref_id" in row:
-            refs["orig_ref_id"] = row.pop("ref_id")
-
-        batch.append(refs | row)
-    dataset = Dataset.from_list(batch).filter(
-        lambda x: x["text"] and x["chunks"],
-        keep_in_memory=not datasets.is_caching_enabled(),
-    )
-
-    for pre_processor in [pre_processors]:
-        processed_dataset = scorer.process(dataset, pre_processor)
-        for r_batch in batched(
-            tqdm(
-                processed_dataset,
-                desc="Inserting Batch Results",
-                position=1,
-                leave=False,
-            ),
-            mongodb_batch_size,
-        ):
-            target_collection.insert_many(r_batch, ordered=False)
+print(json.dumps(scorer.process(dataset, pre_processor), indent=2))

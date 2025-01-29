@@ -30,12 +30,12 @@ class TextPreProcessor(PreProcessor):
         Note:
             Effectively calls:
             ```py
-            >>> tokenizer(
-            >>>     text,
-            >>>     truncation=True,
-            >>>     return_length=True,
-            >>>     add_special_tokens=True,
-            >>> )
+            >>> tokenizer( # doctest: +SKIP
+            ...     text,
+            ...     truncation=True,
+            ...     return_length=True,
+            ...     add_special_tokens=True,
+            ... )
             ```
 
         Args:
@@ -95,7 +95,7 @@ class TextPreProcessor(PreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Sorting Dataset by Length")
-            dataset = list(sorted(dataset, key=lambda row: row.pop("length")))
+            dataset = self._sort_dataset_by_length(dataset)
             tq.update(1)
 
         return dataset
