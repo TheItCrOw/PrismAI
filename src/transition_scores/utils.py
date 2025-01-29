@@ -3,6 +3,8 @@ from typing import Any, Generator, Iterable
 import numpy as np
 from transformers import AutoConfig
 
+from transition_scores.data import FeaturesDict
+
 
 class ModelIntializationError(Exception):
     pass
@@ -143,3 +145,47 @@ def group_by_column(
         if source:
             target.setdefault(into, []).append(source)
     return list(grouped.values())
+
+
+def split_document(document: FeaturesDict) -> tuple[FeaturesDict, FeaturesDict]:
+    _split = document.get("_split", "").split(".")
+    ts = document["transition_scores"]
+    tsa, tsb = (
+        ts[: len(ts) // 2],
+        ts[len(ts) // 2 :],
+    )
+    ma, mb = {}, {}
+    for key, value in document["metadata"].items():
+        if isinstance(value, list):
+            ma[key], mb[key] = (
+                value[: len(value) // 2],
+                value[len(value) // 2 :],
+            )
+        else:
+            ma[key], mb[key] = value, value
+    return (
+        FeaturesDict(
+            {
+                "_ref_id": document["_ref_id"],
+                "ref_id": document["ref_id"],
+                "text_sha256": document["text_sha256"],
+                "_split": ".".join(_split + ["0"]),
+                "model": document["model"],
+                "pre_processor": document["pre_processor"],
+                "transition_scores": tsa,
+                "metadata": ma,
+            }
+        ),
+        FeaturesDict(
+            {
+                "_ref_id": document["_ref_id"],
+                "ref_id": document["ref_id"],
+                "text_sha256": document["text_sha256"],
+                "_split": ".".join(_split + ["1"]),
+                "model": document["model"],
+                "pre_processor": document["pre_processor"],
+                "transition_scores": tsb,
+                "metadata": mb,
+            }
+        ),
+    )
