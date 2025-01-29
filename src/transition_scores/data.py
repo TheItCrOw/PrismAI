@@ -144,8 +144,10 @@ class FeaturesDict(dict):
         model_metadata: ModelMetadata,
         pre_processor_metadata: PreProcessorMetadata,
     ) -> Self:
+        metadata = scores.pop("metadata")
         return cls.new(
             **scores,
             model=model_metadata,
             pre_processor=pre_processor_metadata,
+            **metadata,
         )
