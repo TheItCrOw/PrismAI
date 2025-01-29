@@ -57,7 +57,8 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
 
         Returns:
             BatchEncoding: Tokenized batch. Has the following additional fields:
-              - `text`: The chunk text, including prefix.
+              - `text`: The chunk text, excluding the prefix.
+              - `prefix`: The chunk text prefix.
               - `prefix_idx`: The index of the first chunk in the prefix.
               - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
                   Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
@@ -143,7 +144,8 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             list[dict]: Tokenized dataset. Each row contains a single prefix-window.
                 The original `text` and `chunks` fields are removed.
                 New fields are added:
-                  - `text`: The chunk text, including prefix.
+                  - `text`: The chunk text, excluding the prefix.
+                  - `prefix`: The chunk text prefix.
                   - `prefix_idx`: The index of the first chunk in the prefix.
                   - `start_idx`/`end_idx`: The index of the first/last chunk in the window.
                       Here, `end_idx` is always `start_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
