@@ -42,7 +42,7 @@ class OnnxTransitionScorer(TransitionScorerABC):
         )
 
     def get_model_metadata(self) -> ModelMetadata:
-        match self.model_name_or_path.split("_"):
+        match self.model_name_or_path.strip("/").split("_"):
             case [*_, variant] if variant.startswith("o") and variant[1:].isdigit():
                 return ModelMetadata.new(
                     name=self.model_name,
