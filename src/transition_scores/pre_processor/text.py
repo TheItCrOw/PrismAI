@@ -18,7 +18,13 @@ class TextPreProcessor(PreProcessor):
     def required_fields(self) -> tuple[str, ...]:
         return ("text",)
 
-    def process(self, text: list[str]) -> BatchEncoding:
+    def get_metadata(self) -> PreProcessorMetadata:
+        return PreProcessorMetadata.new(
+            "text",
+            max_length=self.max_length,
+        )
+
+    def _process(self, text: list[str]) -> BatchEncoding:
         """Process a *batch* of samples.
 
         Note:
@@ -46,7 +52,7 @@ class TextPreProcessor(PreProcessor):
             add_special_tokens=True,
         )
 
-    def prepare_dataset(self, dataset: list[dict]) -> list[dict]:
+    def pre_process(self, dataset: list[dict]) -> list[dict]:
         """Prepare the `text` of the samples in a dataset.
         Adds `text_sha256` field to the dataset.
 
@@ -67,7 +73,7 @@ class TextPreProcessor(PreProcessor):
 
             tq.set_postfix_str("Tokenizing Rolling Windows")
             encodings = [
-                self.process(row.pop("text"))
+                self._process(row.pop("text"))
                 for row in tqdm(dataset, position=2, leave=False)
             ]
             tq.update(1)
@@ -93,9 +99,3 @@ class TextPreProcessor(PreProcessor):
             tq.update(1)
 
         return dataset
-
-    def get_metadata(self) -> PreProcessorMetadata:
-        return PreProcessorMetadata.new(
-            "text",
-            max_length=self.max_length,
-        )

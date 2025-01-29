@@ -39,26 +39,24 @@ class PreProcessor(ABC):
     def from_pretrained(cls, model_name_or_path: str, **kwargs):
         return cls(AutoTokenizer.from_pretrained(model_name_or_path), **kwargs)
 
-    @abstractmethod
-    def process(self, batch: dict[str, list]) -> BatchEncoding: ...
-
-    @abstractmethod
-    def prepare_dataset(
-        self, dataset: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]: ...
+    @property
+    def required_fields(self) -> tuple[str, ...]:
+        """The fields that this pre-processor requires."""
+        return ()
 
     @property
     def additional_fields(self) -> None | tuple[str, ...]:
         """The additional fields that this pre-processor adds to the dataset, if any."""
         return None
 
-    @property
-    def required_fields(self) -> tuple[str, ...]:
-        """The fields that this pre-processor requires."""
-        return ()
-
     @abstractmethod
     def get_metadata(self) -> PreProcessorMetadata: ...
+
+    @abstractmethod
+    def _process(self, batch: dict[str, list]) -> BatchEncoding: ...
+
+    @abstractmethod
+    def pre_process(self, dataset: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
 
 
 def text_sha256(text: str) -> dict[str, str]:

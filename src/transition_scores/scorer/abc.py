@@ -85,7 +85,7 @@ class TransitionScorerABC(ABC):
                 pre_processor.tokenizer.pad_token_id
                 or pre_processor.tokenizer.eos_token_id
             )
-            dataset = pre_processor.prepare_dataset(dataset)
+            dataset = pre_processor.pre_process(dataset)
         except KeyError as e:
             raise KeyError(
                 f"PreProcessor {type(pre_processor).__name__} requires the field {e.args[0]} in the dataset."

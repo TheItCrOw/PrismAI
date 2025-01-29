@@ -26,6 +26,13 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
     """
 
     @property
+    def required_fields(self) -> tuple[str, ...]:
+        return (
+            "text",
+            "chunks",
+        )
+
+    @property
     def additional_fields(self) -> tuple[str, ...]:
         return (
             "text",
@@ -35,14 +42,13 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             "start_token_idx",
         )
 
-    @property
-    def required_fields(self) -> tuple[str, ...]:
-        return (
-            "text",
-            "chunks",
+    def get_metadata(self) -> PreProcessorMetadata:
+        return PreProcessorMetadata.new(
+            "chunk-in-context",
+            max_length=self.max_length,
         )
 
-    def process(self, chunks: list[str]) -> BatchEncoding:
+    def _process(self, chunks: list[str]) -> BatchEncoding:
         """
         Process a list of chunks from a single document.
         Will apply a rolling-window to create prefix-windows of chunks that fit within the max_length.
@@ -125,7 +131,7 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
 
         return batch_encoding
 
-    def prepare_dataset(self, dataset: list[dict]) -> list[dict]:
+    def pre_process(self, dataset: list[dict]) -> list[dict]:
         """Tokenize a dataset of chunks from multiple documents.
         Will return a new dataset of different length, where each row contains a single prefix-window.
         Other fields are duplicated for each prefix-window.
@@ -170,7 +176,7 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
 
             tq.set_postfix_str("Tokenizing Rolling Windows")
             encodings = [
-                self.process(row.pop("chunks"))
+                self._process(row.pop("chunks"))
                 for row in tqdm(dataset, position=2, leave=False)
             ]
             tq.update(1)
@@ -196,9 +202,3 @@ class RollingWindowChunkPreProcessor(TextPreProcessor):
             tq.update(1)
 
         return dataset
-
-    def get_metadata(self) -> PreProcessorMetadata:
-        return PreProcessorMetadata.new(
-            "chunk-in-context",
-            max_length=self.max_length,
-        )
