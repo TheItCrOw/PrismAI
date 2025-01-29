@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
@@ -9,6 +10,9 @@ from bson import DBRef
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm, trange
+
+from transition_scores.data import FeaturesDict
+from transition_scores.utils import split_document
 
 if Path(".env").exists():
     load_dotenv()
@@ -71,6 +75,25 @@ def parse_scorer_provider(args: Namespace):
             )
         case _:
             raise RuntimeError
+
+
+def try_insert(collection, document: FeaturesDict):
+    try:
+        target_collection.insert_one(document)
+    except pymongo.errors.OperationFailure as e:
+        if "Size must be between 0" not in e.args[0]:
+            raise e
+
+        index = e.args[0].index("ObjectId('")
+        object_id = e.args[0][index + 10 : index + 34]
+
+        print(
+            f"Caught invalid BSON size error in individual insert for ObjectId('{object_id}')."
+            "Attempting to split document and insert parts individually.",
+        )
+
+        for split in split_document(document):
+            return try_insert(collection, split)
 
 
 if __name__ == "__main__":
@@ -329,10 +352,26 @@ if __name__ == "__main__":
             for batch in batched(
                 tqdm(
                     processed_dataset,
-                    desc="Inserting Batch Results",
+                    desc="Inserting Document Batch",
                     position=1,
                     leave=False,
                 ),
                 mongodb_batch_size,
             ):
-                target_collection.insert_many(batch, ordered=False)
+                try:
+                    target_collection.insert_many(batch)
+                except pymongo.errors.OperationFailure as e:
+                    if "Size must be between 0" not in e.args[0]:
+                        raise e
+
+                    print(
+                        "Caught invalid BSON size error in insert_many.",
+                        file=sys.stderr,
+                    )
+                    for document in tqdm(
+                        batch,
+                        position=2,
+                        leave=False,
+                        desc="Inserting Documents Individually",
+                    ):
+                        try_insert(target_collection, document)
