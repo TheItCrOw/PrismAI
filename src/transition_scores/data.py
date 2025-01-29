@@ -46,7 +46,7 @@ class ModelMetadata(dict):
                 "name": name,
                 "provider": provider,
                 "variant": variant,
-                "metadata": metadata,
+                **metadata,
             }
         )
 
@@ -65,7 +65,7 @@ class PreProcessorMetadata(dict):
         return cls(
             {
                 "type": type,
-                "metadata": metadata,
+                **metadata,
             }
         )
 
