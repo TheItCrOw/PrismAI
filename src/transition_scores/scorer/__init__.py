@@ -5,10 +5,10 @@ from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 
 from transition_scores.data import ModelMetadata
-from transition_scores.scorer.abc import TransitionScorerABC
+from transition_scores.scorer.abc import TransitionScorer
 
 
-class OnnxTransitionScorer(TransitionScorerABC):
+class OnnxTransitionScorer(TransitionScorer):
     def __init__(
         self,
         model: str | Path,
@@ -41,7 +41,7 @@ class OnnxTransitionScorer(TransitionScorerABC):
             **kwargs,
         )
 
-    def get_model_metadata(self) -> ModelMetadata:
+    def get_metadata(self) -> ModelMetadata:
         match self.model_name_or_path.strip("/").split("_"):
             case [*_, variant] if variant.startswith("o") and variant[1:].isdigit():
                 return ModelMetadata.new(
@@ -57,7 +57,7 @@ class OnnxTransitionScorer(TransitionScorerABC):
                 )
 
 
-class TransformersTransitionScorer(TransitionScorerABC):
+class TransformersTransitionScorer(TransitionScorer):
     def __init__(
         self,
         model: str | Path,
@@ -81,7 +81,7 @@ class TransformersTransitionScorer(TransitionScorerABC):
             self.model = self.model.to(self.device)
         self._load_in_8bit = load_in_8bit
 
-    def get_model_metadata(self) -> ModelMetadata:
+    def get_metadata(self) -> ModelMetadata:
         return ModelMetadata.new(
             name=self._model.name_or_path,
             provider="transformers",

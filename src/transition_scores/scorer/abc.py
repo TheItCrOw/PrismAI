@@ -19,7 +19,7 @@ from transition_scores.data import (
 from transition_scores.pre_processor.abc import PreProcessor
 
 
-class TransitionScorerABC(ABC):
+class TransitionScorer(ABC):
     def __init__(
         self,
         batch_size: int = 128,
