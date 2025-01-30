@@ -75,29 +75,30 @@ class PreProcessor(ABC):
         for row, (target_probs, top_k_indices, top_k_probs) in zip(
             dataset, output_probabilities
         ):
-            seq_scores = []
+            seq_scores = {
+                "target_ids": [],
+                "target_probs": [],
+                "top_k_indices": [],
+                "top_k_probs": [],
+            }
 
             # If this model does not use a BOS token, the first token is not predicted,
             # so we add a dummy result with a zero probability
             target_ids = row.pop("input_ids")
             if (first_token := target_ids[0]) not in self.all_special_ids:
-                seq_scores.append(TransitionScores.new(first_token, 0.0, [], []))
+                seq_scores["target_ids"].append(first_token)
+                seq_scores["target_probs"].append(0.0)
+                seq_scores["top_k_indices"].append(None)
+                seq_scores["top_k_probs"].append(None)
 
             # Omit the last token if it is a special token, e.g. <|endoftext|>
             seq_end = -1 if target_ids[-1] in self.all_special_ids else None
-            seq_scores.extend(
-                map(
-                    TransitionScores.from_tuple,
-                    zip(
-                        # We skip the first token,
-                        # as we will not get predictions for it
-                        target_ids[1:seq_end],
-                        target_probs,
-                        top_k_indices,
-                        top_k_probs,
-                    ),
-                )
-            )
+            target_ids = target_ids[1:seq_end]
+
+            seq_scores["target_ids"].extend(target_ids)
+            seq_scores["target_probs"].extend(target_probs[: len(target_ids)])
+            seq_scores["top_k_indices"].extend(top_k_indices[: len(target_ids)])
+            seq_scores["top_k_probs"].extend(top_k_probs[: len(target_ids)])
 
             if "attention_mask" in row:
                 del row["attention_mask"]
