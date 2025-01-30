@@ -18,6 +18,10 @@ class TextPreProcessor(PreProcessor):
     def required_fields(self) -> dict[str, type]:
         return {"text": str}
 
+    @property
+    def additional_fields(self) -> None | dict[str, type]:
+        return {"text": str} if self.include_text else None
+
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(
             "text",
@@ -44,13 +48,27 @@ class TextPreProcessor(PreProcessor):
         Returns:
             BatchEncoding | dict[str, list]: Tokenized batch.
         """
-        return self.tokenizer(
+        batch_encodings = self.tokenizer(
             text,
             truncation=True,
             max_length=self.max_length,
             return_length=True,
             add_special_tokens=True,
         )
+
+        if self.include_text:
+            batch_encodings = [
+                batch_encoding
+                | {
+                    "text": self._tokenizer.batch_decode(
+                        batch_encoding["input_ids"],
+                        skip_special_tokens=True,
+                    )
+                }
+                for batch_encoding in batch_encodings
+            ]
+
+        return batch_encodings
 
     def pre_process(self, dataset: list[dict]) -> list[dict]:
         """Prepare the `text` of the samples in a dataset.

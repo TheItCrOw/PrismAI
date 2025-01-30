@@ -19,6 +19,7 @@ class SlidingWindowTextPreProcessor(PreProcessor):
         tokenizer,
         stride: int | None = None,
         max_length: int | None = None,
+        include_text: bool = False,
     ):
         """
         Sliding-Window text pre-processor.
@@ -31,7 +32,7 @@ class SlidingWindowTextPreProcessor(PreProcessor):
             max_length (int, optional): The max_length for each tokenized sequence.
                 Will try to infer max_length from the tokenizer if not specified.
         """
-        super().__init__(tokenizer, max_length)
+        super().__init__(tokenizer, max_length, include_text)
         self.stride = stride or (self.max_length // 4)
 
     @property
@@ -40,13 +41,15 @@ class SlidingWindowTextPreProcessor(PreProcessor):
 
     @property
     def additional_fields(self) -> dict[str, type]:
-        return {
-            "text": str,
-            "prefix": str,
+        fields = {
             "start_token_idx": int,
             "prefix_token_offset": int,
             "window_size": int,
         }
+        if self.include_text:
+            fields.update({"text": str, "prefix": str})
+
+        return fields
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(
@@ -100,24 +103,25 @@ class SlidingWindowTextPreProcessor(PreProcessor):
             i * self.stride for i, _ in enumerate(batch_encoding.input_ids)
         ]
 
-        batch_encoding["text"] = self._tokenizer.batch_decode(
-            [
-                input_ids[start_token_idx:]
-                for input_ids, start_token_idx in zip(
-                    batch_encoding.input_ids, batch_encoding.start_token_idx
-                )
-            ],
-            skip_special_tokens=True,
-        )
-        batch_encoding["prefix"] = self._tokenizer.batch_decode(
-            [
-                input_ids[:start_token_idx]
-                for input_ids, start_token_idx in zip(
-                    batch_encoding.input_ids, batch_encoding.start_token_idx
-                )
-            ],
-            skip_special_tokens=True,
-        )
+        if self.include_text:
+            batch_encoding["text"] = self._tokenizer.batch_decode(
+                [
+                    input_ids[start_token_idx:]
+                    for input_ids, start_token_idx in zip(
+                        batch_encoding.input_ids, batch_encoding.start_token_idx
+                    )
+                ],
+                skip_special_tokens=True,
+            )
+            batch_encoding["prefix"] = self._tokenizer.batch_decode(
+                [
+                    input_ids[:start_token_idx]
+                    for input_ids, start_token_idx in zip(
+                        batch_encoding.input_ids, batch_encoding.start_token_idx
+                    )
+                ],
+                skip_special_tokens=True,
+            )
 
         return batch_encoding
 

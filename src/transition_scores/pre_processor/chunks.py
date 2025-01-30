@@ -29,14 +29,16 @@ class RollingWindowChunkPreProcessor(PreProcessor):
 
     @property
     def additional_fields(self) -> tuple[str, ...]:
-        return {
-            "text": str,
-            "prefix": str,
+        fields = {
             "prefix_chunk_idx": int,
             "start_chunk_idx": int,
             "end_chunk_idx": int,
             "start_token_idx": int,
         }
+        if self.include_text:
+            fields.update({"text": str, "prefix": str})
+
+        return fields
 
     def get_metadata(self) -> PreProcessorMetadata:
         return PreProcessorMetadata.new(
@@ -120,12 +122,14 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             batch_encoding["input_ids"].append(encoding["input_ids"])
             batch_encoding["attention_mask"].append(encoding["attention_mask"])
             batch_encoding["length"].extend(encoding["length"])
-            batch_encoding["text"].append(text[char_idx:])
-            batch_encoding["prefix"].append(text[:char_idx])
             batch_encoding["prefix_chunk_idx"].append(prefix_start)
             batch_encoding["start_chunk_idx"].append(chunk_idx)
             batch_encoding["end_chunk_idx"].append(chunk_idx + 1)
             batch_encoding["start_token_idx"].append(token_idx)
+
+            if self.include_text:
+                batch_encoding["text"].append(text[char_idx:])
+                batch_encoding["prefix"].append(text[:char_idx])
 
         return batch_encoding
 
