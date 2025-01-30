@@ -11,4 +11,5 @@ class TextPreProcessor(PreProcessor):
         dataset = super()._prepare(dataset)
         for document in dataset:
             document["text"] = " ".join(document["text"].strip().split())
+        dataset = [document for document in dataset if document["text"]]
         return dataset

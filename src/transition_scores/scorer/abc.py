@@ -211,10 +211,10 @@ def collate_fn(
         [torch.tensor(seq_ids) for seq_ids in input_ids],
         batch_first=True,
         padding_value=pad_token_id,
-    )
+    ).long()
     attention_mask = pad_sequence(
         [torch.tensor(mask) for mask in attention_mask],
         batch_first=True,
         padding_value=0,
-    )
+    ).long()
     return input_ids, attention_mask
