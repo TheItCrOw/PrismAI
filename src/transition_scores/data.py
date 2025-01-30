@@ -1,6 +1,9 @@
+from dataclasses import dataclass, field
 from typing import Any, Literal, NamedTuple, Self
 
 from bson import ObjectId
+
+from transition_scores.utils import DataClassMappingMixin
 
 
 class OutputProbabilities(NamedTuple):
@@ -9,27 +12,67 @@ class OutputProbabilities(NamedTuple):
     top_k_probs: list[list[float]]
 
 
-class TransitionScores(dict):
-    @classmethod
-    def new(
-        cls,
-        target_id: int,
-        target_prob: float,
-        top_k_ids: list[int],
-        top_k_scores: list[float],
-    ) -> Self:
-        return cls(
-            {
-                "target_id": target_id,
-                "target_prob": target_prob,
-                "top_k_ids": top_k_ids,
-                "top_k_scores": top_k_scores,
-            }
+@dataclass
+class TransitionScores(DataClassMappingMixin):
+    target_ids: list[int] = field(default_factory=list)
+    target_probs: list[float] = field(default_factory=list)
+    top_k_indices: list[list[int]] = field(default_factory=list)
+    top_k_probs: list[list[float]] = field(default_factory=list)
+
+    def __iter__(self):
+        yield from zip(
+            self.target_ids,
+            self.target_probs,
+            self.top_k_indices,
+            self.top_k_probs,
         )
 
+    def __getitem__(self, key):
+        if isinstance(key, (int, slice)):
+            return TransitionScores(
+                self.target_ids[key],
+                self.target_probs[key],
+                self.top_k_indices[key],
+                self.top_k_probs[key],
+            )
+        return super().__getitem__(key)
+
+    def append(
+        self,
+        target_id: int,
+        target_probs: float,
+        top_k_indices: list[int],
+        top_k_probs: list[float],
+    ):
+        self.target_ids.append(target_id)
+        self.target_probs.append(target_probs)
+        self.top_k_indices.append(top_k_indices)
+        self.top_k_probs.append(top_k_probs)
+
+    def extend(
+        self,
+        target_ids: list[int],
+        target_probs: list[float],
+        top_k_indices: list[list[int]],
+        top_k_probs: list[list[float]],
+    ):
+        self.target_ids.extend(target_ids)
+        self.target_probs.extend(target_probs)
+        self.top_k_indices.extend(top_k_indices)
+        self.top_k_probs.extend(top_k_probs)
+
     @classmethod
-    def from_tuple(cls, tup: tuple[int, float, list[int], list[float]]) -> Self:
-        return cls.new(*tup)
+    def merge(cls, others: list[Self]) -> Self:
+        self = cls()
+
+        for other in others:
+            self.extend(
+                other.target_ids,
+                other.target_probs,
+                other.top_k_indices,
+                other.top_k_probs,
+            )
+        return self
 
 
 class ModelMetadata(dict):

@@ -24,6 +24,9 @@ class DataClassMappingMixin:
             return value
         raise KeyError(f"Key {key} not found in {type(self).__name__}")
 
+    def items(self):
+        yield from ((key, self[key]) for key in self.keys())
+
 
 def transpose_dict_of_lists[K, V](
     dd: dict[K, list[V]], iter: bool = False
