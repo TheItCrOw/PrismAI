@@ -107,8 +107,8 @@ def group_by_column(
         ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
         ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
         ... ]
-        >>> group_by_column(dataset, "foo", ("bar",), ("values",))
-        {1: {'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, 2: {'bar': 'qux', 'values': [[7, 8, 9]]}}
+        >>> group_by_column(dataset, "foo", ("foo", "bar",), ("values",))
+        [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
 
     Args:
         dataset (list[dict[str, Any]]): The dataset to group.
