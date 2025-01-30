@@ -2,7 +2,7 @@ from pprint import pprint
 
 from bson import DBRef
 
-from transition_scores.pre_processor.window import SlidingWindowTextPreProcessor
+from transition_scores.pre_processor.text.window import SlidingWindowTextPreProcessor
 from transition_scores.scorer import OnnxTransitionScorer
 
 pre_processor = SlidingWindowTextPreProcessor.from_pretrained(

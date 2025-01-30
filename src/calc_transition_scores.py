@@ -29,12 +29,12 @@ def parse_pre_processors(args: Namespace):
     from transition_scores.pre_processor import (
         RollingWindowChunkPreProcessor,
         SlidingWindowTextPreProcessor,
-        TextPreProcessor,
+        TruncationTextPreProcessor,
     )
 
     match args.pre_processor:
         case "TextPreProcessor":
-            return TextPreProcessor.from_pretrained(
+            return TruncationTextPreProcessor.from_pretrained(
                 args.model, max_length=args.max_length
             )
         case "RollingWindowChunkPreProcessor":
