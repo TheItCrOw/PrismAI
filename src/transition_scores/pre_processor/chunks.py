@@ -159,7 +159,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
                       Here, `end_chunk_idx` is always `start_chunk_idx + 1`, but we add it for compatibility to synthezied chunks that may cover more than one chunk.
                   - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
-        with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
+        with tqdm(total=4, position=2, leave=False, desc="Pre-Processing") as tq:
             try:
                 tq.set_postfix_str("Preparing Dataset")
                 dataset = remove_columns(self._prepare(dataset), "text")
@@ -197,7 +197,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
         dataset: list[dict[str, Any]],
         output_probabilities: list[OutputProbabilities],
     ) -> list[dict]:
-        with tqdm(total=4, position=1, leave=False, desc="Post-Processing") as tq:
+        with tqdm(total=4, position=2, leave=False, desc="Post-Processing") as tq:
             dataset = super().post_process(dataset, output_probabilities)
             tq.update(1)
 

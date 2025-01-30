@@ -78,7 +78,7 @@ class TruncationTextPreProcessor(TextPreProcessor):
         Returns:
             list[dict]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
-        with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
+        with tqdm(total=4, position=2, leave=False, desc="Pre-Processing") as tq:
             try:
                 tq.set_postfix_str("Preparing Dataset")
                 dataset = self._prepare(dataset)

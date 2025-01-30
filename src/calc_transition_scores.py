@@ -85,11 +85,9 @@ def try_insert_one(document: FeaturesDict, collection: Collection, recursion_dep
         mongodb_target_collection.insert_one(document)
     except pymongo.errors.DuplicateKeyError:
         return  # ignore duplicates
-    except pymongo.errors.DocumentTooLarge as e:
-        print(str(e), file=sys.stderr)
+    except pymongo.errors.DocumentTooLarge:
         pass  # document still too large, continue
-    except pymongo.errors.WriteError as e:
-        print(str(e), file=sys.stderr)
+    except pymongo.errors.WriteError:
         pass  # document still too large, continue
     except Exception as e:
         # otherwise, raise the error
@@ -330,6 +328,10 @@ if __name__ == "__main__":
     pre_processor = parse_pre_processors(args)
     pre_processor_metadata = pre_processor.get_metadata()
 
+    fields_projection = list(
+        {"id", "_ref_id", "ref_id"} | set(pre_processor.required_fields.keys())
+    )
+
     domains = args.mongodb_filter_domains or mongodb_filter_query.pop("domain", (None,))
 
     for domain in tqdm(domains, position=0, desc="Processing Domains"):
@@ -338,10 +340,6 @@ if __name__ == "__main__":
 
         mongodb_limit = args.mongodb_limit or mongodb_source_collection.count_documents(
             mongodb_filter_query
-        )
-
-        fields_projection = list(
-            {"id", "_ref_id", "ref_id"} | set(pre_processor.required_fields.keys())
         )
 
         for dataset in batched(
@@ -353,8 +351,10 @@ if __name__ == "__main__":
                     limit=mongodb_limit,
                     skip=args.mongodb_skip,
                 ),
+                total=mongodb_limit,
                 desc=f"Processing Documents from {domain or 'All Domains'}",
                 position=1,
+                leave=False,
             ),
             dataset_batch_size,
         ):
