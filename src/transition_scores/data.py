@@ -1,6 +1,6 @@
 from typing import Any, Literal, NamedTuple, Self
 
-from bson.dbref import DBRef
+from bson import ObjectId
 
 
 class OutputProbabilities(NamedTuple):
@@ -74,47 +74,11 @@ class PreProcessorMetadata(dict):
         return cls.new(*tup)
 
 
-class ScoresDict(dict):
-    @classmethod
-    def new(
-        cls,
-        _ref_id: DBRef | dict,
-        ref_id: str,
-        text_sha256: str,
-        transition_scores: list[TransitionScores],
-        **metadata,
-    ):
-        return cls(
-            {
-                "_ref_id": _ref_id,
-                "ref_id": ref_id,
-                "text_sha256": text_sha256,
-                "transition_scores": transition_scores,
-                "metadata": metadata,
-            }
-        )
-
-    @classmethod
-    def from_raw(
-        cls,
-        scores: dict[str, Any],
-        collection: str = "collected_items",
-        database: str | None = None,
-    ) -> Self:
-        return cls.new(
-            DBRef(collection, scores.pop("_id"), database=database),
-            scores.pop("text_sha256"),
-            scores.pop("transition_scores"),
-            **scores,
-        )
-
-
 class FeaturesDict(dict):
     @classmethod
     def new(
         cls,
-        _ref_id: DBRef | dict,
-        ref_id: str,
+        refs: dict,
         text_sha256: str,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
@@ -123,8 +87,8 @@ class FeaturesDict(dict):
     ) -> Self:
         return cls(
             {
-                "_ref_id": _ref_id,
-                "ref_id": ref_id,
+                "_id": ObjectId(),
+                "refs": refs,
                 "text_sha256": text_sha256,
                 "model": model,
                 "pre_processor": pre_processor,
@@ -137,17 +101,75 @@ class FeaturesDict(dict):
     def from_tuple(cls, tup: tuple) -> Self:
         return cls.new(*tup)
 
-    @classmethod
-    def from_scores(
-        cls,
-        scores: "ScoresDict",
-        model_metadata: ModelMetadata,
-        pre_processor_metadata: PreProcessorMetadata,
-    ) -> Self:
-        metadata = scores.pop("metadata")
-        return cls.new(
-            **scores,
-            model=model_metadata,
-            pre_processor=pre_processor_metadata,
-            **metadata,
+    def split(self) -> tuple[Self, Self]:
+        _split = self.get("_split", str(self["_id"]))
+        ts = self["transition_scores"]
+        tsa, tsb = (
+            ts[: len(ts) // 2],
+            ts[len(ts) // 2 :],
         )
+        ma, mb = {}, {}
+        for key, value in self["metadata"].items():
+            if isinstance(value, list):
+                ma[key], mb[key] = (
+                    value[: len(value) // 2],
+                    value[len(value) // 2 :],
+                )
+            else:
+                ma[key], mb[key] = value, value
+        return (
+            FeaturesDict(
+                {
+                    "_id": ObjectId(),
+                    "_split": _split + ".0",
+                    "refs": self["refs"],
+                    "text_sha256": self["text_sha256"],
+                    "model": self["model"],
+                    "pre_processor": self["pre_processor"],
+                    "transition_scores": tsa,
+                    "metadata": ma,
+                }
+            ),
+            FeaturesDict(
+                {
+                    "_id": ObjectId(),
+                    "_split": _split + ".1",
+                    "refs": self["refs"],
+                    "text_sha256": self["text_sha256"],
+                    "model": self["model"],
+                    "pre_processor": self["pre_processor"],
+                    "transition_scores": tsb,
+                    "metadata": mb,
+                }
+            ),
+        )
+
+
+def remove_columns(
+    dataset: list[dict[str, Any]],
+    *columns: str,
+    in_place: bool = False,
+) -> list[dict[str, Any]]:
+    """
+    Remove the specified columns from the dataset.
+
+    Args:
+        dataset (list[dict[str, Any]]): The dataset to remove columns from.
+        *columns (str): A sequence of column names to remove.
+        in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+            Default: `False`.
+
+    Returns:
+        list[dict[str, Any]]: The dataset with the specified columns removed.
+    """
+    columns = set(columns)
+    if in_place:
+        for document in dataset:
+            for column in columns:
+                document.pop(column, None)
+        return dataset
+    else:
+        return [
+            {key: value for key, value in document.items() if key not in columns}
+            for document in dataset
+        ]

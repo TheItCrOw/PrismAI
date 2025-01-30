@@ -7,7 +7,6 @@ from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 from transition_scores.data import (
     OutputProbabilities,
     PreProcessorMetadata,
-    TransitionScores,
 )
 from transition_scores.utils import infer_max_length
 
@@ -61,11 +60,29 @@ class PreProcessor(ABC):
         return None
 
     @property
-    def all_special_ids(self):
+    def pad_token_id(self) -> int:
+        return self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+
+    @property
+    def all_special_ids(self) -> set[int]:
         return set(self.tokenizer.all_special_ids)
 
     @abstractmethod
     def get_metadata(self) -> PreProcessorMetadata: ...
+
+    def _prepare(
+        self,
+        dataset: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        dataset = [
+            # Skip rows that do not have all required fields
+            document
+            for document in dataset
+            if all(bool(document.get(field, False)) for field in self.required_fields)
+        ]
+        for document in dataset:
+            document["text_sha256"] = sha256(document["text"].encode()).hexdigest()
+        return dataset
 
     @abstractmethod
     def _process(self, batch: dict[str, list]) -> BatchEncoding: ...

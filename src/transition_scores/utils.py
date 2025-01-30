@@ -1,9 +1,11 @@
-from typing import Any, Generator, Iterable
+import enum
+import gc
+import os
+from typing import Any, Final, Generator, Iterable
 
 import numpy as np
+import torch
 from transformers import AutoConfig
-
-from transition_scores.data import FeaturesDict
 
 
 class ModelIntializationError(Exception):
@@ -91,13 +93,8 @@ def sort_by_column(
 
 def group_by_column(
     dataset: list[dict[str, Any]],
-    key_column: str = "_ref_id",
-    deduplicate: tuple[str, ...] | None = (
-        "_ref_id",
-        "ref_id",
-        "_orig_ref_id",
-        "orig_ref_id",
-    ),
+    key_column: str = "_id",
+    deduplicate: tuple[str, ...] | None = ("_id",),
     aggregate: tuple[str, ...] | None = None,
     into: str = "grouped",
     pop_key_column: bool = False,
@@ -147,45 +144,28 @@ def group_by_column(
     return list(grouped.values())
 
 
-def split_document(document: FeaturesDict) -> tuple[FeaturesDict, FeaturesDict]:
-    _split = document.get("_split", "").split(".")
-    ts = document["transition_scores"]
-    tsa, tsb = (
-        ts[: len(ts) // 2],
-        ts[len(ts) // 2 :],
-    )
-    ma, mb = {}, {}
-    for key, value in document["metadata"].items():
-        if isinstance(value, list):
-            ma[key], mb[key] = (
-                value[: len(value) // 2],
-                value[len(value) // 2 :],
-            )
-        else:
-            ma[key], mb[key] = value, value
-    return (
-        FeaturesDict(
-            {
-                "_ref_id": document["_ref_id"],
-                "ref_id": document["ref_id"],
-                "text_sha256": document["text_sha256"],
-                "_split": ".".join(_split + ["0"]),
-                "model": document["model"],
-                "pre_processor": document["pre_processor"],
-                "transition_scores": tsa,
-                "metadata": ma,
-            }
-        ),
-        FeaturesDict(
-            {
-                "_ref_id": document["_ref_id"],
-                "ref_id": document["ref_id"],
-                "text_sha256": document["text_sha256"],
-                "_split": ".".join(_split + ["1"]),
-                "model": document["model"],
-                "pre_processor": document["pre_processor"],
-                "transition_scores": tsb,
-                "metadata": mb,
-            }
-        ),
-    )
+class PytorchGcLevel(enum.IntEnum):
+    """
+    Aggressiveness level for PyTorch garbage collection.
+    NONE: Default Python garbage collection.
+    DATASET: Garbage collection after each dataset.
+    BATCH: Garbage collection after each batch.
+    """
+
+    NONE = OFF = FALSE = DEFAULT = 0
+    DATASET = 1
+    BATCH = 2
+
+
+_env_pytorch_gc_level = os.environ.get("PYTORCH_GC_LEVEL", "NONE").strip().upper()
+PYTORCH_GC_LEVEL: Final[PytorchGcLevel] = PytorchGcLevel(
+    PytorchGcLevel(int(_env_pytorch_gc_level))
+    if _env_pytorch_gc_level.isdigit()
+    else PytorchGcLevel[_env_pytorch_gc_level]
+)
+
+
+def free_memory():
+    with torch.no_grad():
+        torch.cuda.empty_cache()
+    gc.collect()

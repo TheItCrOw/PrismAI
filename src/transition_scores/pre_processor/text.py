@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 from tqdm import tqdm
 from transformers import BatchEncoding
 
@@ -81,30 +79,34 @@ class TextPreProcessor(PreProcessor):
             list[dict]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
         with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
-            tq.set_postfix_str("Calculating Text Hash")
-            text_hashes = [
-                sha256(row.pop("text").encode()).hexdigest() for row in dataset
-            ]
-            tq.update(1)
+            try:
+                tq.set_postfix_str("Preparing Dataset")
+                dataset = self._prepare(dataset)
+                tq.update(1)
 
-            tq.set_postfix_str("Tokenizing Rolling Windows")
-            encodings = [self._process(row.pop("text")) for row in dataset]
-            tq.update(1)
+                tq.set_postfix_str("Tokenizing Rolling Windows")
+                encodings = [
+                    self._process(document.pop("text")) for document in dataset
+                ]
+                tq.update(1)
 
-            tq.set_postfix_str("Exploding Samples from Encoding")
-            dataset = (
-                dict(
-                    **row,
-                    **transposed,
-                    text_sha256=txt_hsh,
+                tq.set_postfix_str("Exploding Samples from Encoding")
+                dataset = (
+                    dict(
+                        **document,
+                        **transposed,
+                    )
+                    for document, encoding in zip(dataset, encodings)
+                    for transposed in transpose_dict_of_lists(encoding, iter=True)
                 )
-                for row, txt_hsh, encoding in zip(dataset, text_hashes, encodings)
-                for transposed in transpose_dict_of_lists(encoding, iter=True)
-            )
-            tq.update(1)
+                tq.update(1)
 
-            tq.set_postfix_str("Sorting Dataset by Length")
-            dataset = self._sort_dataset_by_length(dataset)
-            tq.update(1)
+                tq.set_postfix_str("Sorting Dataset by Length")
+                dataset = self._sort_dataset_by_length(dataset)
+                tq.update(1)
+            except KeyError as e:
+                raise KeyError(
+                    f"{type(self).__name__} requires the fields: {self.required_fields}."
+                ) from e
 
         return dataset

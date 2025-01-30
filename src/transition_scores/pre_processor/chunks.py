@@ -1,10 +1,13 @@
-from hashlib import sha256
 from typing import Any
 
 from tqdm import tqdm
 from transformers import BatchEncoding
 
-from transition_scores.data import OutputProbabilities, PreProcessorMetadata
+from transition_scores.data import (
+    OutputProbabilities,
+    PreProcessorMetadata,
+    remove_columns,
+)
 from transition_scores.pre_processor.abc import PreProcessor
 from transition_scores.utils import (
     chunks_to_text,
@@ -142,6 +145,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
         Raises:
+            KeyError: If the dataset does not contain one of the required fields.
             ValueError: If the start token of a chunk could not be found in the encoding.
 
         Returns:
@@ -156,31 +160,35 @@ class RollingWindowChunkPreProcessor(PreProcessor):
                   - `start_token_idx`: The index of the first token in the `input_ids` that belongs to the first chunk in the window.
         """
         with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
-            tq.set_postfix_str("Calculating Text Hash")
-            text_hashes = [
-                sha256(row.pop("text").encode()).hexdigest() for row in dataset
-            ]
-            tq.update(1)
+            try:
+                tq.set_postfix_str("Preparing Dataset")
+                dataset = remove_columns(self._prepare(dataset), "text")
+                tq.update(1)
 
-            tq.set_postfix_str("Tokenizing Rolling Windows")
-            encodings = [self._process(row.pop("chunks")) for row in dataset]
-            tq.update(1)
+                tq.set_postfix_str("Tokenizing Rolling Windows")
+                encodings = [
+                    self._process(document.pop("chunks")) for document in dataset
+                ]
+                tq.update(1)
 
-            tq.set_postfix_str("Exploding Samples from Encoding")
-            dataset = (
-                dict(
-                    **row,
-                    **transposed,
-                    text_sha256=txt_hsh,
+                tq.set_postfix_str("Exploding Samples from Encoding")
+                dataset = (
+                    dict(
+                        **document,
+                        **transposed,
+                    )
+                    for document, encoding in zip(dataset, encodings)
+                    for transposed in transpose_dict_of_lists(encoding, iter=True)
                 )
-                for row, txt_hsh, encoding in zip(dataset, text_hashes, encodings)
-                for transposed in transpose_dict_of_lists(encoding, iter=True)
-            )
-            tq.update(1)
+                tq.update(1)
 
-            tq.set_postfix_str("Sorting Dataset by Length")
-            dataset = self._sort_dataset_by_length(dataset)
-            tq.update(1)
+                tq.set_postfix_str("Sorting Dataset by Length")
+                dataset = self._sort_dataset_by_length(dataset)
+                tq.update(1)
+            except KeyError as e:
+                raise KeyError(
+                    f"{type(self).__name__} requires the fields: {self.required_fields}."
+                ) from e
 
         return dataset
 
@@ -197,9 +205,10 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             dataset = [
                 row
                 | {
-                    "transition_scores": row.pop("transition_scores")[
-                        row["start_token_idx"] :
-                    ]
+                    "transition_scores": {
+                        key: value[row["start_token_idx"] :]
+                        for key, value in row.pop("transition_scores").items()
+                    }
                 }
                 for row in dataset
             ]
@@ -208,12 +217,9 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.set_postfix_str("Grouping Transition Scores")
             dataset = group_by_column(
                 dataset,
-                "_ref_id",
+                "_id",
                 deduplicate=(
-                    "_ref_id",
-                    "ref_id",
-                    "_orig_ref_id",
-                    "orig_ref_id",
+                    "_id",
                     "text_sha256",
                 ),
                 aggregate=tuple(self.additional_fields) + ("transition_scores",),

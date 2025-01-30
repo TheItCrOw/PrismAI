@@ -1,4 +1,3 @@
-from hashlib import sha256
 from typing import Any
 
 from tqdm import tqdm
@@ -146,30 +145,36 @@ class SlidingWindowTextPreProcessor(PreProcessor):
                   - `prefix_token_offset`: The offset of the first token from the entire text.
                   - `window_size`: The number of tokens in the window.
         """
-        with tqdm(total=4, position=1, leave=False, desc="Pre-Processing") as tq:
-            tq.set_postfix_str("Calculating Text Hash")
-            text_hashes = [sha256(row["text"].encode()).hexdigest() for row in dataset]
-            tq.update(1)
+        with tqdm(total=3, position=1, leave=False, desc="Pre-Processing") as tq:
+            try:
+                tq.set_postfix_str("Preparing Dataset")
+                dataset = self._prepare(dataset)
+                tq.update(1)
 
-            tq.set_postfix_str("Tokenizing Sliding Windows")
-            encodings = [self._process(row.pop("text")) for row in dataset]
-            tq.update(1)
+                tq.set_postfix_str("Tokenizing Sliding Windows")
+                encodings = [
+                    self._process(document.pop("text")) for document in dataset
+                ]
+                tq.update(1)
 
-            tq.set_postfix_str("Exploding Samples from Encoding")
-            dataset = (
-                dict(
-                    **row,
-                    **transposed,
-                    text_sha256=txt_hsh,
+                tq.set_postfix_str("Exploding Samples from Encoding")
+                dataset = (
+                    dict(
+                        **document,
+                        **transposed,
+                    )
+                    for document, encoding in zip(dataset, encodings)
+                    for transposed in transpose_dict_of_lists(encoding, iter=True)
                 )
-                for row, txt_hsh, encoding in zip(dataset, text_hashes, encodings)
-                for transposed in transpose_dict_of_lists(encoding, iter=True)
-            )
-            tq.update(1)
+                tq.update(1)
 
-            tq.set_postfix_str("Sorting Dataset by Length")
-            dataset = self._sort_dataset_by_length(dataset)
-            tq.update(1)
+                tq.set_postfix_str("Sorting Dataset by Length")
+                dataset = self._sort_dataset_by_length(dataset)
+                tq.update(1)
+            except KeyError as e:
+                raise KeyError(
+                    f"{type(self).__name__} requires the fields: {self.required_fields}."
+                ) from e
 
         return dataset
 
@@ -187,9 +192,10 @@ class SlidingWindowTextPreProcessor(PreProcessor):
             dataset = [
                 row
                 | {
-                    "transition_scores": row.pop("transition_scores")[
-                        row["start_token_idx"] :
-                    ]
+                    "transition_scores": {
+                        key: value[row["start_token_idx"] :]
+                        for key, value in row.pop("transition_scores").items()
+                    }
                 }
                 for row in dataset
             ]
@@ -198,14 +204,8 @@ class SlidingWindowTextPreProcessor(PreProcessor):
             tq.set_postfix_str("Grouping Transition Scores")
             dataset = group_by_column(
                 dataset,
-                "_ref_id",
-                deduplicate=(
-                    "_ref_id",
-                    "ref_id",
-                    "_orig_ref_id",
-                    "orig_ref_id",
-                    "text_sha256",
-                ),
+                key_column="_id",
+                deduplicate=("_id", "text_sha256"),
                 aggregate=tuple(self.additional_fields) + ("transition_scores",),
             )
             tq.update(1)

@@ -1,18 +1,20 @@
 import json
 import os
 import sys
+import traceback
 from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
 import pymongo
-from bson import DBRef
+from bson import ObjectId
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from tqdm import tqdm, trange
+from pymongo.collection import Collection
+from tqdm import tqdm
 
 from transition_scores.data import FeaturesDict
-from transition_scores.utils import split_document
+from transition_scores.scorer.abc import TransitionScorer, convert_to_mongo
 
 if Path(".env").exists():
     load_dotenv()
@@ -20,48 +22,41 @@ elif Path("../.env").exists():
     load_dotenv("../.env")
 
 
+MAX_TRY_INSERT_RECURSION_DEPTH = os.environ.get("MAX_TRY_INSERT_RECURSION_DEPTH", 16)
+
+
 def parse_pre_processors(args: Namespace):
     from transition_scores.pre_processor import (
-        PreProcessor,
         RollingWindowChunkPreProcessor,
         SlidingWindowTextPreProcessor,
         TextPreProcessor,
     )
 
-    pre_processors: list[PreProcessor] = []
-    for pre_processor_str in set(args.pre_processors):
-        match pre_processor_str:
-            case "TextPreProcessor":
-                pre_processors.append(
-                    TextPreProcessor.from_pretrained(
-                        args.model, max_length=args.max_length
-                    )
-                )
-            case "RollingWindowChunkPreProcessor":
-                pre_processors.append(
-                    RollingWindowChunkPreProcessor.from_pretrained(
-                        args.model, max_length=args.max_length
-                    )
-                )
-            case "SlidingWindowTextPreProcessor":
-                pre_processors.append(
-                    SlidingWindowTextPreProcessor.from_pretrained(
-                        args.model, max_length=args.max_length, stride=args.stride
-                    )
-                )
-            case _:
-                raise RuntimeError
-    return pre_processors
+    match args.pre_processor:
+        case "TextPreProcessor":
+            return TextPreProcessor.from_pretrained(
+                args.model, max_length=args.max_length
+            )
+        case "RollingWindowChunkPreProcessor":
+            return RollingWindowChunkPreProcessor.from_pretrained(
+                args.model, max_length=args.max_length
+            )
+        case "SlidingWindowTextPreProcessor":
+            return SlidingWindowTextPreProcessor.from_pretrained(
+                args.model, max_length=args.max_length, stride=args.stride
+            )
+        case _:
+            raise RuntimeError
 
 
-def parse_scorer_provider(args: Namespace):
+def parse_scorer_model(args: Namespace) -> TransitionScorer:
     match args.provider:
         case "hf":
             from transition_scores.scorer import TransformersTransitionScorer
 
             return TransformersTransitionScorer(
                 args.model,
-                batch_size=args.model_batch_size,
+                batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
                 load_in_8bit=args.load_in_8bit,
             )
@@ -70,30 +65,48 @@ def parse_scorer_provider(args: Namespace):
 
             return OnnxTransitionScorer(
                 args.model,
-                batch_size=args.model_batch_size,
+                batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
             )
         case _:
             raise RuntimeError
 
 
-def try_insert(collection, document: FeaturesDict):
-    try:
-        target_collection.insert_one(document)
-    except pymongo.errors.OperationFailure as e:
-        if "Size must be between 0" not in e.args[0]:
-            raise e
-
-        index = e.args[0].index("ObjectId('")
-        object_id = e.args[0][index + 10 : index + 34]
-
-        print(
-            f"Caught invalid BSON size error in individual insert for ObjectId('{object_id}')."
-            "Attempting to split document and insert parts individually.",
+class TryInsertError(Exception):
+    @classmethod
+    def with_id(cls, _id: str | ObjectId):
+        return cls(
+            f"Encountered an error while trying to insert document with _id={_id}."
         )
 
-        for split in split_document(document):
-            return try_insert(collection, split)
+
+def try_insert_one(document: FeaturesDict, collection: Collection, recursion_depth=0):
+    try:
+        mongodb_target_collection.insert_one(document)
+    except pymongo.errors.DuplicateKeyError:
+        return  # ignore duplicates
+    except pymongo.errors.DocumentTooLarge as e:
+        print(str(e), file=sys.stderr)
+        pass  # document still too large, continue
+    except pymongo.errors.WriteError as e:
+        print(str(e), file=sys.stderr)
+        pass  # document still too large, continue
+    except Exception as e:
+        # otherwise, raise the error
+        _id = document.get("_id", None)
+        err = TryInsertError.with_id(_id) if _id else TryInsertError()
+        raise err from e
+    else:
+        return
+
+    if recursion_depth < MAX_TRY_INSERT_RECURSION_DEPTH:
+        for document_split in document.split():
+            return try_insert_one(document_split, collection, recursion_depth + 1)
+    else:
+        raise RecursionError(
+            f"Maximum recursion depth ({MAX_TRY_INSERT_RECURSION_DEPTH}) exceeded; aborting insert."
+            "Consider increasing MAX_TRY_INSERT_RECURSION_DEPTH."
+        )
 
 
 if __name__ == "__main__":
@@ -169,8 +182,7 @@ if __name__ == "__main__":
 
     group_pre_processor = parser.add_argument_group("Pre-Processors")
     group_pre_processor.add_argument(
-        "pre_processors",
-        nargs="+",
+        "pre_processor",
         choices=[
             "RollingWindowChunkPreProcessor",
             "SlidingWindowTextPreProcessor",
@@ -221,6 +233,14 @@ if __name__ == "__main__":
         metavar="{...}",
         dest="mongodb_filter",
         help="Filter for MongoDB query as JSON string.",
+        default=None,
+    )
+    mongodb_group.add_argument(
+        "--domains",
+        type=str,
+        nargs="+",
+        dest="mongodb_filter_domains",
+        help="Filter by domain. Overwrites the `filter` argument.",
         default=None,
     )
     mongodb_group.add_argument(
@@ -282,96 +302,105 @@ if __name__ == "__main__":
         help="Skip the first N documents.",
     )
 
+    parser.add_argument(
+        "-bs",
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Global batch size override.",
+    )
+
     args = parser.parse_args()
 
-    mongodb_batch_size = args.mongodb_batch_size
+    mongodb_batch_size = args.batch_size or args.mongodb_batch_size
     mongodb_filter_query = args.mongodb_filter or {}
-    dataset_batch_size = args.dataset_batch_size or mongodb_batch_size
+    dataset_batch_size = (
+        args.batch_size or args.dataset_batch_size or mongodb_batch_size
+    )
+    dataset_batch_size = min(dataset_batch_size, mongodb_batch_size)
 
     mongodb_client = MongoClient(args.mongodb_uri)
     mongodb_database = mongodb_client.get_database(args.mongodb_database)
-    source_collection = mongodb_database.get_collection(args.source_collection)
-    target_collection = mongodb_database.get_collection(args.target_collection)
+    mongodb_source_collection = mongodb_database.get_collection(args.source_collection)
+    mongodb_target_collection = mongodb_database.get_collection(args.target_collection)
 
-    scorer = parse_scorer_provider(args)
+    model = parse_scorer_model(args)
+    model_metadata = model.get_metadata()
 
-    pre_processors = parse_pre_processors(args)
+    pre_processor = parse_pre_processors(args)
+    pre_processor_metadata = pre_processor.get_metadata()
 
-    num_documents = args.mongodb_limit or source_collection.count_documents(
-        mongodb_filter_query
-    )
-    tq_fetch = trange(
-        args.mongodb_skip,
-        args.mongodb_skip + num_documents,
-        dataset_batch_size,
-        desc=f"Processing Document Batches of {dataset_batch_size} from {args.source_collection}",
-    )
+    domains = args.mongodb_filter_domains or mongodb_filter_query.pop("domain", (None,))
 
-    fields_req_by_pre_processors = {
-        field
-        for pre_processor in pre_processors
-        for field in pre_processor.required_fields
-    }
-    fields_projection = list({"id"} | fields_req_by_pre_processors)
-    for offset in tq_fetch:
-        dataset = []
-        for row in source_collection.find(
-            mongodb_filter_query,
-            projection=fields_projection,
-            batch_size=mongodb_batch_size,
-            limit=min(dataset_batch_size, num_documents),
-            skip=offset,
+    for domain in tqdm(domains, position=0, desc="Processing Domains"):
+        if domain:
+            mongodb_filter_query["domain"] = domain
+
+        mongodb_limit = args.mongodb_limit or mongodb_source_collection.count_documents(
+            mongodb_filter_query
+        )
+
+        fields_projection = list(
+            {"id", "_ref_id", "ref_id"} | set(pre_processor.required_fields.keys())
+        )
+
+        for dataset in batched(
+            tqdm(
+                mongodb_source_collection.find(
+                    mongodb_filter_query,
+                    projection=fields_projection,
+                    batch_size=mongodb_batch_size,
+                    limit=mongodb_limit,
+                    skip=args.mongodb_skip,
+                ),
+                desc=f"Processing Documents from {domain or 'All Domains'}",
+                position=1,
+            ),
+            dataset_batch_size,
         ):
-            # Skip rows that do not have all required fields
-            if not all(row.get(field, False) for field in fields_req_by_pre_processors):
-                continue
+            dataset = pre_processor.pre_process(dataset)
+            scores = model.process(dataset, pre_processor.pad_token_id)
+            dataset = pre_processor.post_process(dataset, scores)
 
-            refs = {
-                "_ref_id": DBRef(
-                    args.source_collection,
-                    row.pop("_id"),
-                )
-            }
-            if "id" in row:
-                refs["ref_id"] = DBRef(
-                    args.source_collection,
-                    row.pop("id"),
-                )
-            else:
-                refs["ref_id"] = None
-
-            if "_ref_id" in row:
-                refs["_orig_ref_id"] = row.pop("_ref_id")
-            if "ref_id" in row:
-                refs["orig_ref_id"] = row.pop("ref_id")
-
-            dataset.append(refs | row)
-
-        for pre_processor in pre_processors:
-            processed_dataset = scorer.process(dataset, pre_processor)
             for batch in batched(
                 tqdm(
-                    processed_dataset,
-                    desc="Inserting Document Batch",
-                    position=1,
+                    dataset,
+                    desc="Inserting Document Batches",
+                    position=2,
                     leave=False,
                 ),
                 mongodb_batch_size,
             ):
-                try:
-                    target_collection.insert_many(batch)
-                except pymongo.errors.OperationFailure as e:
-                    if "Size must be between 0" not in e.args[0]:
-                        raise e
-
-                    print(
-                        "Caught invalid BSON size error in insert_many.",
-                        file=sys.stderr,
+                batch = [
+                    convert_to_mongo(
+                        document,
+                        args.source_collection,
+                        model_metadata,
+                        pre_processor_metadata,
                     )
+                    for document in batch
+                ]
+                try:
+                    mongodb_target_collection.insert_many(batch)
+                except Exception as e:
+                    err_str = str(e)
+                    err_str = err_str[:44] + "..." if len(err_str) > 48 else err_str
+                    # print(
+                    #     f"Caught error during insert_many: {err_str}"
+                    #     f" - attempting insert_one for {len(batch)} documents.",
+                    #     file=sys.stderr,
+                    # )
                     for document in tqdm(
                         batch,
                         position=2,
                         leave=False,
                         desc="Inserting Documents Individually",
                     ):
-                        try_insert(target_collection, document)
+                        try:
+                            try_insert_one(document, mongodb_target_collection)
+                        except TryInsertError as e:
+                            traceback.print_exc()
+                            continue
+                        except RecursionError as e:
+                            print(str(e), file=sys.stderr)
+                            continue

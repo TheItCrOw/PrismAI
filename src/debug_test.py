@@ -1,4 +1,4 @@
-import json
+from pprint import pprint
 
 from bson import DBRef
 
@@ -56,4 +56,5 @@ dataset = [
     },
 ]
 
-print(json.dumps(scorer.process(dataset, pre_processor), indent=2))
+documents = scorer.process(dataset, pre_processor)
+pprint(documents[0].split())
