@@ -2,11 +2,11 @@ from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import PreProcessorMetadata
-from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import transpose_dict_of_lists
 
 
-class TruncationTextPreProcessor(PreProcessor):
+class TruncationTextPreProcessor(TextPreProcessor):
     """
     Simple `text` pre-processor.
     Sequences are tokenized and truncated to `max_length`.

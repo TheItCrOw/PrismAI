@@ -4,7 +4,7 @@ from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import OutputProbabilities, PreProcessorMetadata
-from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import (
     group_by_column,
     sort_by_column,
@@ -12,7 +12,7 @@ from transition_scores.utils import (
 )
 
 
-class SlidingWindowTextPreProcessor(PreProcessor):
+class SlidingWindowTextPreProcessor(TextPreProcessor):
     def __init__(
         self,
         tokenizer,
