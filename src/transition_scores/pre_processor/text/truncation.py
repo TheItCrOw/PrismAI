@@ -1,9 +1,14 @@
+from typing import Any
+
 from tqdm import tqdm
 from transformers import BatchEncoding
 
-from transition_scores.data import PreProcessorMetadata
+from transition_scores.data import Dataset, PreProcessorMetadata
 from transition_scores.pre_processor.text import TextPreProcessor
-from transition_scores.utils import transpose_dict_of_lists
+from transition_scores.utils import (
+    _explode_encodings,
+    _pop_or_calc_length,
+)
 
 
 class TruncationTextPreProcessor(TextPreProcessor):
@@ -68,15 +73,15 @@ class TruncationTextPreProcessor(TextPreProcessor):
 
         return batch_encodings
 
-    def pre_process(self, dataset: list[dict]) -> list[dict]:
+    def pre_process(self, dataset: Dataset[str, Any]) -> Dataset[str, Any]:
         """Prepare the `text` of the samples in a dataset.
         Adds `text_sha256` field to the dataset.
 
         Args:
-            dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+            dataset (Dataset[str, Any]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
         Returns:
-            list[dict]: Tokenized dataset. The `text` and `chunks` fields are removed.
+            Dataset[str, Any]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
         with tqdm(total=4, position=2, leave=False, desc="Pre-Processing") as tq:
             try:
@@ -90,19 +95,12 @@ class TruncationTextPreProcessor(TextPreProcessor):
                 ]
                 tq.update(1)
 
-                tq.set_postfix_str("Exploding Samples from Encoding")
-                dataset = (
-                    dict(
-                        **document,
-                        **transposed,
-                    )
-                    for document, encoding in zip(dataset, encodings)
-                    for transposed in transpose_dict_of_lists(encoding, iter=True)
-                )
+                tq.set_postfix_str("Exploding Documents from Encoding")
+                dataset.flat_map_zip(_explode_encodings, encodings)
                 tq.update(1)
 
                 tq.set_postfix_str("Sorting Dataset by Length")
-                dataset = self._sort_dataset_by_length(dataset)
+                dataset.sort_by(_pop_or_calc_length, in_place=True)
                 tq.update(1)
             except KeyError as e:
                 raise KeyError(

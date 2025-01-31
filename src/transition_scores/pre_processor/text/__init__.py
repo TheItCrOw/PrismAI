@@ -1,15 +1,16 @@
 from typing import Any
 
+from transition_scores.data import Dataset
 from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.utils import normalize_text
 
 
 class TextPreProcessor(PreProcessor):
     def _prepare(
         self,
-        dataset: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        dataset: Dataset[str, Any],
+    ) -> Dataset[str, Any]:
         dataset = super()._prepare(dataset)
-        for document in dataset:
-            document["text"] = " ".join(document["text"].strip().split())
-        dataset = [document for document in dataset if document["text"]]
+        dataset.modify(normalize_text)
+        dataset.filter(lambda document: document["text"], in_place=True)
         return dataset

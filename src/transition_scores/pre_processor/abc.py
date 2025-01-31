@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from hashlib import sha256
-from typing import Any, Iterable
+from typing import Any
 
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
 from transition_scores.data import (
+    Dataset,
     OutputProbabilities,
     PreProcessorMetadata,
     TransitionScores,
 )
-from transition_scores.utils import infer_max_length
+from transition_scores.utils import add_text_sha256, infer_max_length
 
 
 class PreProcessor(ABC):
@@ -73,79 +73,57 @@ class PreProcessor(ABC):
 
     def _prepare(
         self,
-        dataset: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        dataset = [
-            # Skip rows that do not have all required fields
-            document
-            for document in dataset
-            if all(bool(document.get(field, False)) for field in self.required_fields)
-        ]
-        for document in dataset:
-            document["text_sha256"] = sha256(document["text"].encode()).hexdigest()
+        dataset: Dataset[str, Any],
+    ) -> Dataset[str, Any]:
+        dataset.filter(self._filter_required_fields, in_place=True)
+        dataset.modify(add_text_sha256)
+
         return dataset
+
+    def _filter_required_fields(self, document: dict[str, Any]) -> bool:
+        return all((field in document) for field in self.required_fields)
 
     @abstractmethod
     def _process(self, batch: dict[str, list]) -> BatchEncoding: ...
 
     @abstractmethod
-    def pre_process(self, dataset: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
+    def pre_process(self, dataset: Dataset[str, Any]) -> Dataset[str, Any]: ...
 
     def post_process(
         self,
-        dataset: list[dict[str, Any]],
+        dataset: Dataset[str, Any],
         output_probabilities: list[OutputProbabilities],
-    ) -> list[dict[str, Any]]:
-        transition_scores = []
-        for row, (target_probs, top_k_indices, top_k_probs) in zip(
-            dataset, output_probabilities
-        ):
-            seq_scores = TransitionScores()
+    ) -> Dataset[str, Any]:
+        dataset.modify_zip(
+            self._add_transition_scores,
+            output_probabilities,
+        )
+        return dataset
 
-            # If this model does not use a BOS token, the first token is not predicted,
-            # so we add a dummy result with a zero probability
-            target_ids = row.pop("input_ids")
-            if (first_token := target_ids[0]) not in self.all_special_ids:
-                seq_scores.append(first_token, 0.0, None, None)
+    def _add_transition_scores(
+        self,
+        document: dict[str, Any],
+        output_probabilities: OutputProbabilities,
+    ) -> None:
+        document["transition_scores"] = TransitionScores()
 
-            # Omit the last token if it is a special token, e.g. <|endoftext|>
-            seq_end = -1 if target_ids[-1] in self.all_special_ids else None
-            target_ids = target_ids[1:seq_end]
+        # If this model does not use a BOS token, the first token is not predicted,
+        # so we add a dummy result with a zero probability
+        target_ids = document.pop("input_ids")
+        if (first_token := target_ids[0]) not in self.all_special_ids:
+            document["transition_scores"].append(first_token, 0.0, None, None)
 
-            seq_scores.extend(
-                target_ids,
-                target_probs[: len(target_ids)],
-                top_k_indices[: len(target_ids)],
-                top_k_probs[: len(target_ids)],
-            )
+        # Omit the last token if it is a special token, e.g. <|endoftext|>
+        seq_end = -1 if target_ids[-1] in self.all_special_ids else None
+        target_ids = target_ids[1:seq_end]
 
-            if "attention_mask" in row:
-                del row["attention_mask"]
+        target_probs, top_k_indices, top_k_probs = output_probabilities
+        document["transition_scores"].extend(
+            target_ids,
+            target_probs[: len(target_ids)],
+            top_k_indices[: len(target_ids)],
+            top_k_probs[: len(target_ids)],
+        )
 
-            transition_scores.append(row | {"transition_scores": seq_scores})
-        return transition_scores
-
-    @staticmethod
-    def _sort_dataset_by_length(
-        dataset: Iterable[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Sort the dataset by the length of the input_ids.
-        If present, will use and remove the `length` field to sort the dataset.
-        Otherwise the length is calculated from the `input_ids`.
-
-        Args:
-            dataset (Iterable[dict[str, Any]]): The dataset to sort.
-
-        Returns:
-            list[dict[str, Any]]: The sorted dataset.
-        """
-
-        def _pop_or_calc_length(row: dict) -> int:
-            length = row.pop("length", None)
-            return length if length is not None else len(row["input_ids"])
-
-        return list(sorted(dataset, key=_pop_or_calc_length))
-
-
-def text_sha256(text: str) -> dict[str, str]:
-    return {"text_sha256": sha256(text.encode()).hexdigest()}
+        if "attention_mask" in document:
+            del document["attention_mask"]

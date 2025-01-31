@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from tqdm import tqdm
 
-from transition_scores.data import FeaturesDict
+from transition_scores.data import Dataset, FeaturesDict
 from transition_scores.scorer.abc import TransitionScorer, convert_to_mongo
 
 if Path(".env").exists():
@@ -362,7 +362,7 @@ if __name__ == "__main__":
             ),
             dataset_batch_size,
         ):
-            dataset = pre_processor.pre_process(dataset)
+            dataset = pre_processor.pre_process(Dataset(dataset))
             scores = model.process(dataset, pre_processor.pad_token_id)
             dataset = pre_processor.post_process(dataset, scores)
 

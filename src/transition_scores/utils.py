@@ -1,10 +1,11 @@
 import enum
 import gc
 import os
-from typing import Final, Generator, Iterable
+from hashlib import sha256
+from typing import Any, Final, Generator, Iterable
 
 import torch
-from transformers import AutoConfig
+from transformers import AutoConfig, BatchEncoding
 
 
 class ModelIntializationError(Exception):
@@ -92,3 +93,40 @@ def free_memory():
     with torch.no_grad():
         torch.cuda.empty_cache()
     gc.collect()
+
+
+def normalize_text(document):
+    return " ".join(document["text"].strip().split())
+
+
+def _explode_encodings(document: dict[str, Any], encoding: BatchEncoding):
+    yield from (
+        document | transposed
+        for transposed in transpose_dict_of_lists(encoding, iter=True)
+    )
+
+
+def _truncate_transition_scores(document: dict[str, dict[str, list]]) -> None:
+    document["transition_scores"] = {
+        key: value[document["start_token_idx"] :]
+        for key, value in document.pop("transition_scores").items()
+    }
+
+
+def add_text_sha256(document: dict[str, str]) -> None:
+    document["text_sha256"] = sha256(document["text"].encode()).hexdigest()
+
+
+def _pop_or_calc_length(document: dict[str, int | list]) -> int:
+    """Pop or calculate the length of the document.
+    If the `length` field is present, it will be popped and returned.
+    Otherwise, the length of the `input_ids` field will be returned.
+
+    Args:
+        document (dict[str, int | list]): The document to calculate the length of.
+
+    Returns:
+        int: The length of the document.
+    """
+    length: int | None = document.pop("length", None)
+    return length if length is not None else len(document["input_ids"])

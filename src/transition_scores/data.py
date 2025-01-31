@@ -1,5 +1,14 @@
+from collections import UserList
 from dataclasses import dataclass, field
-from typing import Any, Literal, NamedTuple, Self
+from typing import (
+    Callable,
+    Concatenate,
+    Iterable,
+    Literal,
+    NamedTuple,
+    ParamSpec,
+    Self,
+)
 
 import numpy as np
 from bson import ObjectId
@@ -189,112 +198,330 @@ class FeaturesDict(dict):
         )
 
 
-def remove_columns(
-    dataset: list[dict[str, Any]],
-    *columns: str,
-    in_place: bool = False,
-) -> list[dict[str, Any]]:
-    """
-    Remove the specified columns from the dataset.
-
-    Args:
-        dataset (list[dict[str, Any]]): The dataset to remove columns from.
-        *columns (str): A sequence of column names to remove.
-        in_place (bool): Apply the operation **in-place**, modifying the original dataset.
-            Default: `False`.
-
-    Returns:
-        list[dict[str, Any]]: The dataset with the specified columns removed.
-    """
-    columns = set(columns)
-    if in_place:
-        for document in dataset:
-            for column in columns:
-                document.pop(column, None)
-        return dataset
-    else:
-        return [
-            {key: value for key, value in document.items() if key not in columns}
-            for document in dataset
-        ]
+P = ParamSpec("P")
 
 
-def group_by_column(
-    dataset: list[dict[str, Any]],
-    key_column: str = "_id",
-    deduplicate: tuple[str, ...] | None = ("_id",),
-    aggregate: tuple[str, ...] | None = None,
-    into: str = "grouped",
-    pop_key_column: bool = False,
-) -> list[dict[str, Any]]:
-    """Group a dataset by a column and move other columns into a list.
+class Dataset[K, V](UserList[dict[K, V]]):
+    def map(
+        self,
+        map_fn: Callable[[dict[K, V]], dict[K, V]],
+        in_place: bool = True,
+    ) -> Self:
+        """
+        Map the dataset using the provided map function.
 
-    Examples:
-        >>> dataset = [
-        ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
-        ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
-        ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
-        ... ]
-        >>> group_by_column(dataset, "foo", ("foo", "bar",), ("values",))
-        [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
+        Args:
+            map_fn (Callable): A function that takes a document and returns a document.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
 
-    Args:
-        dataset (list[dict[str, Any]]): The dataset to group.
-        column (str): The column to group by.
-        deduplicate (tuple[str, ...]): Columns to deduplicate.
-            These columns will be moved into the parent dict and not aggregated into a list.
-            Duplicate values will be overwritten.
-        aggregate (tuple[str, ...]): Columns to map.
-            These columns will be moved into the parent dict and aggregated into a list.
-        into (str | None): The target column to move all remaining values into
-            that are not covered by `deduplicate` or `aggregate`.
+        Returns:
+            Dataset: The mapped dataset.
+        """
+        if in_place:
+            self.data = list(map(map_fn, self.data))
+            return self
+        else:
+            return Dataset(map(map_fn, self.data))
 
-    Returns:
-        dict[str, list[dict[str, Any]]]: The grouped dataset.
-    """
-    grouped = dict()
-    for source in dataset:
-        key = source.pop(key_column) if pop_key_column else source[key_column]
-        target = grouped.setdefault(key, dict())
+    def flat_map(
+        self,
+        map_fn: Callable[[dict[K, V]], Iterable[dict[K, V]]],
+        in_place: bool = True,
+    ) -> Self:
+        """
+        Flat-map the dataset using the provided map function.
 
-        if deduplicate:
-            for k in deduplicate:
-                if k in source:
-                    target[k] = source.pop(k)
+        Args:
+            map_fn (Callable): A function that takes a document and returns an iterable of documents.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
 
-        if aggregate:
-            for k in aggregate:
-                if k in source:
-                    target.setdefault(k, []).append(source.pop(k))
+        Returns:
+            Dataset: The flat-mapped dataset.
+        """
+        if in_place:
+            self.data = list(doc for document in self.data for doc in map_fn(document))
+            return self
+        else:
+            return Dataset(doc for document in self.data for doc in map_fn(document))
 
-        if source:
-            target.setdefault(into, []).append(source)
-    return list(grouped.values())
+    def flat_map_zip(
+        self,
+        map_fn: Callable[Concatenate[dict[K, V], P], Iterable[dict[K, V]]],
+        *iterables: P.args,
+        in_place: bool = True,
+    ) -> Self:
+        """
+        Flat-map the dataset using the provided map function.
 
+        Args:
+            map_fn (Callable): A function that takes a document and returns an iterable of documents.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
 
-def sort_by_column(
-    dataset: list[dict[str, Any | list]],
-    sort_by: str,
-    fields_to_sort: tuple[str, ...],
-) -> list[dict[str, Any]]:
-    """Sort the given `fields_to_sort` by the values provided in the given `sort_by` column.
+        Returns:
+            Dataset: The flat-mapped dataset.
+        """
+        if in_place:
+            self.data = list(
+                doc
+                for (document, *args) in zip(self.data, *iterables)
+                for doc in map_fn(document, *args)
+            )
+            return self
+        else:
+            return Dataset(
+                doc
+                for (document, *args) in zip(self.data, *iterables)
+                for doc in map_fn(document, *args)
+            )
 
-    Args:
-        dataset (list[dict[str, Any  |  list]]): The dataset to sort.
-        sort_by (str): The column to sort by containing lists of sortable values.
-        fields_to_sort (tuple[str, ...]): The fields to sort.
-            All fields must be lists of the same length as the column.
+    def update(
+        self,
+        values: Iterable[dict[K, V]],
+    ) -> Self:
+        """
+        Update the dataset using the provided map function.
 
-    Returns:
-        list[dict[str, Any]]: The sorted dataset.
-    """
-    # lists & dicts are mutable, so we can just manipulate the values in-place
-    for row in dataset:
-        order = np.argsort(row[sort_by])
-        for _field in fields_to_sort:
-            if len(row[_field]) != len(row[sort_by]):
-                raise ValueError(
-                    f"Field '{_field}' has a different length than the column '{sort_by}': {len(row[_field])} != {len(row[sort_by])}"
-                )
-            row[_field] = [row[_field][i] for i in order]
-    return dataset
+        Args:
+            others (Iterable): An iterable of documents (or another dataset).
+
+        Returns:
+            Dataset: The updated dataset.
+        """
+        for document, other in zip(self.data, values):
+            document.update(other)
+        return self
+
+    def modify(
+        self,
+        map_fn: Callable[[dict[K, V]], None],
+    ) -> Self:
+        """
+        Modify the dataset using the provided map function.
+
+        Args:
+            map_fn (Callable): A function that takes a document and modifies it in-place.
+
+        Returns:
+            Dataset: The modified dataset.
+        """
+        for document in self.data:
+            map_fn(document)
+        return self
+
+    def modify_zip(
+        self,
+        map_fn: Callable[Concatenate[dict[K, V], P], None],
+        *iterables: P.args,
+    ) -> Self:
+        """
+        Modify the dataset using the provided map function, zipping the dataset with other datasets.
+
+        Args:
+            map_fn (Callable): A function that takes a document the same number of positional arguments as passed to this method in `args`, modifying the document in-place.
+            *iterables: Any number of iterables to zip with the dataset.
+
+        Returns:
+            Dataset: The modified dataset.
+        """
+        for document, *args in zip(self.data, *iterables):
+            map_fn(document, *args)
+        return self
+
+    def filter(
+        self,
+        filter_fn: Callable[[dict[K, V]], bool],
+        in_place: bool = True,
+    ):
+        """
+        Filter the dataset using the provided filter function.
+
+        Args:
+            filter_fn (Callable): A function that takes a document and returns a boolean.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
+
+        Returns:
+            Dataset: The filtered dataset.
+        """
+        if in_place:
+            self.data = list(filter(filter_fn, self.data))
+            return self
+        else:
+            return Dataset(filter(filter_fn, self.data))
+
+    def remove_columns(
+        self,
+        *columns: K,
+        in_place: bool = True,
+    ) -> Self:
+        """
+        Remove the specified columns from the dataset.
+
+        Args:
+            *columns (K): A sequence of column names to remove.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
+
+        Returns:
+            Dataset: The dataset with the specified columns removed.
+        """
+        columns = set(columns)
+        if in_place:
+            for document in self.data:
+                for column in columns:
+                    document.pop(column, None)
+            return self
+        else:
+            return Dataset(
+                {key: value for key, value in document.items() if key not in columns}
+                for document in self.data
+            )
+
+    def group_by_column(
+        self,
+        by: K,
+        deduplicate: tuple[K, ...] | None = None,
+        aggregate: tuple[K, ...] | None = None,
+        remainder_into: K | None = None,
+        in_place: bool = True,
+    ) -> Self:
+        """Group a dataset by a column and move other columns into a list.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.group_by_column("foo", ("foo", "bar",), ("values",)).data
+            [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
+
+        Args:
+            by (K): The column to group by.
+                If not present in``deduplicate` or `aggregate`, it will be removed.
+            deduplicate (tuple[K, ...]): Columns to deduplicate.
+                These columns will be moved into the parent dict and not aggregated into a list.
+                Duplicate values will be overwritten in the order they appear in the dataset.
+            aggregate (tuple[K, ...]): Columns to aggregate into lists in the grouped dataset.
+                Note: values already present in `deduplicate` will not be aggregated.
+            remainder_into (K | None): The target column to move all remaining values into
+                that are not covered by `deduplicate` or `aggregate`.
+                If None, these values will be discarded.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
+
+        Returns:
+            Dataset: The grouped dataset.
+        """
+        grouped = dict()
+        remove_by_column = by not in (deduplicate + aggregate)
+        for source in self.data:
+            key = source.pop(by) if remove_by_column else source[by]
+            target = grouped.setdefault(key, dict())
+
+            if deduplicate:
+                for k in deduplicate:
+                    if k in source:
+                        target[k] = source.pop(k)
+
+            if aggregate:
+                for k in aggregate:
+                    if k in source:
+                        target.setdefault(k, []).append(source.pop(k))
+
+            if remainder_into is not None and source:
+                target.setdefault(remainder_into, []).append(source)
+        if in_place:
+            self.data = list(grouped.values())
+            return self
+        else:
+            return Dataset(grouped.values())
+
+    def sort_by_column(
+        self,
+        by: K,
+        to_sort: tuple[K, ...],
+        reverse: bool = False,
+        **kwargs,
+    ) -> Self:
+        """
+        Sort the columns `to_sort` in this dataset by the values provided in the given
+        `by` column. The `by` column will be sorted using `numpy.argsort`.
+
+        Note:
+            Documents in this dataset are modified **in-place**.
+
+        Args:
+            by (K): The column to sort by containing lists of sortable values.
+            *to_sort (K): The fields to sort. Within each document, all fields
+                must be lists of the same length as the `by` column.
+            reverse (bool): If true, will sort the fields in descending order.
+            **kwargs: Additional keyword arguments to pass to `numpy.argsort`.
+
+        Raises:
+            ValueError: If the length of any field does not match the length of the
+                `by` column for any given document.
+
+        Returns:
+            Dataset: The sorted dataset.
+        """
+        # lists & dicts are mutable, so we can just manipulate the values in-place
+        for idx, document in enumerate(self.data):
+            len_row = len(document[by])
+
+            order = np.argsort(document[by], **kwargs)
+            if reverse:
+                order = order[::-1]
+
+            for column in to_sort:
+                if len(document[column]) != len_row:
+                    raise ValueError(
+                        f"Column '{column}' in document {idx} has a different length than the column '{by}': {len(document[column])} != {len(document[by])}"
+                    )
+                document[column] = [document[column][i] for i in order]
+        return self
+
+    def sort_by(
+        self,
+        by: K | Callable,
+        reverse: bool = False,
+        in_place: bool = True,
+        remove_by_column: bool = False,
+    ) -> Self:
+        """
+        Sort the dataset by the values in the given column.
+
+        Args:
+            by (K | Callable): The column to sort by or a callable to determine the sorting key.
+            reverse (bool): If true, will sort the dataset in descending order.
+            in_place (bool): Apply the operation **in-place**, modifying the original dataset.
+                Default: `True`.
+            remove_by_column (bool): If true, will remove the column used for sorting from the dataset.
+                Does not apply if `by` is a callable.
+
+        Returns:
+            Dataset: The sorted dataset.
+        """
+        if callable(by):
+            data = list(sorted(self.data, key=by, reverse=reverse))
+        else:
+            if remove_by_column:
+
+                def _get_or_pop(document: dict[K, V]) -> V:
+                    return document.pop(by)
+
+            else:
+
+                def _get_or_pop(document: dict[K, V]) -> V:
+                    return document[by]
+
+            data = list(sorted(self.data, key=_get_or_pop, reverse=reverse))
+
+        if in_place:
+            self.data = data
+            return self
+
+        return Dataset(data)

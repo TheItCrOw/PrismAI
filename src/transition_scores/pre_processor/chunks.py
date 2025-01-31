@@ -4,16 +4,18 @@ from tqdm import tqdm
 from transformers import BatchEncoding
 
 from transition_scores.data import (
+    Dataset,
     OutputProbabilities,
     PreProcessorMetadata,
-    group_by_column,
-    remove_columns,
-    sort_by_column,
 )
-from transition_scores.pre_processor.abc import PreProcessor
+from transition_scores.pre_processor.abc import (
+    PreProcessor,
+)
 from transition_scores.utils import (
+    _explode_encodings,
+    _pop_or_calc_length,
+    _truncate_transition_scores,
     chunks_to_text,
-    transpose_dict_of_lists,
 )
 
 
@@ -136,20 +138,20 @@ class RollingWindowChunkPreProcessor(PreProcessor):
 
         return batch_encoding
 
-    def pre_process(self, dataset: list[dict]) -> list[dict]:
+    def pre_process(self, dataset: Dataset[str, Any]) -> Dataset[str, Any]:
         """Tokenize a dataset of chunks from multiple documents.
         Will return a new dataset of different length, where each row contains a single prefix-window.
         Other fields are duplicated for each prefix-window.
 
         Args:
-            dataset (list[dict]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
+            dataset (Dataset[str, Any]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
 
         Raises:
             KeyError: If the dataset does not contain one of the required fields.
             ValueError: If the start token of a chunk could not be found in the encoding.
 
         Returns:
-            list[dict]: Tokenized dataset. Each row contains a single prefix-window.
+            Dataset[str, Any]: Tokenized dataset. Each row contains a single prefix-window.
                 The original `text` and `chunks` fields are removed.
                 New fields are added:
                   - `text`: The chunk text, excluding the prefix.
@@ -162,7 +164,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
         with tqdm(total=4, position=2, leave=False, desc="Pre-Processing") as tq:
             try:
                 tq.set_postfix_str("Preparing Dataset")
-                dataset = remove_columns(self._prepare(dataset), "text")
+                dataset = self._prepare(dataset).remove_columns("text")
                 tq.update(1)
 
                 tq.set_postfix_str("Tokenizing Rolling Windows")
@@ -171,19 +173,12 @@ class RollingWindowChunkPreProcessor(PreProcessor):
                 ]
                 tq.update(1)
 
-                tq.set_postfix_str("Exploding Samples from Encoding")
-                dataset = (
-                    dict(
-                        **document,
-                        **transposed,
-                    )
-                    for document, encoding in zip(dataset, encodings)
-                    for transposed in transpose_dict_of_lists(encoding, iter=True)
-                )
+                tq.set_postfix_str("Exploding Documents from Encoding")
+                dataset.flat_map_zip(_explode_encodings, encodings)
                 tq.update(1)
 
                 tq.set_postfix_str("Sorting Dataset by Length")
-                dataset = self._sort_dataset_by_length(dataset)
+                dataset.sort_by(_pop_or_calc_length, in_place=True)
                 tq.update(1)
             except KeyError as e:
                 raise KeyError(
@@ -194,41 +189,27 @@ class RollingWindowChunkPreProcessor(PreProcessor):
 
     def post_process(
         self,
-        dataset: list[dict[str, Any]],
+        dataset: Dataset[str, Any],
         output_probabilities: list[OutputProbabilities],
-    ) -> list[dict]:
+    ) -> Dataset[str, Any]:
         with tqdm(total=4, position=2, leave=False, desc="Post-Processing") as tq:
             dataset = super().post_process(dataset, output_probabilities)
             tq.update(1)
 
             tq.set_postfix_str("Truncating Transition Scores")
-            dataset = [
-                row
-                | {
-                    "transition_scores": {
-                        key: value[row["start_token_idx"] :]
-                        for key, value in row.pop("transition_scores").items()
-                    }
-                }
-                for row in dataset
-            ]
+            dataset.modify(_truncate_transition_scores)
             tq.update(1)
 
             tq.set_postfix_str("Grouping Transition Scores")
-            dataset = group_by_column(
-                dataset,
-                "_id",
-                deduplicate=(
-                    "_id",
-                    "text_sha256",
-                ),
+            dataset.group_by_column(
+                by="_id",
+                deduplicate=("_id", "id", "text_sha256"),
                 aggregate=tuple(self.additional_fields) + ("transition_scores",),
             )
             tq.update(1)
 
             tq.set_postfix_str("Sorting Transition Scores")
-            dataset = sort_by_column(
-                dataset,
+            dataset.sort_by_column(
                 "start_chunk_idx",
                 tuple(self.additional_fields) + ("transition_scores",),
             )
