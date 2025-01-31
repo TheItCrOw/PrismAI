@@ -203,6 +203,12 @@ P = ParamSpec("P")
 
 
 class Dataset[K, V](UserList[dict[K, V]]):
+    """
+    Dataset utility class for working with lists of documents.
+    Each document is represented as a dictionary.
+    Provides a variety of methods for manipulating contained documents.
+    """
+
     def map(
         self,
         map_fn: Callable[[dict[K, V]], dict[K, V]],
