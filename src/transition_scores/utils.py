@@ -106,13 +106,6 @@ def _explode_encodings(document: dict[str, Any], encoding: BatchEncoding):
     )
 
 
-def _truncate_transition_scores(document: dict[str, dict[str, list]]) -> None:
-    document["transition_scores"] = {
-        key: value[document["start_token_idx"] :]
-        for key, value in document.pop("transition_scores").items()
-    }
-
-
 def add_text_sha256(document: dict[str, str]) -> None:
     document["text_sha256"] = sha256(document["text"].encode()).hexdigest()
 

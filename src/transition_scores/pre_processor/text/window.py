@@ -12,7 +12,6 @@ from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import (
     _explode_encodings,
     _pop_or_calc_length,
-    _truncate_transition_scores,
 )
 
 
@@ -186,7 +185,11 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
 
             # TODO: Extract the transition scores for the first couple of windows from the output probabilities.
             tq.set_postfix_str("Truncating Transition Scores")
-            dataset.modify(_truncate_transition_scores)
+            dataset.apply(
+                lambda ts, idx: ts[idx:],
+                "transition_scores",
+                "start_token_idx",
+            )
             tq.update(1)
 
             tq.set_postfix_str("Grouping Transition Scores")
