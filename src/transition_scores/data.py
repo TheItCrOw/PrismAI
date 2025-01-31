@@ -130,11 +130,14 @@ class FeaturesDict(dict):
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
         transition_scores: list[TransitionScores],
+        _id: ObjectId | None = None,
         **metadata,
     ) -> Self:
+        if not isinstance(next(iter(transition_scores)), TransitionScores):
+            transition_scores = [TransitionScores(**ts) for ts in transition_scores]
         return cls(
             {
-                "_id": ObjectId(),
+                "_id": _id or ObjectId(),
                 "refs": refs,
                 "text_sha256": text_sha256,
                 "model": model,
@@ -151,17 +154,13 @@ class FeaturesDict(dict):
     def split(self) -> tuple[Self, Self]:
         _split = self.get("_split", str(self["_id"]))
         ts = self["transition_scores"]
-        tsa, tsb = (
-            ts[: len(ts) // 2],
-            ts[len(ts) // 2 :],
-        )
+        idx = len(ts) // 2
+        tsa, tsb = ts[:idx], ts[idx:]
         ma, mb = {}, {}
         for key, value in self["metadata"].items():
-            if isinstance(value, list):
-                ma[key], mb[key] = (
-                    value[: len(value) // 2],
-                    value[len(value) // 2 :],
-                )
+            if isinstance(value, (tuple, list)):
+                idx = len(value) // 2
+                ma[key], mb[key] = value[:idx], value[idx:]
             else:
                 ma[key], mb[key] = value, value
         return (
