@@ -217,6 +217,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The mapped dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz"},
+            ...     {"foo": 2, "bar": "qux"},
+            ... ])
+            >>> dataset.map(lambda x: {"abc": x.pop("foo") * 2} | x).data
+            [{'abc': 2, 'bar': 'baz'}, {'abc': 4, 'bar': 'qux'}]
         """
         if in_place:
             self.data = list(map(map_fn, self.data))
@@ -239,6 +247,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The flat-mapped dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz"},
+            ...     {"foo": 2, "bar": "qux"},
+            ... ])
+            >>> dataset.flat_map(lambda x: (x, x)).data
+            [{'foo': 1, 'bar': 'baz'}, {'foo': 1, 'bar': 'baz'}, {'foo': 2, 'bar': 'qux'}, {'foo': 2, 'bar': 'qux'}]
         """
         if in_place:
             self.data = list(doc for document in self.data for doc in map_fn(document))
@@ -262,6 +278,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The flat-mapped dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz"},
+            ...     {"foo": 2, "bar": "qux"},
+            ... ])
+            >>> dataset.flat_map_zip(lambda x, ys: (x|y for y in ys), [[{"baz": 123}, {"baz": 456}],[{"baz": 789}]]).data
+            [{'foo': 1, 'bar': 'baz', 'baz': 123}, {'foo': 1, 'bar': 'baz', 'baz': 456}, {'foo': 2, 'bar': 'qux', 'baz': 789}]
         """
         if in_place:
             self.data = list(
@@ -289,6 +313,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The updated dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.update([{"values": [1,2]}, {"values": [4,5]}, {"values": [7,8]}]).data
+            [{'foo': 1, 'bar': 'baz', 'values': [1, 2]}, {'foo': 1, 'bar': 'baz', 'values': [4, 5]}, {'foo': 2, 'bar': 'qux', 'values': [7, 8]}]
         """
         for document, other in zip(self.data, values):
             document.update(other)
@@ -306,6 +339,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The modified dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.modify(lambda x: x.update({"values": [1,2,3]})).data
+            [{'foo': 1, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 1, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 2, 'bar': 'qux', 'values': [1, 2, 3]}]
         """
         for document in self.data:
             map_fn(document)
@@ -325,6 +367,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The modified dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.modify_zip(lambda x, y: x.update(y), [{"foo": 3}, {"foo": 4}, {"foo": 5}]).data
+            [{'foo': 3, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 4, 'bar': 'baz', 'values': [4, 5, 6]}, {'foo': 5, 'bar': 'qux', 'values': [7, 8, 9]}]
         """
         for document, *args in zip(self.data, *iterables):
             map_fn(document, *args)
@@ -345,6 +396,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The filtered dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.filter(lambda x: x["foo"] == 1).data
+            [{'foo': 1, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 1, 'bar': 'baz', 'values': [4, 5, 6]}]
         """
         if in_place:
             self.data = list(filter(filter_fn, self.data))
@@ -367,6 +427,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The dataset with the specified columns removed.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.remove_columns("foo", "bar").data
+            [{'values': [1, 2, 3]}, {'values': [4, 5, 6]}, {'values': [7, 8, 9]}]
         """
         columns = set(columns)
         if in_place:
@@ -390,15 +459,6 @@ class Dataset[K, V](UserList[dict[K, V]]):
     ) -> Self:
         """Group a dataset by a column and move other columns into a list.
 
-        Examples:
-            >>> dataset = Dataset([
-            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
-            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
-            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
-            ... ])
-            >>> dataset.group_by_column("foo", ("foo", "bar",), ("values",)).data
-            [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
-
         Args:
             by (K): The column to group by.
                 If not present in``deduplicate` or `aggregate`, it will be removed.
@@ -415,6 +475,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The grouped dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"foo": 1, "bar": "baz", "values": [1,2,3]},
+            ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
+            ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
+            ... ])
+            >>> dataset.group_by_column("foo", ("foo", "bar",), ("values",)).data
+            [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
         """
         grouped = dict()
         remove_by_column = by not in (deduplicate + aggregate)
@@ -443,7 +512,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
     def sort_by_column(
         self,
         by: K,
-        to_sort: tuple[K, ...],
+        *to_sort: K,
         reverse: bool = False,
         **kwargs,
     ) -> Self:
@@ -467,6 +536,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The sorted dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"value": [3,1,2], "other": ["c", "a", "b"]},
+            ...     {"value": ['y','z','x'], "other": ["b", "c", "a"]},
+            ... ])
+            >>> dataset.sort_by_column("value", "other", reverse=True).data
+            [{'value': [3, 2, 1], 'other': ['c', 'b', 'a']}, {'value': ['z', 'y', 'x'], 'other': ['c', 'b', 'a']}]
         """
         # lists & dicts are mutable, so we can just manipulate the values in-place
         for idx, document in enumerate(self.data):
@@ -504,6 +581,17 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         Returns:
             Dataset: The sorted dataset.
+
+        Examples:
+            >>> dataset = Dataset([
+            ...     {"value": 3, "foo": "qux"},
+            ...     {"value": 1, "foo": "bar"},
+            ...     {"value": 2, "foo": "baz"},
+            ... ])
+            >>> dataset.sort_by("value").data
+            [{'value': 1, 'foo': 'bar'}, {'value': 2, 'foo': 'baz'}, {'value': 3, 'foo': 'qux'}]
+            >>> dataset.sort_by("value", remove_by_column=True).data
+            [{'foo': 'bar'}, {'foo': 'baz'}, {'foo': 'qux'}]
         """
         if callable(by):
             data = list(sorted(self.data, key=by, reverse=reverse))
