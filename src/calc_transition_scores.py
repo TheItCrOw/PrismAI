@@ -7,7 +7,6 @@ from itertools import batched
 from pathlib import Path
 
 import pymongo
-from bson import ObjectId
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -74,10 +73,14 @@ def parse_scorer_model(args: Namespace) -> TransitionScorer:
 
 class TryInsertError(Exception):
     @classmethod
-    def with_id(cls, _id: str | ObjectId):
-        return cls(
-            f"Encountered an error while trying to insert document with _id={_id}."
-        )
+    def from_doc(cls, document: FeaturesDict):
+        _ref_id = document.get("refs", {}).get("_ref_id")
+        if _ref_id:
+            return cls(
+                f"Encountered an error while trying to insert document with _ref_id={str(_ref_id)}."
+            )
+        else:
+            return cls()
 
 
 def try_insert_one(document: FeaturesDict, collection: Collection, recursion_depth=0):
@@ -86,14 +89,15 @@ def try_insert_one(document: FeaturesDict, collection: Collection, recursion_dep
     except pymongo.errors.DuplicateKeyError:
         return  # ignore duplicates
     except pymongo.errors.DocumentTooLarge:
-        pass  # document still too large, continue
+        pass  # document still too large, variant 1
     except pymongo.errors.WriteError:
-        pass  # document still too large, continue
+        pass  # document still too large, variant 2
     except Exception as e:
-        # otherwise, raise the error
-        _id = document.get("_id", None)
-        err = TryInsertError.with_id(_id) if _id else TryInsertError()
-        raise err from e
+        if str(e).strip == "ValueError: Document would overflow BSON size limit":
+            pass  # document still too large, variant 3
+        else:
+            # otherwise, raise the error
+            raise TryInsertError.from_doc(document) from e
     else:
         return
 
