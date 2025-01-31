@@ -142,12 +142,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
     def modify(
         self,
         map_fn: Callable[[dict[K, V]], None],
+        **fn_kwargs,
     ) -> Self:
         """
         Modify the dataset using the provided map function.
 
         Args:
             map_fn (Callable): A function that takes a document and modifies it in-place.
+            **fn_kwargs: Additional keyword arguments to pass to the map function.
 
         Returns:
             Dataset: The modified dataset.
@@ -162,13 +164,14 @@ class Dataset[K, V](UserList[dict[K, V]]):
             [{'foo': 1, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 1, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 2, 'bar': 'qux', 'values': [1, 2, 3]}]
         """
         for document in self.data:
-            map_fn(document)
+            map_fn(document, **fn_kwargs)
         return self
 
     def modify_zip(
         self,
         map_fn: Callable[Concatenate[dict[K, V], P], None],
         *iterables: P.args,
+        **fn_kwargs,
     ) -> Self:
         """
         Modify the dataset using the provided map function, zipping the dataset with other datasets.
@@ -176,6 +179,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
         Args:
             map_fn (Callable): A function that takes a document the same number of positional arguments as passed to this method in `args`, modifying the document in-place.
             *iterables: Any number of iterables to zip with the dataset.
+            **fn_kwargs: Additional keyword arguments to pass to the map function.
 
         Returns:
             Dataset: The modified dataset.
@@ -190,7 +194,78 @@ class Dataset[K, V](UserList[dict[K, V]]):
             [{'foo': 3, 'bar': 'baz', 'values': [1, 2, 3]}, {'foo': 4, 'bar': 'baz', 'values': [4, 5, 6]}, {'foo': 5, 'bar': 'qux', 'values': [7, 8, 9]}]
         """
         for document, *args in zip(self.data, *iterables):
-            map_fn(document, *args)
+            map_fn(document, *args, **fn_kwargs)
+        return self
+
+    def apply(
+        self,
+        apply_fn: Callable[..., V],
+        column: K,
+        *additional_columns: P.args,
+        **fn_kwargs,
+    ):
+        """
+        Apply a function to a column in the dataset.
+        The given column will be overwritten with the result of the function.
+        If the column does not exist in the document, it will be created but not passed to the function.
+
+        Args:
+            apply_fn (Callable[[V], V]): A function to apply to the column values.
+                Should take the column value as the first argument, followed by any additional column values (if any),
+                and return the new value for the column.
+            column (K): The column to apply the function to.
+            *additional_columns (K): Additional columns to pass to the function as *args.
+            **fn_kwargs: Additional keyword arguments to pass to the map function.
+
+        Note:
+            >>> # The following:
+            >>> dataset = Dataset([{"col1": "...", "other": "..."}])  # doctest: +SKIP
+            >>> dataset.apply(fn, "col1", "other")                    # doctest: +SKIP
+            >>> # is roughly equivalent to:
+            >>> for document in dataset:                              # doctest: +SKIP
+            ...     document["col1"] = fn(document["col1"], document["other"])
+
+            >>> # While the following:
+            >>> dataset = Dataset([{"other": "..."}])                 # doctest: +SKIP
+            >>> dataset.apply(fn, "col1", "other")                    # doctest: +SKIP
+            >>> # is roughly equivalent to:
+            >>> for document in dataset:                              # doctest: +SKIP
+            ...     document["col1"] = fn(document["other"])
+
+        Examples:
+            >>> Dataset([
+            ...     {"foo": "bar"},
+            ...     {"foo": "baz"},
+            ...     {"foo": "qux"},
+            ... ]).apply(str.upper, "FOO", "foo").data
+            [{'foo': 'bar', 'FOO': 'BAR'}, {'foo': 'baz', 'FOO': 'BAZ'}, {'foo': 'qux', 'FOO': 'QUX'}]
+
+            >>> Dataset([
+            ...     {"foo": "a-b"},
+            ...     {"foo": "x-y"},
+            ...     {"foo": "1-2"},
+            ... ]).apply(str.split, "foo", sep="-").data
+            [{'foo': ['a', 'b']}, {'foo': ['x', 'y']}, {'foo': ['1', '2']}]
+
+            >>> Dataset([
+            ...     {"foo": "bar", "abc": "one"},
+            ...     {"foo": "baz", "abc": "two"},
+            ...     {"foo": "qux", "abc": "three"},
+            ... ]).apply(lambda a, b: "-".join((a, b)), "foo", "abc").data
+            [{'foo': 'bar-one', 'abc': 'one'}, {'foo': 'baz-two', 'abc': 'two'}, {'foo': 'qux-three', 'abc': 'three'}]
+        """
+        for document in self.data:
+            if column in document:
+                document[column] = apply_fn(
+                    document[column],
+                    *(document[c] for c in additional_columns),
+                    **fn_kwargs,
+                )
+            else:
+                document[column] = apply_fn(
+                    *(document[c] for c in additional_columns),
+                    **fn_kwargs,
+                )
         return self
 
     def filter(
