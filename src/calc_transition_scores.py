@@ -165,7 +165,7 @@ if __name__ == "__main__":
         "--device",
         type=str,
         help="Device to use",
-        default=None,
+        default="cpu",
     )
     device_group.add_argument(
         "--cpu",
