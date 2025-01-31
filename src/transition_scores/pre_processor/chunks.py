@@ -201,7 +201,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Grouping Transition Scores")
-            dataset.group_by_column(
+            dataset.group_documents_by(
                 by="_id",
                 deduplicate=("_id", "id", "text_sha256"),
                 aggregate=tuple(self.additional_fields) + ("transition_scores",),
@@ -211,7 +211,8 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.set_postfix_str("Sorting Transition Scores")
             dataset.sort_documents_by(
                 "start_chunk_idx",
-                tuple(self.additional_fields) + ("transition_scores",),
+                *self.additional_fields,
+                "transition_scores",
             )
             tq.update(1)
 

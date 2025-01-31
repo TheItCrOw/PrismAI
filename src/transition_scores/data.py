@@ -450,7 +450,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
                 for document in self.data
             )
 
-    def group_by_column(
+    def group_documents_by(
         self,
         by: K,
         deduplicate: tuple[K, ...] | None = None,
@@ -458,7 +458,13 @@ class Dataset[K, V](UserList[dict[K, V]]):
         remainder_into: K | None = None,
         in_place: bool = True,
     ) -> Self:
-        """Group a dataset by a column and move other columns into a list.
+        """
+        Group the documents in this dataset by a column and aggregate other columns in lists.
+        You may also specify columns that should be de-duplicated and kept at the top level in the documents.
+        Columns that are not present in `deduplicate` or `aggregate` will be removed, unless a `remainder_into` column is specified.
+
+        Note:
+            If you want to retain the column you group `by`, you **must** include it in either `deduplicate` or `aggregate`.
 
         Args:
             by (K): The column to group by.
@@ -470,7 +476,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
                 Note: values already present in `deduplicate` will not be aggregated.
             remainder_into (K | None): The target column to move all remaining values into
                 that are not covered by `deduplicate` or `aggregate`.
-                If None, these values will be discarded.
+                If None, these columns will be discarded.
             in_place (bool): Apply the operation **in-place**, modifying the original dataset.
                 Default: `True`.
 
@@ -483,7 +489,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             ...     {"foo": 1, "bar": "baz", "values": [4,5,6]},
             ...     {"foo": 2, "bar": "qux", "values": [7,8,9]},
             ... ])
-            >>> dataset.group_by_column("foo", ("foo", "bar",), ("values",)).data
+            >>> dataset.group_documents_by("foo", ("foo", "bar",), ("values",)).data
             [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
         """
         grouped = dict()
@@ -551,9 +557,9 @@ class Dataset[K, V](UserList[dict[K, V]]):
             ...     {"value": [3,1,2], "other": ["c", "a", "b"]},
             ...     {"value": ['y','z','x'], "other": ["b", "c", "a"]},
             ... ])
-            >>> dataset.copy(deep=True).sort_by_column("value", "other", reverse=True).data
+            >>> dataset.copy(deep=True).sort_documents_by("value", "other", reverse=True).data
             [{'value': [3, 2, 1], 'other': ['c', 'b', 'a']}, {'value': ['z', 'y', 'x'], 'other': ['c', 'b', 'a']}]
-            >>> dataset.sort_by_column("value", "other", reverse=True, include_by_column=False).data
+            >>> dataset.sort_documents_by("value", "other", reverse=True, include_by_column=False).data
             [{'value': [3, 1, 2], 'other': ['c', 'b', 'a']}, {'value': ['y', 'z', 'x'], 'other': ['c', 'b', 'a']}]
         """
         # lists & dicts are mutable, so we can just manipulate the values in-place
