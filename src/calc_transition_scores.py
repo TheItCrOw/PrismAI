@@ -12,7 +12,8 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from tqdm import tqdm
 
-from transition_scores.data import Dataset, FeaturesDict
+from simple_dataset.dataset import Dataset
+from transition_scores.data import FeaturesDict
 from transition_scores.scorer.abc import TransitionScorer, convert_to_mongo
 
 if Path(".env").exists():

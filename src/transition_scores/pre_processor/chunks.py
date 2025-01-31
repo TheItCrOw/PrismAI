@@ -3,8 +3,8 @@ from typing import Any
 from tqdm import tqdm
 from transformers import BatchEncoding
 
+from simple_dataset.dataset import Dataset
 from transition_scores.data import (
-    Dataset,
     OutputProbabilities,
     PreProcessorMetadata,
 )

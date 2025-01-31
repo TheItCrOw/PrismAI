@@ -3,8 +3,8 @@ from typing import Any
 
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
+from simple_dataset.dataset import Dataset
 from transition_scores.data import (
-    Dataset,
     OutputProbabilities,
     PreProcessorMetadata,
     TransitionScores,
