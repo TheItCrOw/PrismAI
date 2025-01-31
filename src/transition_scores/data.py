@@ -231,7 +231,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             self.data = list(map(map_fn, self.data))
             return self
         else:
-            return Dataset(map(map_fn, self.data))
+            return type(self)(map(map_fn, self.data))
 
     def flat_map(
         self,
@@ -261,7 +261,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             self.data = list(doc for document in self.data for doc in map_fn(document))
             return self
         else:
-            return Dataset(doc for document in self.data for doc in map_fn(document))
+            return type(self)(doc for document in self.data for doc in map_fn(document))
 
     def flat_map_zip(
         self,
@@ -296,7 +296,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             )
             return self
         else:
-            return Dataset(
+            return type(self)(
                 doc
                 for (document, *args) in zip(self.data, *iterables)
                 for doc in map_fn(document, *args)
@@ -411,7 +411,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             self.data = list(filter(filter_fn, self.data))
             return self
         else:
-            return Dataset(filter(filter_fn, self.data))
+            return type(self)(filter(filter_fn, self.data))
 
     def remove_columns(
         self,
@@ -445,7 +445,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
                     document.pop(column, None)
             return self
         else:
-            return Dataset(
+            return type(self)(
                 {key: value for key, value in document.items() if key not in columns}
                 for document in self.data
             )
@@ -508,7 +508,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             self.data = list(grouped.values())
             return self
         else:
-            return Dataset(grouped.values())
+            return type(self)(grouped.values())
 
     def sort_by_column(
         self,
@@ -615,7 +615,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             self.data = data
             return self
 
-        return Dataset(data)
+        return type(self)(data)
 
     def copy(self, deep=False) -> Self:
         """
@@ -625,4 +625,8 @@ class Dataset[K, V](UserList[dict[K, V]]):
             deep (bool): If True, will return a `deepcopy` of the dataset.
                 Default: `False`.
         """
-        return Dataset(self.data.copy()) if not deep else Dataset(deepcopy(self.data))
+        return (
+            type(self)(self.data.copy())
+            if not deep
+            else type(self)(deepcopy(self.data))
+        )
