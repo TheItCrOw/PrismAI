@@ -1,4 +1,5 @@
 from collections import UserList
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import (
     Callable,
@@ -542,8 +543,10 @@ class Dataset[K, V](UserList[dict[K, V]]):
             ...     {"value": [3,1,2], "other": ["c", "a", "b"]},
             ...     {"value": ['y','z','x'], "other": ["b", "c", "a"]},
             ... ])
-            >>> dataset.sort_by_column("value", "other", reverse=True).data
+            >>> dataset.copy(deep=True).sort_by_column("value", "other", reverse=True).data
             [{'value': [3, 2, 1], 'other': ['c', 'b', 'a']}, {'value': ['z', 'y', 'x'], 'other': ['c', 'b', 'a']}]
+            >>> dataset.sort_by_column("value", "other", reverse=True, include_by_column=False).data
+            [{'value': [3, 1, 2], 'other': ['c', 'b', 'a']}, {'value': ['y', 'z', 'x'], 'other': ['c', 'b', 'a']}]
         """
         # lists & dicts are mutable, so we can just manipulate the values in-place
         for idx, document in enumerate(self.data):
@@ -613,3 +616,13 @@ class Dataset[K, V](UserList[dict[K, V]]):
             return self
 
         return Dataset(data)
+
+    def copy(self, deep=False) -> Self:
+        """
+        Return a copy of the dataset.
+
+        Args:
+            deep (bool): If True, will return a `deepcopy` of the dataset.
+                Default: `False`.
+        """
+        return Dataset(self.data.copy()) if not deep else Dataset(deepcopy(self.data))
