@@ -2,7 +2,7 @@ import enum
 import gc
 import os
 from hashlib import sha256
-from typing import Any, Final, Generator, Iterable
+from typing import Any, Final, Generator, Iterable, Mapping
 
 import torch
 from transformers import AutoConfig, BatchEncoding
@@ -12,9 +12,9 @@ class ModelIntializationError(Exception):
     pass
 
 
-class DataClassMappingMixin:
-    def keys(self):
-        return self.__dataclass_fields__.keys()
+class DataClassMappingMixin(Mapping):
+    def __iter__(self):
+        return iter(self.__dataclass_fields__.keys())
 
     def __getitem__(self, key):
         if hasattr(self, key):
@@ -23,9 +23,6 @@ class DataClassMappingMixin:
                 return dict(**value)
             return value
         raise KeyError(f"Key {key} not found in {type(self).__name__}")
-
-    def items(self):
-        yield from ((key, self[key]) for key in self.keys())
 
 
 def transpose_dict_of_lists[K, V](

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import (
+    Generator,
     Literal,
     NamedTuple,
     Self,
@@ -18,18 +19,22 @@ class OutputProbabilities(NamedTuple):
 
 @dataclass
 class TransitionScores(DataClassMappingMixin):
+    """
+    `dataclass` for storing transition scores.
+    Supports slicing with the same semantics as a list for `int` and `slice` keys,
+    while also implementing `Mapping` for MongoDB compatibility.
+
+    As such, `__iter__` returns the names of the fields.
+
+    `__len__`, however, returns the number of target probabilities.
+
+    To iterate over a zipped representation of the transition scores, use the `zipped` method.
+    """
+
     target_ids: list[int] = field(default_factory=list)
     target_probs: list[float] = field(default_factory=list)
     top_k_indices: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
-
-    def __iter__(self):
-        yield from zip(
-            self.target_ids,
-            self.target_probs,
-            self.top_k_indices,
-            self.top_k_probs,
-        )
 
     def __getitem__(self, key):
         if isinstance(key, (int, slice)):
@@ -40,6 +45,9 @@ class TransitionScores(DataClassMappingMixin):
                 self.top_k_probs[key],
             )
         return super().__getitem__(key)
+
+    def __len__(self):
+        return len(self.target_probs)
 
     def append(
         self,
@@ -77,6 +85,31 @@ class TransitionScores(DataClassMappingMixin):
                 other.top_k_probs,
             )
         return self
+
+    class Item(NamedTuple):
+        target_id: int
+        target_prob: float
+        top_k_index: list[int]
+        top_k_prob: list[float]
+
+    def zipped(self) -> Generator[Item, None, None]:
+        """
+        Iterate over a zipped representation of the transition scores.
+        Roughly equivalent to:
+        >>> yield from zip(ts.target_ids, ts.target_probs, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
+
+        Yields:
+            Item: A named tuple containing the target_id, target_prob, top_k_index, and top_k_prob.
+        """
+        yield from (
+            self.Item(item)
+            for item in zip(
+                self.target_ids,
+                self.target_probs,
+                self.top_k_indices,
+                self.top_k_probs,
+            )
+        )
 
 
 class ModelMetadata(dict):
