@@ -6,13 +6,13 @@ from transformers import BatchEncoding
 from transition_scores.data import (
     OutputProbabilities,
     PreProcessorMetadata,
+    group_by_column,
     remove_columns,
+    sort_by_column,
 )
 from transition_scores.pre_processor.abc import PreProcessor
 from transition_scores.utils import (
     chunks_to_text,
-    group_by_column,
-    sort_by_column,
     transpose_dict_of_lists,
 )
 
