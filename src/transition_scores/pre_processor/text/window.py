@@ -198,7 +198,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Sorting Transition Scores")
-            dataset.sort_by_column(
+            dataset.sort_documents_by(
                 "prefix_token_offset",
                 tuple(self.additional_fields) + ("transition_scores",),
             )

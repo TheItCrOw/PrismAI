@@ -510,11 +510,13 @@ class Dataset[K, V](UserList[dict[K, V]]):
         else:
             return type(self)(grouped.values())
 
-    def sort_by_column(
+    def sort_documents_by(
         self,
         by: K,
         *to_sort: K,
         reverse: bool = False,
+        include_by_column: bool = True,
+        disable_length_check: bool = False,
         **kwargs,
     ) -> Self:
         """
@@ -529,11 +531,17 @@ class Dataset[K, V](UserList[dict[K, V]]):
             *to_sort (K): The fields to sort. Within each document, all fields
                 must be lists of the same length as the `by` column.
             reverse (bool): If true, will sort the fields in descending order.
+            include_by_column (bool): If true, will include the `by` column in the sorted dataset.
+                You can achieve the same effect by including the `by` column in `to_sort`.
+            disable_length_check (bool): If true, will disable the length check for the fields to sort.
+                Use with caution: may cause `IndexError`'s if the lengths do not match.
+                Default: `False`.
             **kwargs: Additional keyword arguments to pass to `numpy.argsort`.
 
         Raises:
             ValueError: If the length of any field does not match the length of the
                 `by` column for any given document.
+            IndexError: If `disable_length_check` is `False` and any column `to_sort` is shorter than the `by` column.
 
         Returns:
             Dataset: The sorted dataset.
@@ -556,8 +564,13 @@ class Dataset[K, V](UserList[dict[K, V]]):
             if reverse:
                 order = order[::-1]
 
+            # If the by column is not in to_sort, we sort it manually
+            # unless include_by_column is False
+            if by not in to_sort and include_by_column:
+                document[by] = [document[by][i] for i in order]
+
             for column in to_sort:
-                if len(document[column]) != len_row:
+                if disable_length_check and len(document[column]) != len_row:
                     raise ValueError(
                         f"Column '{column}' in document {idx} has a different length than the column '{by}': {len(document[column])} != {len(document[by])}"
                     )

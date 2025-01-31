@@ -209,7 +209,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Sorting Transition Scores")
-            dataset.sort_by_column(
+            dataset.sort_documents_by(
                 "start_chunk_idx",
                 tuple(self.additional_fields) + ("transition_scores",),
             )
