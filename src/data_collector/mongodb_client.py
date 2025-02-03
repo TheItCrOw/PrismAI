@@ -74,7 +74,7 @@ class MongoDBConnection:
 
     def get_collected_items_by_domain(self, domain, batch_size=100000, skip=0):
         try:
-            cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).sort({'id', -1}).skip(skip)
+            cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).sort([{'_id', -1}]).skip(skip)
             while True:
                 batch = []
                 for _ in range(batch_size):
@@ -93,7 +93,7 @@ class MongoDBConnection:
 
     def get_collected_items_by_text(self, text, batch_size=100000, skip=0):
         try:
-            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).sort({'id', -1}).skip(skip)
+            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).sort([{'_id', -1}]).skip(skip)
             while True:
                 batch = []
                 for _ in range(batch_size):

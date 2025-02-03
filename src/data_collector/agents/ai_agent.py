@@ -65,14 +65,23 @@ class Agent(ABC):
         synth_obj['extracted_information'] = self.get_response(
             system_prompt=self.information_extract_prompt,
             user_prompt='\n\n### Text:\n' + item.text[:5000]
-        )   
+        )
+        if self.name.startswith('deepseek-r1'):
+            synth_obj['extracted_information'] = synth_obj['extracted_information'].split('</think>')[1]   
         synth_obj['extracted_information'] += f'\n- The text must be around {min(2000, text_length)} words long.'
 
+        multiplier = 1.6
+        if self.name.startswith('deepseek-r1'):
+            # In this case, we have a reasoning model. Their response looks differently,
+            # since they "<think></think>" before hand. We hence give them more tokens
+            multiplier = 10
         response = self.get_response(
             system_prompt=self.ghostwriting_prompt,
             user_prompt='### Text Requirements:\n' + synth_obj['extracted_information'],
-            max_tokens=(int)(text_length * 1.6)
+            max_tokens=(int)(text_length * multiplier)
         )
+        if self.name.startswith('deepseek-r1'):
+            response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
 
         synth_obj['synth_text'] = self.truncate_to_full_sentence(response)
         synth_obj['og_text_length'] = len(item.text.split())
@@ -128,9 +137,17 @@ class Agent(ABC):
         user_prompt = f'### START: {before.strip()}\n\n### END: {after.strip()}'
 
         # Generate the filling chunk gaps now with the AI response.
+        multiplier = 1.6
+        if self.name.startswith('deepseek-r1'):
+            # In this case, we have a reasoning model. Their response looks differently,
+            # since they "<think></think>" before hand. We hence give them more tokens
+            multiplier = 10
         response = self.get_response(system_prompt=system_prompt, 
                                      user_prompt=user_prompt, 
-                                     max_tokens=(int)(synth_obj['og_chunk_text_length'] * 1.6))
+                                     max_tokens=(int)(synth_obj['og_chunk_text_length'] * multiplier))
+        if self.name.startswith('deepseek-r1'):
+            response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
+        
         # Since we want to force a certain length of the response and set max_tokens, the model
         # sometimes doesnt end on a full sentence. In that case, we cut that faulty sentence off.
         cleaned_response = self.truncate_to_full_sentence(response)
