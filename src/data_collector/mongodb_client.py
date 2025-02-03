@@ -73,41 +73,55 @@ class MongoDBConnection:
             return None
 
     def get_collected_items_by_domain(self, domain, batch_size=100000, skip=0):
+        client = MongoClient(self.connection_string)
         try:
-            cursor = self.collected_items_coll.find({"domain": domain}, no_cursor_timeout=True).sort([('_id', -1)]).skip(skip)
-            while True:
-                batch = []
-                for _ in range(batch_size):
-                    try:
-                        batch.append(next(cursor))
-                    except StopIteration:
-                        break  
-                if not batch:
-                    break
-                for item in batch:
-                    yield item
+            with client.start_session() as session:
+                cursor = client.get_database('prismai').get_collection('collected_items').find(
+                    {"domain": domain},
+                    no_cursor_timeout=True,
+                    session=session
+                ).sort([('_id', -1)]).skip(skip)
+                
+                while True:
+                    batch = []
+                    for _ in range(batch_size):
+                        try:
+                            batch.append(next(cursor))
+                        except StopIteration:
+                            break
+                    if not batch:
+                        break
+                    for item in batch:
+                        yield item
         except Exception as ex:
-            print('Error while fetching items by domain: ', ex)
+            print('Error while fetching items by domain:', ex)
         finally:
             if cursor:
                 cursor.close()
 
     def get_collected_items_by_text(self, text, batch_size=100000, skip=0):
+        client = MongoClient(self.connection_string)
         try:
-            cursor = self.collected_items_coll.find({"text": text}, no_cursor_timeout=True).sort([('_id', -1)]).skip(skip)
-            while True:
-                batch = []
-                for _ in range(batch_size):
-                    try:
-                        batch.append(next(cursor))
-                    except StopIteration:
-                        break 
-                if not batch:
-                    break
-                for item in batch:
-                    yield item
+            with client.start_session() as session:
+                cursor = client.get_database('prismai').get_collection('collected_items').find(
+                    {"text": text},
+                    no_cursor_timeout=True,
+                    session=session
+                ).sort([('_id', -1)]).skip(skip)
+                
+                while True:
+                    batch = []
+                    for _ in range(batch_size):
+                        try:
+                            batch.append(next(cursor))
+                        except StopIteration:
+                            break
+                    if not batch:
+                        break
+                    for item in batch:
+                        yield item
         except Exception as ex:
-            print('Error while fetching items by text: ', ex)
+            print('Error while fetching items by text:', ex)
         finally:
             if cursor:
                 cursor.close()
