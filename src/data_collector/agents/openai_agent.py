@@ -19,7 +19,7 @@ class OpenAIAgent(Agent):
         }
         # Adjust max_tokens based on model name
         if self.name == "o3-mini":
-            params["max_completion_tokens"] = max_tokens
+            params["max_completion_tokens"] = max(2048, max_tokens)
         else:
             params["max_tokens"] = max_tokens
             params["top_p"] = 0.6

@@ -17,7 +17,9 @@ class OllamaAgent(Agent):
                      user_prompt, 
                      temperature=1, 
                      max_tokens=1024):
-        
+        if self.name.startswith('deepseek-r1'):
+            max_tokens = max(2048, max_tokens)
+            
         payload = {
             "model": self.name,
             "messages": [
