@@ -16,14 +16,13 @@ class OpenAIAgent(Agent):
                 {"role": "user", "content": user_prompt}
             ],
             "temperature": temperature,
-            "top_p": 0.6,
         }
-
         # Adjust max_tokens based on model name
         if self.name == "o3-mini":
             params["max_completion_tokens"] = max_tokens
         else:
             params["max_tokens"] = max_tokens
+            params["top_p"] = 0.6
 
         completion = self.client.chat.completions.create(**params)
         return completion.choices[0].message.content

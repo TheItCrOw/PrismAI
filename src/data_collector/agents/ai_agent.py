@@ -71,10 +71,10 @@ class Agent(ABC):
         synth_obj['extracted_information'] += f'\n- The text must be around {min(2000, text_length)} words long.'
 
         multiplier = 1.6
-        if self.name.startswith('deepseek-r1'):
+        if self.name.startswith('deepseek-r1') or self.name == 'o3-mini':
             # In this case, we have a reasoning model. Their response looks differently,
             # since they "<think></think>" before hand. We hence give them more tokens
-            multiplier = 10
+            multiplier = 15
         response = self.get_response(
             system_prompt=self.ghostwriting_prompt,
             user_prompt='### Text Requirements:\n' + synth_obj['extracted_information'],
@@ -138,10 +138,10 @@ class Agent(ABC):
 
         # Generate the filling chunk gaps now with the AI response.
         multiplier = 1.6
-        if self.name.startswith('deepseek-r1'):
+        if self.name.startswith('deepseek-r1') or self.name == 'o3-mini':
             # In this case, we have a reasoning model. Their response looks differently,
             # since they "<think></think>" before hand. We hence give them more tokens
-            multiplier = 10
+            multiplier = 15
         response = self.get_response(system_prompt=system_prompt, 
                                      user_prompt=user_prompt, 
                                      max_tokens=(int)(synth_obj['og_chunk_text_length'] * multiplier))
