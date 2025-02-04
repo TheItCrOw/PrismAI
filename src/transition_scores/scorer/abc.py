@@ -22,7 +22,7 @@ class TransitionScorer(ABC):
     def __init__(
         self,
         batch_size: int = 128,
-        top_k: int = 100,
+        top_k: int = 16,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
     ):
         self.batch_size = batch_size
