@@ -164,6 +164,7 @@ class DocumentMetadata(DataClassMappingMixin):
     lang: str
     text_sha256: str
     type: Literal["source", "chunk", "fulltext"] = "source"
+    label: Literal["human", "ai", "fusion"] = "human"
     agent: str | None = None
     _synth_id: ObjectId | None = None
 
@@ -177,12 +178,12 @@ class DocumentMetadata(DataClassMappingMixin):
         source_collection: str = "collected_items",
     ) -> None:
         _id: ObjectId | DBRef = document.pop("_id")
-        if document.get("_ref_id", None) is None:
+        if (_ref_id := document.pop("_ref_id", None)) is None:
             _id = DBRef(source_collection, _id)
             _synth_id = None
         else:
             _synth_id = DBRef(source_collection, _id)
-            _id = document.pop("_ref_id")
+            _id = _ref_id
 
         document["document"] = cls(
             _id=_id,
@@ -190,6 +191,7 @@ class DocumentMetadata(DataClassMappingMixin):
             lang=document.pop("lang"),
             text_sha256=sha256(document["text"].encode()).hexdigest(),
             type=document.pop("type", "source"),
+            label=document.pop("label", None),
             agent=document.pop("agent", None),
             _synth_id=_synth_id,
         )
