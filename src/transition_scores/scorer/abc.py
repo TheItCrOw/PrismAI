@@ -120,11 +120,19 @@ class TransitionScorer(ABC):
             # Get target token and top k probabilities
             target_probs = seq_probs[torch.arange(seq_len), target_ids[1:]].flatten()
 
-            top_k_probs, top_k_indices = seq_probs.topk(self.top_k)
+            sorted_probs, sorted_indices = torch.sort(seq_probs, descending=True)
+
+            _, target_ranks = torch.where(sorted_indices.eq(target_ids[1:].view(-1, 1)))
+
+            top_k_probs = sorted_probs[:, : self.top_k + 1]
+            top_k_indices = sorted_indices[:, : self.top_k + 1]
 
             probabilities.append(
                 OutputProbabilities(
-                    target_probs.tolist(), top_k_indices.tolist(), top_k_probs.tolist()
+                    target_probs.tolist(),
+                    target_ranks.tolist(),
+                    top_k_indices.tolist(),
+                    top_k_probs.tolist(),
                 )
             )
         return probabilities

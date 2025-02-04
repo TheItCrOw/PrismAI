@@ -14,6 +14,7 @@ from transition_scores.utils import DataClassMappingMixin
 
 class OutputProbabilities(NamedTuple):
     target_probs: list[float]
+    target_ranks: list[int]
     top_k_indices: list[list[int]]
     top_k_probs: list[list[float]]
 
@@ -34,6 +35,7 @@ class TransitionScores(DataClassMappingMixin):
 
     target_ids: list[int] = field(default_factory=list)
     target_probs: list[float] = field(default_factory=list)
+    target_ranks: list[int] = field(default_factory=list)
     top_k_indices: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
 
@@ -42,6 +44,7 @@ class TransitionScores(DataClassMappingMixin):
             return TransitionScores(
                 self.target_ids[key],
                 self.target_probs[key],
+                self.target_ranks[key],
                 self.top_k_indices[key],
                 self.top_k_probs[key],
             )
@@ -54,11 +57,13 @@ class TransitionScores(DataClassMappingMixin):
         self,
         target_id: int,
         target_probs: float,
+        target_ranks: float,
         top_k_indices: list[int],
         top_k_probs: list[float],
     ):
         self.target_ids.append(target_id)
         self.target_probs.append(target_probs)
+        self.target_ranks.append(target_ranks)
         self.top_k_indices.append(top_k_indices)
         self.top_k_probs.append(top_k_probs)
 
@@ -66,11 +71,13 @@ class TransitionScores(DataClassMappingMixin):
         self,
         target_ids: list[int],
         target_probs: list[float],
+        target_ranks: list[float],
         top_k_indices: list[list[int]],
         top_k_probs: list[list[float]],
     ):
         self.target_ids.extend(target_ids)
         self.target_probs.extend(target_probs)
+        self.target_ranks.extend(target_ranks)
         self.top_k_indices.extend(top_k_indices)
         self.top_k_probs.extend(top_k_probs)
 
@@ -82,6 +89,7 @@ class TransitionScores(DataClassMappingMixin):
             self.extend(
                 other.target_ids,
                 other.target_probs,
+                other.target_ranks,
                 other.top_k_indices,
                 other.top_k_probs,
             )
@@ -90,6 +98,7 @@ class TransitionScores(DataClassMappingMixin):
     class Item(NamedTuple):
         target_id: int
         target_prob: float
+        target_rank: int
         top_k_index: list[int]
         top_k_prob: list[float]
 
@@ -97,6 +106,7 @@ class TransitionScores(DataClassMappingMixin):
         """
         Iterate over a zipped representation of the transition scores.
         Roughly equivalent to:
+        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
 
         Yields:
             Item: A named tuple containing the target_id, target_prob, top_k_index, and top_k_prob.
@@ -106,6 +116,7 @@ class TransitionScores(DataClassMappingMixin):
             for item in zip(
                 self.target_ids,
                 self.target_probs,
+                self.target_ranks,
                 self.top_k_indices,
                 self.top_k_probs,
             )
