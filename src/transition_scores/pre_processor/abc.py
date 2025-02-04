@@ -9,7 +9,7 @@ from transition_scores.data import (
     PreProcessorMetadata,
     TransitionScores,
 )
-from transition_scores.utils import add_text_sha256, infer_max_length
+from transition_scores.utils import infer_max_length
 
 
 class PreProcessor(ABC):
@@ -76,7 +76,6 @@ class PreProcessor(ABC):
         dataset: Dataset[str, Any],
     ) -> Dataset[str, Any]:
         dataset.filter(self._filter_required_fields, in_place=True)
-        dataset.modify(add_text_sha256)
 
         return dataset
 
@@ -111,16 +110,17 @@ class PreProcessor(ABC):
         # so we add a dummy result with a zero probability
         target_ids = document.pop("input_ids")
         if (first_token := target_ids[0]) not in self.all_special_ids:
-            document["transition_scores"].append(first_token, 0.0, None, None)
+            document["transition_scores"].append(first_token, 0.0, 0, None, None)
 
         # Omit the last token if it is a special token, e.g. <|endoftext|>
         seq_end = -1 if target_ids[-1] in self.all_special_ids else None
         target_ids = target_ids[1:seq_end]
 
-        target_probs, top_k_indices, top_k_probs = output_probabilities
+        target_probs, target_ranks, top_k_indices, top_k_probs = output_probabilities
         document["transition_scores"].extend(
             target_ids,
             target_probs[: len(target_ids)],
+            target_ranks[: len(target_ids)],
             top_k_indices[: len(target_ids)],
             top_k_probs[: len(target_ids)],
         )

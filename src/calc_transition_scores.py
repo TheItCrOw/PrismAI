@@ -13,7 +13,7 @@ from pymongo.collection import Collection
 from tqdm import tqdm
 
 from simple_dataset.dataset import Dataset
-from transition_scores.data import FeaturesDict
+from transition_scores.data import DocumentMetadata, FeaturesDict
 from transition_scores.scorer.abc import TransitionScorer, convert_to_mongo
 
 if Path(".env").exists():
@@ -334,7 +334,8 @@ if __name__ == "__main__":
     pre_processor_metadata = pre_processor.get_metadata()
 
     fields_projection = list(
-        {"id", "_ref_id", "ref_id"} | set(pre_processor.required_fields.keys())
+        {"_id", "_ref_id", "domain", "lang", "type", "agent"}
+        | set(pre_processor.required_fields.keys())
     )
 
     domains = args.mongodb_filter_domains or mongodb_filter_query.pop("domain", (None,))
@@ -363,7 +364,12 @@ if __name__ == "__main__":
             ),
             dataset_batch_size,
         ):
-            dataset = pre_processor.pre_process(Dataset(dataset))
+            dataset = Dataset(dataset)
+            dataset.modify(
+                DocumentMetadata.add_metadata_to_document,
+                source_collection=args.source_collection,
+            )
+            dataset = pre_processor.pre_process(dataset)
             scores = model.process(dataset, pre_processor.pad_token_id)
             dataset = pre_processor.post_process(dataset, scores)
 
@@ -379,7 +385,6 @@ if __name__ == "__main__":
                 batch = [
                     convert_to_mongo(
                         document,
-                        args.source_collection,
                         model_metadata,
                         pre_processor_metadata,
                     )

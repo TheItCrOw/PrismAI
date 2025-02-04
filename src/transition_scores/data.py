@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from hashlib import sha256
 from typing import (
     Generator,
     Literal,
@@ -6,7 +7,7 @@ from typing import (
     Self,
 )
 
-from bson import ObjectId
+from bson import DBRef, ObjectId
 
 from transition_scores.utils import DataClassMappingMixin
 
@@ -96,7 +97,6 @@ class TransitionScores(DataClassMappingMixin):
         """
         Iterate over a zipped representation of the transition scores.
         Roughly equivalent to:
-        >>> yield from zip(ts.target_ids, ts.target_probs, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
 
         Yields:
             Item: A named tuple containing the target_id, target_prob, top_k_index, and top_k_prob.
@@ -130,10 +130,6 @@ class ModelMetadata(dict):
             }
         )
 
-    @classmethod
-    def from_tuple(cls, tup: tuple) -> Self:
-        return cls.new(*tup)
-
 
 class PreProcessorMetadata(dict):
     @classmethod
@@ -149,17 +145,50 @@ class PreProcessorMetadata(dict):
             }
         )
 
+
+@dataclass
+class DocumentMetadata(DataClassMappingMixin):
+    _id: ObjectId
+    domain: str
+    lang: str
+    text_sha256: str
+    type: Literal["source", "chunk", "fulltext"] = "source"
+    agent: str | None = None
+    _synth_id: ObjectId | None = None
+
+    def __hash__(self):
+        return self._id.__hash__()
+
     @classmethod
-    def from_tuple(cls, tup: tuple) -> Self:
-        return cls.new(*tup)
+    def add_metadata_to_document(
+        cls,
+        document: dict[str, str],
+        source_collection: str = "collected_items",
+    ) -> None:
+        _id: ObjectId | DBRef = document.pop("_id")
+        if document.get("_ref_id", None) is None:
+            _id = DBRef(source_collection, _id)
+            _synth_id = None
+        else:
+            _synth_id = DBRef(source_collection, _id)
+            _id = document.pop("_ref_id")
+
+        document["document"] = cls(
+            _id=_id,
+            domain=document.pop("domain"),
+            lang=document.pop("lang"),
+            text_sha256=sha256(document["text"].encode()).hexdigest(),
+            type=document.pop("type", "source"),
+            agent=document.pop("agent", None),
+            _synth_id=_synth_id,
+        )
 
 
 class FeaturesDict(dict):
     @classmethod
     def new(
         cls,
-        refs: dict,
-        text_sha256: str,
+        document: DocumentMetadata | dict,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
         transition_scores: list[TransitionScores],
@@ -171,8 +200,7 @@ class FeaturesDict(dict):
         return cls(
             {
                 "_id": _id or ObjectId(),
-                "refs": refs,
-                "text_sha256": text_sha256,
+                "document": document,
                 "model": model,
                 "pre_processor": pre_processor,
                 "transition_scores": transition_scores,
@@ -201,8 +229,7 @@ class FeaturesDict(dict):
                 {
                     "_id": ObjectId(),
                     "_split": _split + ".0",
-                    "refs": self["refs"],
-                    "text_sha256": self["text_sha256"],
+                    "document": self["document"],
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
                     "transition_scores": tsa,
@@ -213,8 +240,7 @@ class FeaturesDict(dict):
                 {
                     "_id": ObjectId(),
                     "_split": _split + ".1",
-                    "refs": self["refs"],
-                    "text_sha256": self["text_sha256"],
+                    "document": self["document"],
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
                     "transition_scores": tsb,

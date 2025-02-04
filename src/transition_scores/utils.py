@@ -1,7 +1,6 @@
 import enum
 import gc
 import os
-from hashlib import sha256
 from typing import Any, Final, Generator, Iterable, Mapping
 
 import torch
@@ -23,6 +22,9 @@ class DataClassMappingMixin(Mapping):
                 return dict(**value)
             return value
         raise KeyError(f"Key {key} not found in {type(self).__name__}")
+    
+    def __len__(self):
+        return len(self.__dataclass_fields__)
 
 
 def transpose_dict_of_lists[K, V](
@@ -101,10 +103,6 @@ def _explode_encodings(document: dict[str, Any], encoding: BatchEncoding):
         document | transposed
         for transposed in transpose_dict_of_lists(encoding, iter=True)
     )
-
-
-def add_text_sha256(document: dict[str, str]) -> None:
-    document["text_sha256"] = sha256(document["text"].encode()).hexdigest()
 
 
 def _pop_or_calc_length(document: dict[str, int | list]) -> int:

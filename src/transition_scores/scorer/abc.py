@@ -4,7 +4,6 @@ from functools import partial
 
 import multiprocess
 import torch
-from bson import DBRef
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -166,33 +165,12 @@ class TransitionScorer(ABC):
 
 def convert_to_mongo(
     document: dict,
-    source_collection: str,
     model_metadata: ModelMetadata,
     pre_processor_metadata: PreProcessorMetadata,
 ) -> FeaturesDict:
-    refs = {
-        "_ref_id": DBRef(
-            source_collection,
-            document.pop("_id"),
-        )
-    }
-    refs["ref_id"] = (
-        DBRef(
-            source_collection,
-            document.pop("id"),
-        )
-        if "id" in document
-        else None
-    )
-
-    if "_ref_id" in document:
-        refs["_orig_ref_id"] = document.pop("_ref_id")
-    if "ref_id" in document:
-        refs["orig_ref_id"] = document.pop("ref_id")
-
+    document_metadata = document.pop("document")
     return FeaturesDict.new(
-        refs=refs,
-        text_sha256=document.pop("text_sha256"),
+        document=document_metadata,
         model=model_metadata,
         pre_processor=pre_processor_metadata,
         transition_scores=document.pop("transition_scores"),

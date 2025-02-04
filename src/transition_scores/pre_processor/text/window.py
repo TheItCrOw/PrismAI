@@ -194,8 +194,8 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
 
             tq.set_postfix_str("Grouping Transition Scores")
             dataset.group_documents_by(
-                by="_id",
-                deduplicate=("_id", "id", "text_sha256"),
+                by="document",
+                deduplicate=("document",),
                 aggregate=tuple(self.additional_fields) + ("transition_scores",),
             )
             tq.update(1)
