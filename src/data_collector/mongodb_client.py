@@ -126,6 +126,32 @@ class MongoDBConnection:
             if cursor:
                 cursor.close()
 
+    def get_collected_items(self, batch_size=100, skip=0):
+        client = MongoClient(self.connection_string)
+        try:
+            with client.start_session() as session:
+                cursor = client.get_database('prismai').get_collection('collected_items').find(
+                    no_cursor_timeout=True,
+                    session=session
+                ).sort([('_id', 1)]).skip(skip)
+                
+                while True:
+                    batch = []
+                    for _ in range(batch_size):
+                        try:
+                            batch.append(next(cursor))
+                        except StopIteration:
+                            break
+                    if not batch:
+                        break
+                    for item in batch:
+                        yield item
+        except Exception as ex:
+            print('Error while fetching collected items:', ex)
+        finally:
+            if cursor:
+                cursor.close()
+
     def close(self):
         self.client.close()
 
