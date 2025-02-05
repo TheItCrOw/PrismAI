@@ -378,6 +378,9 @@ class Dataset[K, V](UserList[dict[K, V]]):
             >>> dataset.group_documents_by("foo", ("foo", "bar",), ("values",)).data
             [{'foo': 1, 'bar': 'baz', 'values': [[1, 2, 3], [4, 5, 6]]}, {'foo': 2, 'bar': 'qux', 'values': [[7, 8, 9]]}]
         """
+        deduplicate = deduplicate or tuple()
+        aggregate = aggregate or tuple()
+
         grouped = dict()
         remove_by_column = by not in (deduplicate + aggregate)
         for source in self.data:
