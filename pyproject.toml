@@ -10,6 +10,7 @@ dependencies = [
     "bs4>=0.0.2",
     "dkpro-cassis>=0.9.1",
     "frontend>=0.0.3",
+    "lightning>=2.5.0.post0",
     "nltk>=3.9.1",
     "numpy>=2.2.1",
     "openai>=1.59.7",
