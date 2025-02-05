@@ -1,6 +1,7 @@
 import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 from luminar.features import (
     FeatureSelection,
@@ -28,14 +29,14 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.mongodb_adapter = mongodb_adapter
-        feature_selection = (
+        self.feature_selection = (
             feature_selection(slice)
             if feature_selection is not None
             else FeatureSelection.first(slice)
         )
         match feature_type:
             case FeatureType.LLR | "LLR" | "llr":
-                self.feature_algo = LogLikelihoodLogRankRatio(feature_selection)
+                self.feature_algo = LogLikelihoodLogRankRatio(self.feature_selection)
             case FeatureType.LTR | "LTR" | "ltr":
                 raise NotImplementedError
             case FeatureType.LTS | "LTS" | "lts":
@@ -67,12 +68,20 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         human_documents: list[TransitionScores] = list(
             dataset.filter(
                 lambda doc: doc["document"]["type"] == "source", in_place=False
-            ).map(lambda doc: doc["transition_scores"], in_place=True)
+            )
+            .filter(
+                lambda doc: len(doc["transition_scores"])
+                >= self.feature_selection.effective_size()
+            )
+            .map(lambda doc: doc["transition_scores"])
         )
         synth_documents: list[TransitionScores] = list(
-            dataset.filter(
-                lambda doc: doc["document"]["type"] != "source", in_place=True
-            ).map(lambda doc: doc["transition_scores"], in_place=True)
+            dataset.filter(lambda doc: doc["document"]["type"] != "source")
+            .filter(
+                lambda doc: len(doc["transition_scores"])
+                >= self.feature_selection.effective_size()
+            )
+            .map(lambda doc: doc["transition_scores"])
         )
 
         eval_indices = np.random.choice(
@@ -80,21 +89,26 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         )
         eval_indices = sorted(eval_indices, reverse=True)
 
-        self.eval_data = []
-        for idx in eval_indices:
-            document = human_documents.pop(idx)
-            self.eval_data.append((self.convert_to_features(document), 0))
+        with tqdm(total=len(human_documents) + len(synth_documents)) as tq:
+            self.eval_data = []
+            for idx in eval_indices:
+                document = human_documents.pop(idx)
+                self.eval_data.append((self.convert_to_features(document), 0))
+                tq.update(1)
 
-        for idx in eval_indices:
-            document = synth_documents.pop(idx)
-            self.eval_data.append((self.convert_to_features(document), 1))
+            for idx in eval_indices:
+                document = synth_documents.pop(idx)
+                self.eval_data.append((self.convert_to_features(document), 1))
+                tq.update(1)
 
-        self.train_data = []
-        for document in human_documents:
-            self.train_data.append((self.convert_to_features(document), 0))
+            self.train_data = []
+            for document in human_documents:
+                self.train_data.append((self.convert_to_features(document), 0))
+                tq.update(1)
 
-        for document in synth_documents:
-            self.train_data.append((self.convert_to_features(document), 1))
+            for document in synth_documents:
+                self.train_data.append((self.convert_to_features(document), 1))
+                tq.update(1)
 
     def convert_to_features(self, transition_scores: TransitionScores):
         return self.feature_algo.featurize(transition_scores)
