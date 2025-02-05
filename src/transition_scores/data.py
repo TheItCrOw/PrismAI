@@ -146,7 +146,7 @@ class PreProcessorMetadata(dict):
     @classmethod
     def new(
         cls,
-        type: Literal["text", "chunk", "chunk-in-context"],
+        type: Literal["text", "chunk", "chunk-in-context", "sliding-window"],
         **metadata,
     ) -> Self:
         return cls(
