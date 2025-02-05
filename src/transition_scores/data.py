@@ -87,11 +87,11 @@ class TransitionScores(DataClassMappingMixin):
 
         for other in others:
             self.extend(
-                other.target_ids,
-                other.target_probs,
-                other.target_ranks,
-                other.top_k_indices,
-                other.top_k_probs,
+                other["target_ids"],
+                other["target_probs"],
+                other["target_ranks"],
+                other["top_k_indices"],
+                other["top_k_probs"],
             )
         return self
 
@@ -114,11 +114,11 @@ class TransitionScores(DataClassMappingMixin):
         yield from (
             self.Item(item)
             for item in zip(
-                self.target_ids,
-                self.target_probs,
-                self.target_ranks,
-                self.top_k_indices,
-                self.top_k_probs,
+                self["target_ids"],
+                self["target_probs"],
+                self["target_ranks"],
+                self["top_k_indices"],
+                self["top_k_probs"],
             )
         )
 
