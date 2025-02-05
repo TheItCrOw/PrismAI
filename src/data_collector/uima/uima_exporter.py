@@ -7,6 +7,7 @@ import uuid
 import re
 import requests
 import io
+import concurrent.futures
 
 from dotenv import load_dotenv
 from tqdm.notebook import tqdm
@@ -50,49 +51,9 @@ class UIMAExporter():
         for t in self.typesystem.get_types():
             print(t)
 
-    def __export_df(self, df, output_dir, level):
-        for index, row in df.iterrows():
-            try:
-                if row['text'] == None or row['text'] == '':
-                    continue
-
-                file_name = f'{row['domain']}_{self.counters[output_dir]}.xmi'
-                output_file = os.path.join(output_dir, file_name)
-                cas = Cas(
-                    sofa_string = self.__sanitize_string(row['text']),
-                    document_language = row['lang'],
-                    typesystem = self.typesystem
-                )
-                UceDynamicMetadata = self.typesystem.get_type('org.texttechnologylab.annotation.uce.Metadata')
-                DocumentAnnotation = self.typesystem.get_type('org.texttechnologylab.annotation.DocumentAnnotation')
-                DocumentMetadata = self.typesystem.get_type('de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData')
-
-                cas.add(DocumentMetadata(
-                    documentTitle=file_name, 
-                    documentId=str(uuid.uuid4()), 
-                    documentUri=output_file
-                ))
-                cas.add(DocumentAnnotation(
-                    author='Bönisch, Kevin and Stoeckel, Manuel and Mehler, Alexander'
-                ))
-                cas.add(UceDynamicMetadata(key='date', value=row['date'], valueType='String', comment='The date this text was originally created or written by the user.'))
-                cas.add(UceDynamicMetadata(key='domain', value=row['domain'], valueType='Enum', comment='The domain where this document belongs to.'))
-                cas.add(UceDynamicMetadata(key='source', value=row['source'], valueType='Url', comment='Either the exact source url (if scraped) or the citation where this original human text was taken from.'))
-                cas.add(UceDynamicMetadata(key='synthetization', value=self.__sanitize_string(json.dumps(row['synthetization'])), valueType='Json', 
-                                           comment='The synthetization object of this text, containing a full AI rewrite of the text and also a chunk-based replacement somewhere in the middle of the text through AI.'))
-                
-                if level == 'feature_space':
-                    cas.add(UceDynamicMetadata(key='feature_space', value=json.dumps(row['feature_space']), valueType='Json'))
-                
-                cas.to_xmi(output_file)
-                self.counters[output_dir] += 1
-            except Exception as ex:
-                print('There was an error with one file, skipping it.')
-                print(ex)
-
     def __build_xmi_from_collected_item(self, item):
         try:
-            file_name = f'{item['domain']}_{item['id']}.xmi'
+            file_name = f'{item['domain']}_{item['id']}'
             cas = Cas(
                 sofa_string = self.__sanitize_string(item['text']),
                 document_language = item['lang'],
@@ -115,17 +76,17 @@ class UIMAExporter():
             cas.add(UceDynamicMetadata(key='source', value=item['source'], valueType='Url', comment='Either the exact source url (if scraped) or the citation where this original human text was taken from.'))
             cas.add(UceDynamicMetadata(key='synthetization', value=self.__sanitize_string(json.dumps(item['synthetization'])), valueType='Json', 
                                         comment='The synthetization object of this text, containing a full AI rewrite of the text and also a chunk-based replacement somewhere in the middle of the text through AI. Can contain multiple AI agents.'))
-            return cas.to_xmi()
+            return cas.to_xmi(), file_name
         except Exception as ex:
             print(f"Couldn't parse the collected item with id {item['id']} to a XMI file.")
             print(ex)
-            return None
+            return None, None
 
-    def __upload_xmi_to_uce(self, xmi_string, corpusId):
+    def __upload_xmi_to_uce(self, xmi_string, file_name, corpusId):
         try:
-            url = "http://localhost:4567/api/ie/upload/uima"
+            url = "http://141.2.108.197:4567/api/ie/upload/uima"
             files = {
-                "file": ("generated.xmi", io.StringIO(xmi_string), "application/xml"),
+                "file": (file_name, io.StringIO(xmi_string), "application/xml"),
             }
             data = {
                 "corpusId": corpusId
@@ -139,14 +100,21 @@ class UIMAExporter():
             print("Failed to upload XMI file:", ex)
 
     def synch_from_mongo_db_to_uce(self, mongo_conn_string, uceCorpusId):
-        '''
-        Synchronizes the documents from the mongodb to the UCE upload post API
-        '''
         mongo_conn = MongoDBConnection(mongo_conn_string)
-        for item in mongo_conn.get_collected_items():
-            xmi = self.__build_xmi_from_collected_item(item)
-            print(xmi)
-            self.__upload_xmi_to_uce(xmi, uceCorpusId)
+        collected_items = mongo_conn.get_collected_items_with_synth()
+
+        # Let's do it in parallel.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            futures = []
+            for item in collected_items:
+                xmi_string, name = self.__build_xmi_from_collected_item(item)
+                if xmi_string is None or name is None:
+                    continue
+
+                futures.append(executor.submit(self.__upload_xmi_to_uce, xmi_string, name, uceCorpusId))
+
+            # Wait for all futures to complete
+            concurrent.futures.wait(futures)
 
     def export_from_disc_to_disc(self, level, force=False):
         collector_paths = [ f.path for f in os.scandir(self.root_data_path) if f.is_dir() ]
