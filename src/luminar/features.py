@@ -24,6 +24,9 @@ class ThreeDimFeatures(NamedTuple):
 
 
 class FeatureSelection(ABC):
+    def __init__(self, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures):
+        self.size = size
+
     @abstractmethod
     def __call__(
         self,
@@ -44,11 +47,15 @@ class FeatureSelection(ABC):
     def random_no_overlap(cls, size: TwoDimFeatures | ThreeDimFeatures) -> Self:
         return FeatureSelectionRandomNoOverlap(size)
 
+    def effective_size(self) -> int:
+        match self.size:
+            case (size,):
+                return size
+            case (a, b) | (a, b, _):
+                return a * b
+
 
 class FeatureSelectionFirst(FeatureSelection):
-    def __init__(self, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures):
-        self.size = size
-
     def __call__(
         self,
         *features: np.ndarray,
@@ -67,9 +74,6 @@ class FeatureSelectionFirst(FeatureSelection):
 
 
 class FeatureSelectionRandom:
-    def __init__(self, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures):
-        self.size = size
-
     def __call__(
         self,
         size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
@@ -111,7 +115,8 @@ class FeatureSelectionRandomNoOverlap(FeatureSelection):
         self,
         size: TwoDimFeatures | ThreeDimFeatures,
     ):
-        match size:
+        super().__init__(size)
+        match self.size:
             case (_,):
                 raise ValueError(f"{type(self).__name__} does not support 1D features")
             case (w, h) | (w, h, _):
