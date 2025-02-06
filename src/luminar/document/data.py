@@ -1,7 +1,8 @@
-import numpy as np
+import pickle
+
 import pytorch_lightning as pl
+import torch
 from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
 
 from luminar.features import (
     AnyDimFeatures,
@@ -23,6 +24,9 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         feature_type: FeatureAlgorithm.Type | str = FeatureAlgorithm.Type.Likelihood,
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
+        eval_split_size: float = 0.2,
+        use_cache: bool = True,
+        update_cache: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -51,112 +55,120 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
 
         self.train_batch_size = train_batch_size
         self.eval_batch_size = eval_batch_size
+        self.eval_split_size = eval_split_size
 
-        # self.tokenizer = AutoTokenizer.from_pretrained(
-        #     self.model_name_or_path, use_fast=True
-        # )
+        self._use_cache = use_cache
+        self._update_cache = update_cache
 
-    # def prepare_data(self):
-    #     datasets.load_dataset("glue", self.task_name)
-    #     AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
+    def prepare_data(self):
+        cache_file = self.mongodb_adapter.get_cache_file("pkl")
+        if self._use_cache:
+            if self._update_cache or not cache_file.exists():
+                print("Caching Enabled - Loading Dataset in prepare_data()")
+                dataset = Dataset(self.mongodb_adapter.iter_documents())
+
+                print(f"Writing Dataset to {cache_file}")
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(cache_file, "wb") as f:
+                    pickle.dump(dataset.data, f)
+            else:
+                print("Caching Enabled - Dataset Already Cached")
+        else:
+            self._dataset = Dataset(self.mongodb_adapter.iter_documents())
 
     def setup(self, stage=None):
-        dataset = Dataset(self.mongodb_adapter.iter_documents())
-        # drop documents where we don't have one human and one AI generated variant
-        dataset = dataset.filter(
-            lambda doc: len(doc["features"]) == 2
-            and len({ts["document"]["type"] for ts in doc["features"]}) == 2
-        )
-        # flatten the nested features list
-        dataset = dataset.flat_map(lambda doc: doc["features"])
-        # merge strided transition scores
-        dataset = dataset.apply(TransitionScores.merge, "transition_scores")
+        match stage:
+            case "fit" if getattr(self, "train_data", None) is not None:
+                return
+            case "validation" if getattr(self, "eval_data", None) is not None:
+                return
+            case "test" if getattr(self, "test_data", None) is not None:
+                return
+            case "predict":
+                raise NotImplementedError(stage)
+            case None:
+                pass
 
-        human_documents: list[TransitionScores] = list(
-            # filter for human written documents
-            dataset.filter(
-                lambda doc: doc["document"]["type"] == "source", in_place=False
+        if (
+            getattr(self, "human_features", None) is None
+            or getattr(self, "synth_features", None) is None
+        ):
+            if self._use_cache:
+                print(f"Caching Enabled - Loading Dataset in setup({stage})")
+                try:
+                    with self.mongodb_adapter.get_cache_file("pkl").open("rb") as f:
+                        self._dataset = Dataset(pickle.load(f))
+                except FileNotFoundError as e:
+                    raise RuntimeError(
+                        "Cache file not found: did you forget to run prepare_data() with use_cache=True?"
+                    ) from e
+            else:
+                if getattr(self, "_dataset", None) is None:
+                    self._dataset = Dataset(self.mongodb_adapter.iter_documents())
+
+            # drop documents where we don't have one human and one AI generated variant
+            self._dataset = self._dataset.filter(
+                lambda doc: len(doc["features"]) == 2
+                and len({ts["document"]["type"] for ts in doc["features"]}) == 2
             )
-            # filter out documents that are too short
-            .filter(
-                lambda doc: len(doc["transition_scores"])
-                >= self.feature_selection.required_size()
+            # flatten the nested features list
+            self._dataset = self._dataset.flat_map(lambda doc: doc["features"])
+            # merge strided transition scores
+            self._dataset = self._dataset.apply(
+                TransitionScores.merge, "transition_scores"
             )
-            # .map(lambda doc: doc["transition_scores"])
-        )
-        synth_documents: list[TransitionScores] = list(
-            # filter for AI generated documents
-            dataset.filter(lambda doc: doc["document"]["type"] != "source")
-            # filter out documents that are too short
-            .filter(
-                lambda doc: len(doc["transition_scores"])
-                >= self.feature_selection.required_size()
+
+            self.human_features: list[TransitionScores] = list(
+                # filter for human written documents
+                self._dataset.filter(
+                    lambda doc: doc["document"]["type"] == "source", in_place=False
+                )
+                # filter out documents that are too short
+                .filter(
+                    lambda doc: len(doc["transition_scores"])
+                    >= self.feature_selection.required_size()
+                )
+                .map(
+                    lambda doc: {
+                        "features": self.convert_to_features(doc["transition_scores"]),
+                        "labels": 0,
+                    }
+                )
             )
-            # .map(lambda doc: doc["transition_scores"])
-        )
+            self.synth_features: list[TransitionScores] = list(
+                # filter for AI generated documents
+                self._dataset.filter(lambda doc: doc["document"]["type"] != "source")
+                # filter out documents that are too short
+                .filter(
+                    lambda doc: len(doc["transition_scores"])
+                    >= self.feature_selection.required_size()
+                )
+                .map(
+                    lambda doc: {
+                        "features": self.convert_to_features(doc["transition_scores"]),
+                        "labels": 1,
+                    }
+                )
+            )
 
         self.eval_data = []
         self.train_data = []
 
-        # featurize transition scores
-        with tqdm(total=len(human_documents) + len(synth_documents)) as tq:
-            # 80% train, 20% eval split
-            eval_indices = np.random.choice(
-                len(human_documents), len(human_documents) // 5, replace=False
-            )
-            eval_indices = sorted(eval_indices, reverse=True)
+        human_eval_size = int(len(self.human_features) // (1 / self.eval_split_size))
+        _train_data, _eval_data = torch.utils.data.random_split(
+            self.human_features,
+            [len(self.human_features) - human_eval_size, human_eval_size],
+        )
+        self.train_data.extend(_train_data)
+        self.eval_data.extend(_eval_data)
 
-            for idx in eval_indices:
-                document = human_documents.pop(idx)
-                self.eval_data.append(
-                    {
-                        "features": self.convert_to_features(
-                            document["transition_scores"]
-                        ),
-                        "labels": 0,
-                    }
-                )
-                tq.update(1)
-
-            for document in human_documents:
-                self.train_data.append(
-                    {
-                        "features": self.convert_to_features(
-                            document["transition_scores"]
-                        ),
-                        "labels": 0,
-                    }
-                )
-                tq.update(1)
-
-            # 80% train, 20% eval split
-            eval_indices = np.random.choice(
-                len(synth_documents), len(synth_documents) // 5, replace=False
-            )
-            eval_indices = sorted(eval_indices, reverse=True)
-
-            for idx in eval_indices:
-                document = synth_documents.pop(idx)
-                self.eval_data.append(
-                    {
-                        "features": self.convert_to_features(
-                            document["transition_scores"]
-                        ),
-                        "labels": 1,
-                    }
-                )
-                tq.update(1)
-
-            for document in synth_documents:
-                self.train_data.append(
-                    {
-                        "features": self.convert_to_features(
-                            document["transition_scores"]
-                        ),
-                        "labels": 1,
-                    }
-                )
-                tq.update(1)
+        synth_eval_size = int(len(self.synth_features) // (1 / self.eval_split_size))
+        _train_data, _eval_data = torch.utils.data.random_split(
+            self.synth_features,
+            [len(self.synth_features) - synth_eval_size, synth_eval_size],
+        )
+        self.train_data.extend(_train_data)
+        self.eval_data.extend(_eval_data)
 
     def convert_to_features(self, transition_scores: TransitionScores):
         return self.feature_algo.featurize(transition_scores)

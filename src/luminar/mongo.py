@@ -1,7 +1,11 @@
+from hashlib import sha256
+from pathlib import Path
 from typing import Generator, Literal
 
+import bson.json_util
 from pymongo import MongoClient
 from pymongo.database import Database
+from tqdm import tqdm
 
 
 class MongoDBAdapter:
@@ -35,7 +39,7 @@ class MongoDBAdapter:
         self.synth_collection = synth_collection
         self.score_collection = score_collection
         self.domain = domain
-        self.lang = lang
+        self.lang = lang or ("en-EN" if self.domain != "bundestag" else "de-DE")
         self.synth_type = synth_type
         self.synth_agent = synth_agent
         self.feature_model = feature_model
@@ -44,77 +48,71 @@ class MongoDBAdapter:
         self.additional_score_match = additional_score_match or {}
         self.additional_pipeline_stages = additional_pipeline_stages or []
 
+    def _get_aggregation_pipeline(self):
+        return [
+            {
+                "$match": {"domain": self.domain, "lang": self.lang}
+                | self.additional_source_match
+            },
+            {"$limit": self.source_collection_limit},
+            {
+                "$lookup": {
+                    "from": self.synth_collection,
+                    "as": "synthesized_texts",
+                    "localField": "_id",
+                    "foreignField": "_ref_id.$id",
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "type": self.synth_type,
+                                "agent": self.synth_agent,
+                            }
+                            | self.additional_synth_match
+                        },
+                    ],
+                }
+            },
+            {
+                "$lookup": {
+                    "from": self.score_collection,
+                    "as": "features",
+                    "localField": "_id",
+                    "foreignField": "document._id.$id",
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "model.name": self.feature_model,
+                                # "pre_processor.type": pre_processor_type,
+                                "document.type": {"$in": ["source", self.synth_type]},
+                                "document.agent": {"$in": [None, self.synth_agent]},
+                            }
+                            | self.additional_score_match,
+                        },
+                    ],
+                },
+            },
+        ] + self.additional_pipeline_stages
+
     def iter_documents(self) -> Generator[dict, None, None]:
         # if synth_type == "chunk":
         #     raise NotImplementedError("Chunk")
 
-        lang = self.lang or ("en-EN" if self.domain != "bundestag" else "de-DE")
-
-        yield from self.__db.get_collection(self.source_collection).aggregate(
-            [
-                {
-                    "$match": {"domain": self.domain, "lang": lang}
-                    | self.additional_source_match
-                },
-                {"$limit": self.source_collection_limit},
-                {"$project": {"_id": 1}},
-                {
-                    "$lookup": {
-                        "from": self.synth_collection,
-                        "as": "synthesized_texts",
-                        "localField": "_id",
-                        "foreignField": "_ref_id.$id",
-                        "pipeline": [
-                            # {
-                            #     "$project": {"_id": 1, "type": 1, "agent": 1}
-                            #     | {key: 1 for key in additional_synth_match}
-                            # },
-                            {
-                                "$match": {
-                                    "type": self.synth_type,
-                                    "agent": self.synth_agent,
-                                }
-                                | self.additional_synth_match
-                            },
-                        ],
-                    }
-                },
-                {
-                    "$lookup": {
-                        "from": self.score_collection,
-                        "as": "features",
-                        "localField": "_id",
-                        "foreignField": "document._id.$id",
-                        "pipeline": [
-                            # {
-                            #     "$project": {
-                            #         "_id": 1,
-                            #         "document": 1,
-                            #         "model.name": 1,
-                            #         # "pre_processor.type": 1,
-                            #         "transition_scores": 1,
-                            #         "metadata": 1,
-                            #     }
-                            #     | {key: 1 for key in additional_score_match}
-                            # },
-                            {
-                                "$match": {
-                                    "model.name": self.feature_model,
-                                    # "pre_processor.type": pre_processor_type,
-                                    "document.type": {
-                                        "$in": ["source", self.synth_type]
-                                    },
-                                    "document.agent": {"$in": [None, self.synth_agent]},
-                                }
-                                | self.additional_score_match,
-                            },
-                        ],
-                    },
-                },
-            ]
-            + self.additional_pipeline_stages,
-            allowDiskUse=True,
+        yield from tqdm(
+            self.__db.get_collection(self.source_collection).aggregate(
+                self._get_aggregation_pipeline(),
+                allowDiskUse=True,
+            ),
+            desc=f"{type(self).__name__}: Loading Documents from MongoDB",
+            total=self.source_collection_limit,
         )
 
     def get_documents(self) -> list[dict]:
         return list(self.iter_documents())
+
+    def _get_pipeline_hash(self) -> str:
+        return sha256(
+            bson.json_util.dumps(self._get_aggregation_pipeline()).encode()
+        ).hexdigest()
+
+    def get_cache_file(self, ext="json") -> Path:
+        return Path("/tmp/luminar") / f"{self._get_pipeline_hash()}.{ext}"

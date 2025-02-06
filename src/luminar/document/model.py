@@ -55,6 +55,7 @@ class DocumentClassficationModel(pl.LightningModule):
             + [ConvolutionalLayerSpec(64, 3, 1)]
         )
 
+        self.example_input_array = torch.randn((1, *feature_size))
         self.save_hyperparameters()
 
         self.conv_layers = nn.ModuleList()
