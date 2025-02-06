@@ -29,10 +29,19 @@ type AnyDimFeatures = OneDimFeatures | TwoDimFeatures | ThreeDimFeatures
 class FeatureSelection(ABC):
     def __init__(
         self,
-        size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
+        size: int | tuple[int, ...],
         offset: int = 1,
     ):
-        self.size = size
+        match size:
+            case (number,) | number if isinstance(number, int):
+                self.size = OneDimFeatures(number)
+            case (h, w):
+                self.size = TwoDimFeatures(h, w)
+            case (h, w, d):
+                self.size = ThreeDimFeatures(h, w, d)
+            case _:
+                raise ValueError(f"Invalid feature size {size}")
+
         self.offset = offset
 
     @abstractmethod
@@ -64,6 +73,9 @@ class FeatureSelection(ABC):
 
     def required_size(self) -> int:
         return self.effective_size() + self.offset
+
+    def effective_shape(self) -> OneDimFeatures | TwoDimFeatures | ThreeDimFeatures:
+        return self.size
 
     class Type(enum.StrEnum):
         First = "First"
@@ -118,7 +130,6 @@ class FeatureSelectionRandom:
 
     def __call__(
         self,
-        size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
         *features: np.ndarray,
     ) -> list[np.ndarray]:
         length = len(features[0])
@@ -150,6 +161,13 @@ class FeatureSelectionRandom:
                 return features
             case _:
                 raise RuntimeError(f"Invalid slice size: {size}")
+
+    def effective_shape(self) -> OneDimFeatures | TwoDimFeatures | ThreeDimFeatures:
+        match self.flatten, self.size:
+            case True, (w, h) | (w, h, _):
+                return TwoDimFeatures(w * h, *self.size[2:])
+            case _, shape:
+                return shape
 
 
 class FeatureSelectionRandomNoOverlap(FeatureSelectionRandom):
