@@ -4,12 +4,10 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from luminar.features import (
+    AnyDimFeatures,
+    FeatureAlgorithm,
     FeatureSelection,
-    FeatureType,
-    LogLikelihoodLogRankRatio,
     OneDimFeatures,
-    ThreeDimFeatures,
-    TwoDimFeatures,
 )
 from luminar.mongo import MongoDBAdapter
 from simple_dataset.dataset import Dataset
@@ -20,30 +18,35 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
     def __init__(
         self,
         mongodb_adapter: MongoDBAdapter,
-        slice: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures = OneDimFeatures(256),
-        feature_selection: type[FeatureSelection] = None,
-        feature_type: str | FeatureType = FeatureType.LLR,
+        feature_dim: AnyDimFeatures | tuple[int, ...] = OneDimFeatures(256),
+        feature_selection: FeatureSelection.Type | str = FeatureSelection.Type.First,
+        feature_type: FeatureAlgorithm.Type | str = FeatureAlgorithm.Type.Likelihood,
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
         **kwargs,
     ):
         super().__init__()
         self.mongodb_adapter = mongodb_adapter
-        self.feature_selection = (
-            feature_selection(slice)
-            if feature_selection is not None
-            else FeatureSelection.first(slice)
-        )
-        match feature_type:
-            case FeatureType.LLR | "LLR" | "llr":
-                self.feature_algo = LogLikelihoodLogRankRatio(self.feature_selection)
-            case FeatureType.LTR | "LTR" | "ltr":
-                raise NotImplementedError
-            case FeatureType.LTS | "LTS" | "lts":
-                raise NotImplementedError
+        match feature_selection:
+            case string if isinstance(string, str):
+                self.feature_selection = FeatureSelection.Type[string].into(feature_dim)
+            case value if isinstance(value, FeatureSelection.Type):
+                self.feature_selection = value.into(feature_dim)
             case _:
-                raise RuntimeError(
-                    f"Unsupported feature type: {feature_type}. Must be one of {FeatureType.__members__.keys()}"
+                raise ValueError(
+                    f"Unsupported feature selection: {feature_selection}. Must be one of {FeatureSelection.Type.__members__.keys()}"
+                )
+
+        match feature_type:
+            case string if isinstance(string, str):
+                self.feature_algo = FeatureAlgorithm.Type[string].into(
+                    self.feature_selection
+                )
+            case value if isinstance(value, FeatureAlgorithm.Type):
+                self.feature_algo = value.into(self.feature_selection)
+            case _:
+                raise ValueError(
+                    f"Unsupported feature type: {feature_type}. Must be one of {FeatureAlgorithm.Type.__members__.keys()}"
                 )
 
         self.train_batch_size = train_batch_size
@@ -52,6 +55,10 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         # self.tokenizer = AutoTokenizer.from_pretrained(
         #     self.model_name_or_path, use_fast=True
         # )
+
+    # def prepare_data(self):
+    #     datasets.load_dataset("glue", self.task_name)
+    #     AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
 
     def setup(self, stage=None):
         dataset = Dataset(self.mongodb_adapter.iter_documents())
@@ -66,56 +73,93 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         dataset = dataset.apply(TransitionScores.merge, "transition_scores")
 
         human_documents: list[TransitionScores] = list(
+            # filter for human written documents
             dataset.filter(
                 lambda doc: doc["document"]["type"] == "source", in_place=False
             )
+            # filter out documents that are too short
             .filter(
                 lambda doc: len(doc["transition_scores"])
-                >= self.feature_selection.effective_size()
+                >= self.feature_selection.required_size()
             )
-            .map(lambda doc: doc["transition_scores"])
+            # .map(lambda doc: doc["transition_scores"])
         )
         synth_documents: list[TransitionScores] = list(
+            # filter for AI generated documents
             dataset.filter(lambda doc: doc["document"]["type"] != "source")
+            # filter out documents that are too short
             .filter(
                 lambda doc: len(doc["transition_scores"])
-                >= self.feature_selection.effective_size()
+                >= self.feature_selection.required_size()
             )
-            .map(lambda doc: doc["transition_scores"])
+            # .map(lambda doc: doc["transition_scores"])
         )
 
-        eval_indices = np.random.choice(
-            len(human_documents), len(human_documents) // 5, replace=False
-        )
-        eval_indices = sorted(eval_indices, reverse=True)
+        self.eval_data = []
+        self.train_data = []
 
+        # featurize transition scores
         with tqdm(total=len(human_documents) + len(synth_documents)) as tq:
-            self.eval_data = []
+            # 80% train, 20% eval split
+            eval_indices = np.random.choice(
+                len(human_documents), len(human_documents) // 5, replace=False
+            )
+            eval_indices = sorted(eval_indices, reverse=True)
+
             for idx in eval_indices:
                 document = human_documents.pop(idx)
-                self.eval_data.append((self.convert_to_features(document), 0))
+                self.eval_data.append(
+                    {
+                        "features": self.convert_to_features(
+                            document["transition_scores"]
+                        ),
+                        "labels": 0,
+                    }
+                )
                 tq.update(1)
+
+            for document in human_documents:
+                self.train_data.append(
+                    {
+                        "features": self.convert_to_features(
+                            document["transition_scores"]
+                        ),
+                        "labels": 0,
+                    }
+                )
+                tq.update(1)
+
+            # 80% train, 20% eval split
+            eval_indices = np.random.choice(
+                len(synth_documents), len(synth_documents) // 5, replace=False
+            )
+            eval_indices = sorted(eval_indices, reverse=True)
 
             for idx in eval_indices:
                 document = synth_documents.pop(idx)
-                self.eval_data.append((self.convert_to_features(document), 1))
-                tq.update(1)
-
-            self.train_data = []
-            for document in human_documents:
-                self.train_data.append((self.convert_to_features(document), 0))
+                self.eval_data.append(
+                    {
+                        "features": self.convert_to_features(
+                            document["transition_scores"]
+                        ),
+                        "labels": 1,
+                    }
+                )
                 tq.update(1)
 
             for document in synth_documents:
-                self.train_data.append((self.convert_to_features(document), 1))
+                self.train_data.append(
+                    {
+                        "features": self.convert_to_features(
+                            document["transition_scores"]
+                        ),
+                        "labels": 1,
+                    }
+                )
                 tq.update(1)
 
     def convert_to_features(self, transition_scores: TransitionScores):
         return self.feature_algo.featurize(transition_scores)
-
-    # def prepare_data(self):
-    #     datasets.load_dataset("glue", self.task_name)
-    #     AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
 
     def train_dataloader(self):
         return DataLoader(
