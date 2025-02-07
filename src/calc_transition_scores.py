@@ -43,7 +43,10 @@ def parse_pre_processors(args: Namespace):
             )
         case "SlidingWindowTextPreProcessor":
             return SlidingWindowTextPreProcessor.from_pretrained(
-                args.model, max_length=args.max_length, stride=args.stride
+                args.model,
+                max_length=args.max_length,
+                stride=args.stride,
+                truncate=args.truncate,
             )
         case _:
             raise RuntimeError
@@ -228,6 +231,13 @@ if __name__ == "__main__":
         help="SlidingWindowTextPreProcessor: set the stride for the sliding window. Defaults to 1/4 of the max_length.",
         default=None,
     )
+    group_pre_processor.add_argument(
+        "--truncate",
+        type=int,
+        metavar="N",
+        help="Truncate any document to at most N tokens.",
+        default=None,
+    )
 
     mongodb_group = parser.add_argument_group("MongoDB")
     mongodb_group.add_argument(
@@ -285,7 +295,7 @@ if __name__ == "__main__":
         type=str,
         metavar="NAME",
         dest="target_collection",
-        default="transition_scores",
+        default="log_likelihoods",
         help="Target collection name.",
     )
     mongodb_group.add_argument(

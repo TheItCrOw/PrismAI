@@ -114,15 +114,15 @@ class TransitionScorer(ABC):
         probabilities = []
         for target_ids, seq_probs in zip(input_ids, outputs):
             # Truncate the sequence to the last non-pad token
-            seq_len = len(target_ids) - 1
-            seq_probs = seq_probs[:seq_len]
+            labels = target_ids[1:]
+            seq_probs = seq_probs[: len(labels)]
 
             # Get target token and top k probabilities
-            target_probs = seq_probs[torch.arange(seq_len), target_ids[1:]].flatten()
+            target_probs = seq_probs[torch.arange(len(labels)), labels].flatten()
 
             sorted_probs, sorted_indices = torch.sort(seq_probs, descending=True)
 
-            _, target_ranks = torch.where(sorted_indices.eq(target_ids[1:].view(-1, 1)))
+            _, target_ranks = torch.where(sorted_indices.eq(labels.view(-1, 1)))
 
             top_k_probs = sorted_probs[:, : self.top_k + 1]
             top_k_indices = sorted_indices[:, : self.top_k + 1]
@@ -166,8 +166,8 @@ class TransitionScorer(ABC):
                     attention_mask=attention_mask.to(self.device),
                     position_ids=position_ids.to(self.device),
                 )
-                .logits.cpu()
-                .softmax(-1)
+                .logits.log_softmax(-1)
+                .cpu()
             )
 
 

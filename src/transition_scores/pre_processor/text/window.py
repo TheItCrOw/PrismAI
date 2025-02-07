@@ -22,6 +22,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
         stride: int | None = None,
         max_length: int | None = None,
         include_text: bool = False,
+        truncate: int | None = None
     ):
         """
         Sliding-Window text pre-processor.
@@ -36,6 +37,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
         """
         super().__init__(tokenizer, max_length, include_text)
         self.stride = stride or (self.max_length // 4)
+        self.truncate = truncate or 8096
 
     @property
     def required_fields(self) -> dict[str, type]:
@@ -89,6 +91,9 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             add_special_tokens=True,
         )
         del batch_encoding["overflow_to_sample_mapping"]
+
+        max_sequences = (self.truncate - self.max_length + self.stride) // self.stride
+        batch_encoding.input_ids = batch_encoding.input_ids[:max_sequences]
 
         # As the first window is not a sliding window, it covers all tokens,
         # so we set the `start_token_idx` to 0.
