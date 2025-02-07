@@ -5,9 +5,7 @@ from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
 from simple_dataset.dataset import Dataset
 from transition_scores.data import (
-    OutputProbabilities,
     PreProcessorMetadata,
-    TransitionScores,
 )
 from transition_scores.utils import infer_max_length
 
@@ -91,39 +89,5 @@ class PreProcessor(ABC):
     def post_process(
         self,
         dataset: Dataset[str, Any],
-        output_probabilities: list[OutputProbabilities],
     ) -> Dataset[str, Any]:
-        dataset.modify_zip(
-            self._add_transition_scores,
-            output_probabilities,
-        )
-        return dataset
-
-    def _add_transition_scores(
-        self,
-        document: dict[str, Any],
-        output_probabilities: OutputProbabilities,
-    ) -> None:
-        document["transition_scores"] = TransitionScores()
-
-        # If this model does not use a BOS token, the first token is not predicted,
-        # so we add a dummy result with a zero probability
-        target_ids = document.pop("input_ids")
-        if (first_token := target_ids[0]) not in self.all_special_ids:
-            document["transition_scores"].append(first_token, 0.0, 0, None, None)
-
-        # Omit the last token if it is a special token, e.g. <|endoftext|>
-        seq_end = -1 if target_ids[-1] in self.all_special_ids else None
-        target_ids = target_ids[1:seq_end]
-
-        target_probs, target_ranks, top_k_indices, top_k_probs = output_probabilities
-        document["transition_scores"].extend(
-            target_ids,
-            target_probs[: len(target_ids)],
-            target_ranks[: len(target_ids)],
-            top_k_indices[: len(target_ids)],
-            top_k_probs[: len(target_ids)],
-        )
-
-        if "attention_mask" in document:
-            del document["attention_mask"]
+        return dataset.remove_columns("input_ids", "attention_mask")

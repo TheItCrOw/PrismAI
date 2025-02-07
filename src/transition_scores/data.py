@@ -12,13 +12,6 @@ from bson import DBRef, ObjectId
 from transition_scores.utils import DataClassMappingMixin
 
 
-class OutputProbabilities(NamedTuple):
-    target_probs: list[float]
-    target_ranks: list[int]
-    top_k_indices: list[list[int]]
-    top_k_probs: list[list[float]]
-
-
 @dataclass
 class TransitionScores(DataClassMappingMixin):
     """
@@ -204,12 +197,10 @@ class FeaturesDict(dict):
         document: DocumentMetadata | dict,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
-        transition_scores: list[TransitionScores],
+        transition_scores: TransitionScores,
         _id: ObjectId | None = None,
         **metadata,
     ) -> Self:
-        if not isinstance(next(iter(transition_scores)), TransitionScores):
-            transition_scores = [TransitionScores(**ts) for ts in transition_scores]
         return cls(
             {
                 "_id": _id or ObjectId(),

@@ -1,6 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial
+from typing import Generator
 
 import multiprocess
 import torch
@@ -8,11 +9,12 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from simple_dataset.dataset import Dataset
 from transition_scores.data import (
     FeaturesDict,
     ModelMetadata,
-    OutputProbabilities,
     PreProcessorMetadata,
+    TransitionScores,
 )
 from transition_scores.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memory
 
@@ -52,25 +54,36 @@ class TransitionScorer(ABC):
 
     def process(
         self,
-        dataset: list[dict],
+        dataset: Dataset | list[dict],
         pad_token_id: int,
-    ) -> list[OutputProbabilities]:
+    ) -> Dataset:
         """
         Calculate transition scores for the given pre-processed dataset.
 
         Args:
-            dataset (list[dict]): A sequence of pre-processed documents to be processed.
+            dataset (Dataset): A sequence of pre-processed documents to be processed.
             pad_token_id (int): The token ID to use for padding.
 
         Raises:
             KeyError: If the pre-processor requires a field that is not present in the given dataset.
 
         Returns:
-            list[OutputProbabilities]: A list of output probabilities for each input document.
+            Dataset: The processed dataset with a new "transition_scores" field.
         """
-        _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
+        if not isinstance(dataset, Dataset):
+            dataset = Dataset(dataset)
 
-        probabilities = []
+        return dataset.update(
+            (
+                {"transition_scores": ts}
+                for ts in self._generate_scores(dataset, pad_token_id)
+            )
+        )
+
+    def _generate_scores(
+        self, dataset: Dataset, pad_token_id: int
+    ) -> Generator[TransitionScores, None, None]:
+        _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
         for input_ids, attention_mask in tqdm(
             DataLoader(
                 dataset,
@@ -83,7 +96,7 @@ class TransitionScorer(ABC):
             leave=False,
             desc="Processing Sequences",
         ):
-            probabilities.extend(self._process_batch(input_ids, attention_mask))
+            yield from self._process_batch(input_ids, attention_mask, pad_token_id)
 
             if PYTORCH_GC_LEVEL == PytorchGcLevel.BATCH:
                 free_memory()
@@ -91,13 +104,12 @@ class TransitionScorer(ABC):
         if PYTORCH_GC_LEVEL == PytorchGcLevel.DATASET:
             free_memory()
 
-        return probabilities
-
     def _process_batch(
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
-    ) -> list[OutputProbabilities]:
+        pad_token_id: int,
+    ) -> list[TransitionScores]:
         """
         Process the a batch of input sequences and calculate transition scores.
         Runs a forward pass on the model and extracts the top k probabilities.
@@ -107,7 +119,7 @@ class TransitionScorer(ABC):
             attention_mask (torch.Tensor): A list of attention masks for each input sequence.
 
         Returns:
-            list[OutputProbabilities]: A list output probability tuples.
+            list[TransitionScores]: A list output probability tuples.
         """
         outputs = self._forward(input_ids, attention_mask)
 
@@ -128,7 +140,8 @@ class TransitionScorer(ABC):
             top_k_indices = sorted_indices[:, : self.top_k + 1]
 
             probabilities.append(
-                OutputProbabilities(
+                TransitionScores(
+                    target_ids.tolist(),
                     target_probs.tolist(),
                     target_ranks.tolist(),
                     top_k_indices.tolist(),

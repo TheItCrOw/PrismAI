@@ -5,8 +5,8 @@ from transformers import BatchEncoding
 
 from simple_dataset.dataset import Dataset
 from transition_scores.data import (
-    OutputProbabilities,
     PreProcessorMetadata,
+    TransitionScores,
 )
 from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import (
@@ -22,7 +22,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
         stride: int | None = None,
         max_length: int | None = None,
         include_text: bool = False,
-        truncate: int | None = None
+        truncate: int | None = None,
     ):
         """
         Sliding-Window text pre-processor.
@@ -182,13 +182,11 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
     def post_process(
         self,
         dataset: Dataset[str, Any],
-        output_probabilities: list[OutputProbabilities],
     ) -> Dataset[str, Any]:
-        with tqdm(total=4, position=2, leave=False, desc="Post-Processing") as tq:
-            dataset = super().post_process(dataset, output_probabilities)
+        with tqdm(total=5, position=2, leave=False, desc="Post-Processing") as tq:
+            dataset = super().post_process(dataset)
             tq.update(1)
 
-            # TODO: Extract the transition scores for the first couple of windows from the output probabilities.
             tq.set_postfix_str("Truncating Transition Scores")
             dataset.apply(
                 lambda ts, idx: ts[idx:],
@@ -211,6 +209,10 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
                 *self.additional_fields.keys(),
                 "transition_scores",
             )
+            tq.update(1)
+
+            tq.set_postfix_str("Merging Transition Scores")
+            dataset.apply(TransitionScores.merge, "transition_scores")
             tq.update(1)
 
         return dataset

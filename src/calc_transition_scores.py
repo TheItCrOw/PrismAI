@@ -380,8 +380,8 @@ if __name__ == "__main__":
                 source_collection=args.source_collection,
             )
             dataset = pre_processor.pre_process(dataset)
-            scores = model.process(dataset, pre_processor.pad_token_id)
-            dataset = pre_processor.post_process(dataset, scores)
+            dataset = model.process(dataset, pre_processor.pad_token_id)
+            dataset = pre_processor.post_process(dataset)
 
             for batch in batched(
                 tqdm(
