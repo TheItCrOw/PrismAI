@@ -39,7 +39,9 @@ class MongoDBAdapter:
         self.synth_collection = synth_collection
         self.score_collection = score_collection
         self.domain = domain
-        self.lang = lang or ("en-EN" if self.domain != "bundestag" else "de-DE")
+        self.lang = lang or (
+            "en-EN" if self.domain not in {"bundestag", "spiegel_articles"} else "de-DE"
+        )
         self.synth_type = synth_type
         self.synth_agent = synth_agent
         self.feature_model = feature_model
