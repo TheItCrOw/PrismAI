@@ -7,7 +7,6 @@ from simple_dataset.dataset import Dataset
 from transition_scores.data import PreProcessorMetadata
 from transition_scores.pre_processor.text import TextPreProcessor
 from transition_scores.utils import (
-    _explode_encodings,
     _pop_or_calc_length,
 )
 
@@ -84,20 +83,16 @@ class TruncationTextPreProcessor(TextPreProcessor):
         Returns:
             Dataset[str, Any]: Tokenized dataset. The `text` and `chunks` fields are removed.
         """
-        with tqdm(total=4, position=2, leave=False, desc="Pre-Processing") as tq:
+        with tqdm(total=3, position=2, leave=False, desc="Pre-Processing") as tq:
             try:
                 tq.set_postfix_str("Preparing Dataset")
                 dataset = self._prepare(dataset)
                 tq.update(1)
 
-                tq.set_postfix_str("Tokenizing Rolling Windows")
-                encodings = [
-                    self._process(document.pop("text")) for document in dataset
-                ]
-                tq.update(1)
-
-                tq.set_postfix_str("Exploding Documents from Encoding")
-                dataset.flat_map_zip(_explode_encodings, encodings)
+                tq.set_postfix_str("Tokenizing Text")
+                dataset.map(
+                    lambda document: document | self._process(document.pop("text"))
+                )
                 tq.update(1)
 
                 tq.set_postfix_str("Sorting Dataset by Length")
