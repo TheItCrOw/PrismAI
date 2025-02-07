@@ -395,7 +395,9 @@ if __name__ == "__main__":
         if domain:
             mongodb_filter_query["domain"] = domain
 
-        mongodb_limit = args.mongodb_limit
+        num_documents = mongodb_source_collection.count_documents(mongodb_filter_query)
+
+        mongodb_limit = args.mongodb_limit or num_documents
         mongodb_skip = args.mongodb_skip
 
         for dataset in batched(
