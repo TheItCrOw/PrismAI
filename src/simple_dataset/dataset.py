@@ -336,14 +336,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
                 for document in self.data
             )
 
-    def group_documents_by(
+    def group_documents_by[K_grouped](
         self,
-        by: K,
+        by: K | Callable[[dict[K, V]], K_grouped],
         deduplicate: tuple[K, ...] | None = None,
         aggregate: tuple[K, ...] | None = None,
         remainder_into: K | None = None,
         in_place: bool = True,
-    ) -> Self:
+        return_dict: bool = False,
+    ) -> Self | dict[K_grouped, dict[K, V]]:
         """
         Group the documents in this dataset by a column and aggregate other columns in lists.
         You may also specify columns that should be de-duplicated and kept at the top level in the documents.
@@ -353,8 +354,8 @@ class Dataset[K, V](UserList[dict[K, V]]):
             If you want to retain the column you group `by`, you **must** include it in either `deduplicate` or `aggregate`.
 
         Args:
-            by (K): The column to group by.
-                If not present in``deduplicate` or `aggregate`, it will be removed.
+            by (K | Callable): The column to group by or a callable that determines the grouping key from the document.
+                If it is a column that not present in `deduplicate` or `aggregate`, it will be removed.
             deduplicate (tuple[K, ...]): Columns to deduplicate.
                 These columns will be moved into the parent dict and not aggregated into a list.
                 Duplicate values will be overwritten in the order they appear in the dataset.
@@ -365,9 +366,10 @@ class Dataset[K, V](UserList[dict[K, V]]):
                 If None, these columns will be discarded.
             in_place (bool): Apply the operation **in-place**, modifying the original dataset.
                 Default: `True`.
+            return_dict (bool): If True, returns the grouped dataset as a dictionary.
 
         Returns:
-            Dataset: The grouped dataset.
+            Dataset | dict: The grouped dataset if `return_dict` is False, otherwise a dictionary.
 
         Examples:
             >>> dataset = Dataset([
@@ -381,10 +383,19 @@ class Dataset[K, V](UserList[dict[K, V]]):
         deduplicate = deduplicate or tuple()
         aggregate = aggregate or tuple()
 
+        if callable(by):
+
+            def _key(document: dict[K, V]) -> K_grouped:
+                return by(document)
+        else:
+            remove_by_column = by not in (deduplicate + aggregate)
+
+            def _key(document: dict[K, V]) -> V:
+                return document.pop(by) if remove_by_column else document[by]
+
         grouped = dict()
-        remove_by_column = by not in (deduplicate + aggregate)
         for source in self.data:
-            key = source.pop(by) if remove_by_column else source[by]
+            key = _key(source)
             target = grouped.setdefault(key, dict())
 
             if deduplicate:
@@ -399,6 +410,10 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
             if remainder_into is not None and source:
                 target.setdefault(remainder_into, []).append(source)
+
+        if return_dict:
+            return grouped
+
         if in_place:
             self.data = list(grouped.values())
             return self
