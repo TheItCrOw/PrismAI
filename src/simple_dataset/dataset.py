@@ -18,6 +18,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
         self,
         map_fn: Callable[[dict[K, V]], dict[K, V]],
         in_place: bool = True,
+        **map_fn_kwargs,
     ) -> Self:
         """
         Map the dataset using the provided map function.
@@ -39,15 +40,16 @@ class Dataset[K, V](UserList[dict[K, V]]):
             [{'abc': 2, 'bar': 'baz'}, {'abc': 4, 'bar': 'qux'}]
         """
         if in_place:
-            self.data = list(map(map_fn, self.data))
+            self.data = list(map(map_fn, self.data, **map_fn_kwargs))
             return self
         else:
-            return type(self)(map(map_fn, self.data))
+            return type(self)(map(map_fn, self.data, **map_fn_kwargs))
 
     def flat_map(
         self,
         map_fn: Callable[[dict[K, V]], Iterable[dict[K, V]]],
         in_place: bool = True,
+        **map_fn_kwargs,
     ) -> Self:
         """
         Flat-map the dataset using the provided map function.
@@ -69,10 +71,18 @@ class Dataset[K, V](UserList[dict[K, V]]):
             [{'foo': 1, 'bar': 'baz'}, {'foo': 1, 'bar': 'baz'}, {'foo': 2, 'bar': 'qux'}, {'foo': 2, 'bar': 'qux'}]
         """
         if in_place:
-            self.data = list(doc for document in self.data for doc in map_fn(document))
+            self.data = list(
+                doc
+                for document in self.data
+                for doc in map_fn(document, **map_fn_kwargs)
+            )
             return self
         else:
-            return type(self)(doc for document in self.data for doc in map_fn(document))
+            return type(self)(
+                doc
+                for document in self.data
+                for doc in map_fn(document, **map_fn_kwargs)
+            )
 
     def flat_map_zip(
         self,
