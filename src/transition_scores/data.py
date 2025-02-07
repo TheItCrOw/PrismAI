@@ -207,6 +207,7 @@ class FeaturesDict(dict):
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
         transition_scores: TransitionScores,
+        split: str | None = None,
         _id: ObjectId | None = None,
         **metadata,
     ) -> Self:
@@ -217,6 +218,7 @@ class FeaturesDict(dict):
                 "model": model,
                 "pre_processor": pre_processor,
                 "transition_scores": transition_scores,
+                "split": split,
                 "metadata": metadata,
             }
         )
@@ -246,6 +248,7 @@ class FeaturesDict(dict):
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
                     "transition_scores": tsa,
+                    "split": self["split"],
                     "metadata": ma,
                 }
             ),
@@ -257,6 +260,7 @@ class FeaturesDict(dict):
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
                     "transition_scores": tsb,
+                    "split": self["split"],
                     "metadata": mb,
                 }
             ),

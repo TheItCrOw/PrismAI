@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import traceback
 from argparse import ArgumentParser, Namespace
@@ -22,7 +23,7 @@ elif Path("../.env").exists():
     load_dotenv("../.env")
 
 
-MAX_TRY_INSERT_RECURSION_DEPTH = os.environ.get("MAX_TRY_INSERT_RECURSION_DEPTH", 16)
+MAX_TRY_INSERT_RECURSION_DEPTH = os.environ.get("MAX_TRY_INSERT_RECURSION_DEPTH", 0)
 
 
 def parse_pre_processors(args: Namespace):
@@ -238,6 +239,16 @@ if __name__ == "__main__":
         help="Truncate any document to at most N tokens.",
         default=None,
     )
+    group_pre_processor.add_argument(
+        "--split",
+        type=str,
+        help=(
+            "The split to assign to the processed documents. Defaults to `train`. "
+            "Can be either a split name or '${field_name}:[${regex}]' (e.g. 'source:' or  'file:(train|test|dev).*') to extract the split from a field. "
+            "If no regex is passed, will check for 'train', 'test' or 'val' in the field value."
+        ),
+        default="train",
+    )
 
     mongodb_group = parser.add_argument_group("MongoDB")
     mongodb_group.add_argument(
@@ -343,10 +354,40 @@ if __name__ == "__main__":
     pre_processor = parse_pre_processors(args)
     pre_processor_metadata = pre_processor.get_metadata()
 
-    fields_projection = list(
-        {"_id", "_ref_id", "domain", "lang", "type", "agent"}
-        | set(pre_processor.required_fields.keys())
+    fields_projection = {"_id", "_ref_id", "domain", "lang", "type", "agent"} | set(
+        pre_processor.required_fields.keys()
     )
+
+    split_field_name = None
+    if ":" in args.split:
+        split_field_name, regex = args.split.split(":", 1)
+        if regex:
+            split_field_name, regex = split_field_name.split(":", 1)
+            regex: re.Pattern = re.compile(regex)
+            if regex.groups == 0:
+                raise ValueError("Regex must contain at least one group.")
+
+            def _add_split(value):
+                mtches: list[re.Match] = regex.findall(value)
+                if not mtches:
+                    return None
+                return mtches[0].group(1)
+
+        else:
+
+            def _add_split(value):
+                if "train" in value:
+                    return "train"
+                elif "test" in value:
+                    return "test"
+                elif "val" in value or "dev" in value:
+                    return "val"
+                else:
+                    return None
+
+        fields_projection.add(split_field_name)
+
+    fields_projection = list(fields_projection)
 
     domains = args.mongodb_filter_domains or mongodb_filter_query.pop("domain", (None,))
 
@@ -375,6 +416,8 @@ if __name__ == "__main__":
             dataset_batch_size,
         ):
             dataset = Dataset(dataset)
+            if split_field_name:
+                dataset.apply(_add_split, "split", split_field_name)
             dataset.modify(
                 DocumentMetadata.add_metadata_to_document,
                 source_collection=args.source_collection,
@@ -382,6 +425,7 @@ if __name__ == "__main__":
             dataset = pre_processor.pre_process(dataset)
             dataset = model.process(dataset, pre_processor.pad_token_id)
             dataset = pre_processor.post_process(dataset)
+            dataset.modify(lambda doc: doc.update(split=args.split))
 
             for batch in batched(
                 tqdm(
