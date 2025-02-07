@@ -18,7 +18,7 @@ class MongoDBAdapter:
         database: str = "prismai",
         source_collection: str = "collected_items",
         synth_collection: str = "synthesized_texts",
-        score_collection: str = "transition_scores",
+        score_collection: str = "features_prismai",
         source_collection_limit: int = 1500,
         domain: str = "bundestag",
         lang: str | None = None,
