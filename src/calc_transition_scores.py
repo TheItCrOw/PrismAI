@@ -34,7 +34,7 @@ def parse_pre_processors(args: Namespace):
     )
 
     match args.pre_processor:
-        case "TextPreProcessor":
+        case "TruncationTextPreProcessor":
             return TruncationTextPreProcessor.from_pretrained(
                 args.model, max_length=args.max_length
             )
@@ -193,27 +193,27 @@ if __name__ == "__main__":
         choices=[
             "RollingWindowChunkPreProcessor",
             "SlidingWindowTextPreProcessor",
-            "TextPreProcessor",
+            "TruncationTextPreProcessor",
         ],
         help="Pre-processor to use.",
     )
     group_pre_processor.add_argument(
-        "-tp",
-        "--text_pre_processor",
+        "-trt",
+        "--truncation",
         action="append_const",
-        const="TextPreProcessor",
-        help="Use the TextPreProcessor.",
+        const="TruncationTextPreProcessor",
+        help="Use the TruncationTextPreProcessor.",
     )
     group_pre_processor.add_argument(
         "-rwc",
-        "--rolling_window_chunks",
+        "--rolling_window",
         action="append_const",
         const="RollingWindowChunkPreProcessor",
         help="Use the RollingWindowChunkPreProcessor.",
     )
     group_pre_processor.add_argument(
         "-slt",
-        "--sliding_window_text",
+        "--sliding_window",
         action="append_const",
         const="SlidingWindowTextPreProcessor",
         help="Use the SlidingWindowTextPreProcessor.",
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         type=str,
         metavar="NAME",
         dest="target_collection",
-        default="log_likelihoods",
+        default="features_prismai",
         help="Target collection name.",
     )
     mongodb_group.add_argument(
@@ -395,9 +395,8 @@ if __name__ == "__main__":
         if domain:
             mongodb_filter_query["domain"] = domain
 
-        mongodb_limit = args.mongodb_limit or mongodb_source_collection.count_documents(
-            mongodb_filter_query
-        )
+        mongodb_limit = args.mongodb_limit
+        mongodb_skip = args.mongodb_skip
 
         for dataset in batched(
             tqdm(
@@ -406,7 +405,7 @@ if __name__ == "__main__":
                     projection=fields_projection,
                     batch_size=mongodb_batch_size,
                     limit=mongodb_limit,
-                    skip=args.mongodb_skip,
+                    skip=mongodb_skip,
                 ),
                 total=mongodb_limit,
                 desc=f"Processing Documents from {domain or 'All Domains'}",
