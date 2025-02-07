@@ -31,6 +31,7 @@ class TransitionScores(DataClassMappingMixin):
     target_ranks: list[int] = field(default_factory=list)
     top_k_indices: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
+    intermediate_logits: list[list[float]] = field(default_factory=list)
 
     def __getitem__(self, key):
         if isinstance(key, (int, slice)):
@@ -40,6 +41,7 @@ class TransitionScores(DataClassMappingMixin):
                 self.target_ranks[key],
                 self.top_k_indices[key],
                 self.top_k_probs[key],
+                self.intermediate_logits[key],
             )
         return super().__getitem__(key)
 
@@ -53,12 +55,14 @@ class TransitionScores(DataClassMappingMixin):
         target_ranks: float,
         top_k_indices: list[int],
         top_k_probs: list[float],
+        intermediate_logits: list[float],
     ):
         self.target_ids.append(target_id)
         self.target_probs.append(target_probs)
         self.target_ranks.append(target_ranks)
         self.top_k_indices.append(top_k_indices)
         self.top_k_probs.append(top_k_probs)
+        self.intermediate_logits.append(intermediate_logits)
 
     def extend(
         self,
@@ -67,12 +71,14 @@ class TransitionScores(DataClassMappingMixin):
         target_ranks: list[float],
         top_k_indices: list[list[int]],
         top_k_probs: list[list[float]],
+        intermediate_logits: list[list[float]],
     ):
         self.target_ids.extend(target_ids)
         self.target_probs.extend(target_probs)
         self.target_ranks.extend(target_ranks)
         self.top_k_indices.extend(top_k_indices)
         self.top_k_probs.extend(top_k_probs)
+        self.intermediate_logits.extend(intermediate_logits)
 
     @classmethod
     def merge(cls, others: list[Self]) -> Self:
@@ -85,6 +91,7 @@ class TransitionScores(DataClassMappingMixin):
                 other["target_ranks"],
                 other["top_k_indices"],
                 other["top_k_probs"],
+                other.get("intermediate_logits", []),
             )
         return self
 
@@ -94,15 +101,16 @@ class TransitionScores(DataClassMappingMixin):
         target_rank: int
         top_k_index: list[int]
         top_k_prob: list[float]
+        intermediate_logits: list[float]
 
     def zipped(self) -> Generator[Item, None, None]:
         """
         Iterate over a zipped representation of the transition scores.
         Roughly equivalent to:
-        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
+        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.intermediate_logits, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
 
         Yields:
-            Item: A named tuple containing the target_id, target_prob, top_k_index, and top_k_prob.
+            Item: A named tuple containing the target_id, target_prob, intermediate_logits, top_k_indices, and top_k_probs.
         """
         yield from (
             self.Item(item)
@@ -112,6 +120,7 @@ class TransitionScores(DataClassMappingMixin):
                 self["target_ranks"],
                 self["top_k_indices"],
                 self["top_k_probs"],
+                self.get("intermediate_logits", []),
             )
         )
 
