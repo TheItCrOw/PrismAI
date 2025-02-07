@@ -1,7 +1,7 @@
 import pickle
 
-import pytorch_lightning as pl
 import torch
+from lightning.pytorch import LightningDataModule
 from torch.utils.data import DataLoader
 
 from luminar.features import (
@@ -15,7 +15,7 @@ from simple_dataset.dataset import Dataset
 from transition_scores.data import TransitionScores
 
 
-class DocumentClassificationDataModule(pl.LightningDataModule):
+class DocumentClassificationDataModule(LightningDataModule):
     def __init__(
         self,
         mongodb_adapter: MongoDBAdapter,
@@ -30,6 +30,18 @@ class DocumentClassificationDataModule(pl.LightningDataModule):
         **kwargs,
     ):
         super().__init__()
+
+        self.save_hyperparameters(
+            {
+                "train_batch_size": train_batch_size,
+                "eval_batch_size": eval_batch_size,
+                "eval_split_size": eval_split_size,
+                "feature_dim": feature_dim,
+                "feature_selection": str(feature_selection),
+                "feature_type": str(feature_type),
+            }
+        )
+
         self.mongodb_adapter = mongodb_adapter
         match feature_selection:
             case string if isinstance(string, str):

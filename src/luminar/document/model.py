@@ -2,10 +2,11 @@ from collections import defaultdict
 from typing import NamedTuple
 
 import evaluate
-import pytorch_lightning as pl
+from sklearn.metrics import auc, roc_curve
 import torch
 import torch.nn as nn
 from transformers import get_linear_schedule_with_warmup
+from lightning.pytorch import LightningModule
 
 from luminar.features import OneDimFeatures, ThreeDimFeatures, TwoDimFeatures
 
@@ -32,7 +33,7 @@ class ConvolutionalLayerSpec(NamedTuple):
         return (self.kernel_size_1d - 1) // 2
 
 
-class DocumentClassficationModel(pl.LightningModule):
+class DocumentClassficationModel(LightningModule):
     def __init__(
         self,
         feature_size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,

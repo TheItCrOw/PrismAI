@@ -308,7 +308,6 @@ class LogLikelihoodLogRankRatio(FeatureAlgorithm):
         )
         return self(target_probs, target_ranks)
 
-
 class LikelihoodTopkLikelihoodRatio(FeatureAlgorithm):
     def __call__(
         self,
