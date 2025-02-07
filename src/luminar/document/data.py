@@ -1,4 +1,5 @@
 import pickle
+from typing import Callable
 
 import torch
 from lightning.pytorch import LightningDataModule
@@ -90,7 +91,7 @@ class DocumentClassificationDataModule(LightningDataModule):
 
     def setup(self, stage=None):
         match stage:
-            case "fit" if getattr(self, "train_data", None) is not None:
+            case "fit" | "train" if getattr(self, "train_data", None) is not None:
                 return
             case "validation" if getattr(self, "eval_data", None) is not None:
                 return
@@ -101,10 +102,7 @@ class DocumentClassificationDataModule(LightningDataModule):
             case None:
                 pass
 
-        if (
-            getattr(self, "human_features", None) is None
-            or getattr(self, "synth_features", None) is None
-        ):
+        if getattr(self, "_dataset", None) is None:
             if self._use_cache:
                 print(f"Caching Enabled - Loading Dataset in setup({stage})")
                 try:
@@ -118,11 +116,6 @@ class DocumentClassificationDataModule(LightningDataModule):
                 if getattr(self, "_dataset", None) is None:
                     self._dataset = Dataset(self.mongodb_adapter.iter_documents())
 
-            # drop documents where we don't have one human and one AI generated variant
-            self._dataset = self._dataset.filter(
-                lambda doc: len(doc["features"]) == 2
-                and len({ts["document"]["type"] for ts in doc["features"]}) == 2
-            )
             # flatten the nested features list
             self._dataset = self._dataset.flat_map(lambda doc: doc["features"])
             # merge strided transition scores
@@ -130,38 +123,42 @@ class DocumentClassificationDataModule(LightningDataModule):
                 TransitionScores.merge, "transition_scores"
             )
 
-            self.human_features: list[TransitionScores] = list(
-                # filter for human written documents
-                self._dataset.filter(
-                    lambda doc: doc["document"]["type"] == "source", in_place=False
-                )
-                # filter out documents that are too short
-                .filter(
-                    lambda doc: len(doc["transition_scores"])
-                    >= self.feature_selection.required_size()
-                )
-                .map(
-                    lambda doc: {
-                        "features": self.convert_to_features(doc["transition_scores"]),
-                        "labels": 0,
-                    }
+            self._dataset: dict[str, list[TransitionScores]] = (
+                self._dataset.group_documents_by(
+                    lambda doc: doc["document"].get("type", "source"),
+                    aggregate=("transition_scores",),
+                    return_dict=True,
                 )
             )
-            self.synth_features: list[TransitionScores] = list(
-                # filter for AI generated documents
-                self._dataset.filter(lambda doc: doc["document"]["type"] != "source")
-                # filter out documents that are too short
-                .filter(
-                    lambda doc: len(doc["transition_scores"])
-                    >= self.feature_selection.required_size()
-                )
-                .map(
-                    lambda doc: {
-                        "features": self.convert_to_features(doc["transition_scores"]),
-                        "labels": 1,
-                    }
-                )
+
+            keys = set(self._dataset.keys())
+            if "source" not in keys:
+                raise ValueError(f"Expected a 'source' document type, but got {keys}")
+            if len(self._dataset.keys()) > 2:
+                raise ValueError(f"Expected only two document types, but got {keys}")
+
+        if (
+            stage is None
+            or getattr(self, "human_features", None) is None
+            or getattr(self, "synth_features", None) is None
+        ):
+            key = "source"
+            keys.remove(key)
+            human_features = Dataset(self._dataset[key]["transition_scores"])
+            human_features.filter(
+                lambda ts: len(ts) >= self.feature_selection.required_size()
             )
+            human_features.map(self.get_featurizer(0))
+            self.human_features = human_features
+
+            (key,) = keys
+            synth_features = Dataset(self._dataset[key]["transition_scores"])
+            synth_features.filter(
+                lambda ts: len(ts) >= self.feature_selection.required_size()
+            )
+            synth_features.map(self.get_featurizer(1))
+            self.synth_features = synth_features
+
 
         self.eval_data = []
         self.train_data = []
@@ -182,8 +179,18 @@ class DocumentClassificationDataModule(LightningDataModule):
         self.train_data.extend(_train_data)
         self.eval_data.extend(_eval_data)
 
-    def convert_to_features(self, transition_scores: TransitionScores):
-        return self.feature_algo.featurize(transition_scores)
+
+    def get_featurizer(
+        self,
+        label: int,
+    ) -> Callable[[TransitionScores], dict]:
+        def _featurizer(ts: TransitionScores) -> dict:
+            return {
+                "features": self.feature_algo.featurize(ts),
+                "labels": label,
+            }
+
+        return _featurizer
 
     def train_dataloader(self):
         return DataLoader(

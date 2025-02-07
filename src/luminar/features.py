@@ -219,11 +219,11 @@ class FeatureAlgorithm(ABC):
         self.feature_selection = feature_selection
 
     @abstractmethod
-    def __call__(self, *features: np.ndarray, **kwargs) -> np.ndarray:
+    def __call__(self, *features: np.ndarray, **kwargs) -> torch.Tensor:
         pass
 
     @abstractmethod
-    def featurize(self, transition_scores: TransitionScores) -> np.ndarray:
+    def featurize(self, transition_scores: TransitionScores) -> torch.Tensor:
         pass
 
     class Type(enum.StrEnum):
@@ -307,6 +307,7 @@ class LogLikelihoodLogRankRatio(FeatureAlgorithm):
             transition_scores.target_ranks,
         )
         return self(target_probs, target_ranks)
+
 
 class LikelihoodTopkLikelihoodRatio(FeatureAlgorithm):
     def __call__(
