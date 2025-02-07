@@ -67,7 +67,7 @@ if __name__ == "__main__":
                     try:
                         seed_everything(42)
                         model = DocumentClassficationModel(
-                            dm.feature_selection.effective_shape(),
+                            feature_size,
                             projection_dim=pdim,
                             learning_rate=lr,
                             warmup_steps=wus,

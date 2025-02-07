@@ -8,6 +8,18 @@ import torch
 from transition_scores.data import TransitionScores
 
 
+class FeaturizedTransitionScores(NamedTuple):
+    target_ids: torch.Tensor
+    target_probs: torch.Tensor
+    target_ranks: torch.Tensor
+    top_k_indices: torch.Tensor
+    top_k_probs: torch.Tensor
+    intermediate_logits: torch.Tensor
+
+    def __len__(self):
+        return len(self.target_probs)
+
+
 class OneDimFeatures(NamedTuple):
     size: int
 
@@ -26,253 +38,213 @@ class ThreeDimFeatures(NamedTuple):
 type AnyDimFeatures = OneDimFeatures | TwoDimFeatures | ThreeDimFeatures
 
 
-class FeatureSelection(ABC):
-    def __init__(
-        self,
-        size: int | tuple[int, ...],
-        offset: int = 1,
-    ):
-        match size:
-            case (number,) | number if isinstance(number, int):
-                self.size = OneDimFeatures(number)
-            case (h, w):
-                self.size = TwoDimFeatures(h, w)
-            case (h, w, d):
-                self.size = ThreeDimFeatures(h, w, d)
-            case _:
-                raise ValueError(f"Invalid feature size {size}")
+class Slicer(ABC):
+    def __init__(self, size: int, offset: int = 0):
+        """
+        Creates a single slice of sequences.
 
+        Args:
+            size (int): The size of the slice.
+            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
+        """
+        self.size = size
         self.offset = offset
 
     @abstractmethod
-    def __call__(
-        self,
-        *features: np.ndarray,
-        **kwargs,
-    ) -> list[np.ndarray]:
-        pass
+    def slice(self, *args, **kwargs) -> tuple[slice]: ...
 
-    @classmethod
-    def first(cls, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures) -> Self:
-        return FeatureSelectionFirst(size)
+    class Type(enum.Enum):
+        First = "first"
+        Random = "random"
+        RandomMultiple = "random_multiple"
+        RandomStrided = "random_strided"
 
-    @classmethod
-    def random(cls, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures) -> Self:
-        return FeatureSelectionRandom(size)
-
-    @classmethod
-    def random_no_overlap(cls, size: TwoDimFeatures | ThreeDimFeatures) -> Self:
-        return FeatureSelectionRandomNoOverlap(size)
-
-    def effective_size(self) -> int:
-        match self.size:
-            case (size,):
-                return size
-            case (a, b) | (a, b, _):
-                return a * b
-
-    def required_size(self) -> int:
-        return self.effective_size() + self.offset
-
-    def effective_shape(self) -> OneDimFeatures | TwoDimFeatures | ThreeDimFeatures:
-        return self.size
-
-    class Type(enum.StrEnum):
-        First = "First"
-        Random = "Random"
-        RandomNoOverlap = "RandomNoOverlap"
-
-        def into(
-            self, size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures
-        ) -> "FeatureSelection":
+        def into(self, feature_dim: AnyDimFeatures) -> Self:
             match self:
-                case FeatureSelection.Type.First:
-                    return FeatureSelectionFirst(size)
-                case FeatureSelection.Type.Random:
-                    return FeatureSelectionRandom(size)
-                case FeatureSelection.Type.RandomNoOverlap:
-                    return FeatureSelectionRandomNoOverlap(size)
+                case self.First:
+                    return SliceFirst(feature_dim[0])
+                case self.Random:
+                    return SliceRandom(feature_dim[0])
+                case self.RandomMultiple:
+                    return SliceRandomMultiple(feature_dim[0], feature_dim[1])
+                case self.RandomStrided:
+                    return SliceRandomStrided(feature_dim[0], feature_dim[1])
                 case _:
-                    raise RuntimeError
+                    raise RuntimeError(f"Invalid Slicer type: {self}")
 
 
-class FeatureSelectionFirst(FeatureSelection):
-    def __call__(
-        self,
-        *features: np.ndarray,
-    ) -> list[np.ndarray]:
-        match self.size:
-            case (size,):
-                return [
-                    torch.tensor(feature[self.offset : self.offset + size])
-                    for feature in features
-                ]
-            case (h, w) | (h, w, _):
-                slices = np.arange(self.offset, len(features[0]) - w, w)[:h]
-                slices = slices.reshape(-1, 1).repeat(w, 1)
-                slices = slices + np.arange(w).reshape(1, -1)
-                return [torch.tensor(feature[slices]) for feature in features]
-            case _:
-                raise RuntimeError(f"Invalid slice size: {size}")
+class MutliSlicer(Slicer):
+    def __init__(self, size: int, multiple: int, offset: int = 0, sort: bool = False):
+        """
+        Creates multiple slices of sequences.
 
-
-class FeatureSelectionRandom:
-    def __init__(
-        self,
-        size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
-        offset: int = 1,
-        sort: bool = True,
-        flatten: bool = False,
-    ):
+        Args:
+            size (int): The size of the slices.
+            multiple (int): The number of slices to create.
+            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
+            sort (bool, optional): If true, sort the slices in ascending order.
+                Otherwise, the slices are in random order. Defaults to False.
+        """
         super().__init__(size, offset)
+        self.multiple = multiple
         self.sort = sort
-        self.flatten = flatten
 
-    def __call__(
-        self,
-        *features: np.ndarray,
-    ) -> list[np.ndarray]:
-        length = len(features[0])
-        match self.size:
-            case (size,):
-                offset = np.random.randint(self.offset, length - self.offset - size)
-                return [
-                    torch.tensor(feature[offset : offset + size])
-                    for feature in features
-                ]
-            case (h, w) | (h, w, _):
-                slices = np.arange(self.offset, length - self.offset - w)
-                slices = np.random.choice(slices, h, replace=False)
-
-                if self.sort:
-                    slices = np.sort(slices)
-
-                slices = slices.reshape(-1, 1).repeat(w, 1)
-                slices = slices + np.arange(w).reshape(1, -1)
-
-                features = [torch.tensor(feature[slices]) for feature in features]
-                if self.flatten:
-                    features = [
-                        feature.flatten()
-                        if feature.ndim == 2
-                        else feature.reshape(-1, feature.shape[-1])
-                        for feature in features
-                    ]
-                return features
-            case _:
-                raise RuntimeError(f"Invalid slice size: {size}")
-
-    def effective_shape(self) -> OneDimFeatures | TwoDimFeatures | ThreeDimFeatures:
-        match self.flatten, self.size:
-            case True, (w, h) | (w, h, _):
-                return TwoDimFeatures(w * h, *self.size[2:])
-            case _, shape:
-                return shape
+    @abstractmethod
+    def slice(self, *args, **kwargs) -> tuple[slice, ...]: ...
 
 
-class FeatureSelectionRandomNoOverlap(FeatureSelectionRandom):
-    def __init__(
-        self,
-        size: TwoDimFeatures | ThreeDimFeatures,
-        offset: int = 1,
-        sort: bool = True,
-        flatten: bool = False,
-    ):
-        super().__init__(size, offset=offset, sort=sort, flatten=flatten)
-        match self.size:
-            case (_,):
-                raise ValueError(f"{type(self).__name__} does not support 1D features")
-            case (w, h) | (w, h, _):
-                self.w = w
-                self.h = h
+class SliceFirst(Slicer):
+    def slice(self, *_args, **_kwargs) -> tuple[slice]:
+        """
+        Slice the first part of the sequence starting from the offset.
 
-    def __call__(
-        self,
-        *features: np.ndarray,
-    ) -> list[torch.Tensor]:
-        length = len(features[0])
-        slices = np.arange(self.offset, length - self.offset - self.w, self.w)
-        slices = np.random.choice(slices, self.h, replace=False)
+        Returns:
+            tuple[slice]: A tuple with a single slice.
+        """
+        return (slice(self.offset, self.offset + self.size),)
+
+
+class SliceRandom(Slicer):
+    def slice(self, length: int) -> tuple[slice]:
+        """
+        Randomly slice a part of the sequence starting from the offset.
+
+        Args:
+            length (int): The length of the sequence.
+
+        Returns:
+            tuple[slice]: A tuple with a single slice.
+        """
+        upper = length - self.offset - self.size
+        if upper <= 0:
+            return slice(0, self.size)
+        i = np.random.randint(self.offset, upper)
+        return (slice(i, i + self.size),)
+
+
+class SliceRandomMultiple(MutliSlicer):
+    def slice(self, length: int, *_args, **_kwargs) -> tuple[slice, ...]:
+        """
+        Create random slices starting from the offset.
+
+        Args:
+            length (int): The length of the sequence.
+
+        Returns:
+            tuple[slice, ...]: A tuple with the random slices.
+        """
+        upper = length - self.offset - self.size
+        if upper <= 0 or upper <= self.offset:
+            return [slice(0, self.size)]
+
+        slices = np.arange(self.offset, upper)
+        slices = np.random.choice(
+            slices,
+            min(upper - self.offset, self.multiple),
+            replace=False,
+        )
 
         if self.sort:
-            slices = np.sort(slices)
+            slices = sorted(slices)
 
-        slices = slices.reshape(-1, 1).repeat(self.w, 1)
-        slices = slices + np.arange(self.w).reshape(1, -1)
-
-        features = [torch.tensor(feature[slices]) for feature in features]
-        if self.flatten:
-            features = [
-                feature.flatten()
-                if feature.ndim == 2
-                else feature.view(-1, feature.shape[-1])
-                for feature in features
-            ]
-        return features
+        return tuple(slice(i, i + self.size) for i in slices)
 
 
-class FeatureAlgorithm(ABC):
+class SliceRandomStrided(MutliSlicer):
     def __init__(
         self,
-        feature_selection: FeatureSelection,
+        size: int,
+        multiple: int,
+        stride: int | None = None,
+        offset=0,
+        sort=False,
     ):
-        self.feature_selection = feature_selection
+        """
+        Randomly slice a part of the sequence starting from the offset with a given stride.
+
+        Args:
+            size (int): _description_
+            multiple (int): _description_
+            stride (int | None, optional): Stride of the slices. Defaults to to `size`.
+            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
+            sort (bool, optional): If true, sort the slices in ascending order.
+                Otherwise, the slices are in random order. Defaults to False.
+        """
+        super().__init__(size, multiple, offset, sort)
+        self.stride = stride or size
+
+    def slice(self, length: int, *_args, **_kwargs) -> tuple[slice, ...]:
+        """
+        Create random slices with a given stride starting from the offset.
+
+        Args:
+            length (int): The length of the sequence.
+
+        Returns:
+            tuple[slice, ...]: A tuple with the random slices.
+        """
+        upper = length - self.offset - self.size
+        if upper <= 0 or upper <= self.offset:
+            return [slice(0, self.size)]
+
+        slices = np.arange(self.offset, upper, self.stride)
+        slices = np.random.choice(
+            slices,
+            min(upper - self.offset, self.multiple),
+            replace=False,
+        )
+
+        if self.sort:
+            slices = sorted(slices)
+
+        return tuple(slice(i, i + self.size) for i in slices)
+
+
+class FeatureExtractor(ABC):
+    @abstractmethod
+    def __call__(self, *features: torch.Tensor, **kwargs) -> torch.Tensor: ...
 
     @abstractmethod
-    def __call__(self, *features: np.ndarray, **kwargs) -> torch.Tensor:
-        pass
+    def featurize(
+        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
+    ) -> list[torch.Tensor]: ...
 
-    @abstractmethod
-    def featurize(self, transition_scores: TransitionScores) -> torch.Tensor:
-        pass
+    class Type(enum.Enum):
+        Likelihood = "likelihood"
+        LogLikelihoodLogRankRatio = "log_likelihood_log_rank_ratio"
+        LikelihoodTopkLikelihoodRatio = "likelihood_topk_likelihood_ratio"
+        TopkLikelihoodLikelihoodRatio = "topk_likelihood_likelihood_ratio"
+        IntermediateLogits = "intermediate_logits"
 
-    class Type(enum.StrEnum):
-        Likelihood = Default = "Likelihood"
-        LLR = LogLikelihoodLogRankRatio = "Log-Likelihood Log-Rank Ratio"
-        LTR = LikelihoodTopkLikelihoodRatio = "Likelihood Top-k Likelihood Ratio"
-        TLR = TopkLikelihoodLikelihoodRatio = "Top-k Likelihood Likelihood Ratio"
-        LTS = LikelihoodTopkStack = "Likelihood Top-k Stack"
-
-        def into(self, *args, **kwargs) -> "FeatureAlgorithm":
+        def into(self, *args, **kwargs) -> Self:
             match self:
                 case self.Likelihood:
                     return Likelihood(*args, **kwargs)
-                case self.LLR:
+                case self.LogLikelihoodLogRankRatio:
                     return LogLikelihoodLogRankRatio(*args, **kwargs)
-                case self.LTR:
+                case self.LikelihoodTopkLikelihoodRatio:
                     return LikelihoodTopkLikelihoodRatio(*args, **kwargs)
-                case self.TLR:
+                case self.TopkLikelihoodLikelihoodRatio:
                     return TopkLikelihoodLikelihoodRatio(*args, **kwargs)
-                case self.LTS:
-                    raise NotImplementedError(
-                        f"{FeatureAlgorithm.__name__}({self.value}) is not implemented yet"
-                    )
-                    # return LikelihoodTopkStack(*args, **kwargs)
+                case self.IntermediateLogits:
+                    return IntermediateLogits(*args, **kwargs)
                 case _:
-                    raise RuntimeError
+                    raise RuntimeError(f"Invalid FeatureExtractor type: {self}")
 
 
-class Likelihood(FeatureAlgorithm):
+class Likelihood(FeatureExtractor):
     def __call__(
         self,
         target_probs: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute the likelihood.
-
-        Args:
-            target_probs (torch.Tensor): Target token probabilities.
-
-        Returns:
-            torch.Tensor: Tensor of the same shape as target_probs.
-        """
         return target_probs.float()
 
-    def featurize(self, transition_scores: TransitionScores):
-        (target_probs,) = self.feature_selection(transition_scores.target_probs)
-        return self(target_probs)
+    def featurize(self, transition_scores: TransitionScores, slices: tuple[slice, ...]):
+        target_probs = torch.tensor(transition_scores.target_probs)
+        return [self(target_probs[s]) for s in slices]
 
 
-class LogLikelihoodLogRankRatio(FeatureAlgorithm):
+class LogLikelihoodLogRankRatio(FeatureExtractor):
     def __call__(
         self,
         target_probs: torch.Tensor,
@@ -290,26 +262,30 @@ class LogLikelihoodLogRankRatio(FeatureAlgorithm):
         """
         return (
             torch.div(
-                # probs are generally small but may approach zero due to rounding,
-                # so we add epsilon to avoid log(0)
+                # probs are generally small but may approach zero due to rounding
+                # in our pipeline, so we add epsilon to avoid log(0)
                 torch.log(target_probs + epsilon),
                 # ranks, however, are 0-indexed, so we use log1p to avoid log(0)
                 # and add epsilon to avoid division by zero
                 torch.log1p(target_ranks) + epsilon,
             )
-            .exp()
+            .exp()  # FIXME
             .float()
         )
 
-    def featurize(self, transition_scores: TransitionScores):
-        target_probs, target_ranks = self.feature_selection(
-            transition_scores.target_probs,
-            transition_scores.target_ranks,
+    def featurize(self, transition_scores: TransitionScores, slices: tuple[slice, ...]):
+        target_probs, target_ranks = (
+            torch.tensor(transition_scores.target_probs),
+            torch.tensor(transition_scores.target_ranks),
         )
-        return self(target_probs, target_ranks)
+        return [self(target_probs[s], target_ranks[s]) for s in slices]
 
 
-class LikelihoodTopkLikelihoodRatio(FeatureAlgorithm):
+class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
+    def __init__(self, k: int = 8):
+        super().__init__()
+        self.k = k
+
     def __call__(
         self,
         target_probs: torch.Tensor,
@@ -326,15 +302,17 @@ class LikelihoodTopkLikelihoodRatio(FeatureAlgorithm):
         """
         return torch.div(target_probs, top_k_probs)
 
-    def featurize(self, transition_scores: TransitionScores):
-        target_probs, top_k_probs = self.feature_selection(
-            transition_scores.target_probs,
-            transition_scores.top_k_probs,
+    def featurize(
+        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
+    ) -> list[torch.Tensor]:
+        target_probs, top_k_probs = (
+            torch.tensor(transition_scores.target_probs),
+            torch.tensor(transition_scores.top_k_probs),
         )
-        return self(target_probs, top_k_probs)
+        return [self(target_probs[s, self.k], top_k_probs[s, self.k]) for s in slices]
 
 
-class TopkLikelihoodLikelihoodRatio(FeatureAlgorithm):
+class TopkLikelihoodLikelihoodRatio(LikelihoodTopkLikelihoodRatio):
     def __call__(
         self,
         target_probs: torch.Tensor,
@@ -350,13 +328,6 @@ class TopkLikelihoodLikelihoodRatio(FeatureAlgorithm):
             torch.Tensor: Tensor of the same shape as top_k_probs.
         """
         return torch.div(top_k_probs, target_probs)
-
-    def featurize(self, transition_scores: TransitionScores):
-        target_probs, top_k_probs = self.feature_selection(
-            transition_scores.target_probs,
-            transition_scores.top_k_probs,
-        )
-        return self(target_probs, top_k_probs)
 
 
 def log_likelihood_top_k_likelihood_ratio(
@@ -389,3 +360,15 @@ def log_likelihood_log_top_k_likelihood_ratio(
         torch.Tensor: Tensor of the same shape as target_probs and top_k_probs.
     """
     return torch.div(target_probs.log(), top_k_probs.log())
+
+
+class IntermediateLogits(Likelihood):
+    def __init__(self, layers: slice | None):
+        super().__init__()
+        self.layers = layers or slice(0, None)
+
+    def featurize(
+        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
+    ) -> list[torch.Tensor]:
+        intermediate_logits = torch.tensor(transition_scores.intermediate_logits)
+        return [self(intermediate_logits[s, self.layers]) for s in slices]

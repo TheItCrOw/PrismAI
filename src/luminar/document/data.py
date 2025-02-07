@@ -1,5 +1,6 @@
+import itertools
 import pickle
-from typing import Callable
+from typing import Iterable
 
 import torch
 from lightning.pytorch import LightningDataModule
@@ -7,9 +8,9 @@ from torch.utils.data import DataLoader
 
 from luminar.features import (
     AnyDimFeatures,
-    FeatureAlgorithm,
-    FeatureSelection,
+    FeatureExtractor,
     OneDimFeatures,
+    Slicer,
 )
 from luminar.mongo import MongoDBAdapter
 from simple_dataset.dataset import Dataset
@@ -21,8 +22,10 @@ class DocumentClassificationDataModule(LightningDataModule):
         self,
         mongodb_adapter: MongoDBAdapter,
         feature_dim: AnyDimFeatures | tuple[int, ...] = OneDimFeatures(256),
-        feature_selection: FeatureSelection.Type | str = FeatureSelection.Type.First,
-        feature_type: FeatureAlgorithm.Type | str = FeatureAlgorithm.Type.Likelihood,
+        slicer: Slicer | Slicer.Type | str = Slicer.Type.First,
+        featurizer: FeatureExtractor
+        | FeatureExtractor.Type
+        | str = FeatureExtractor.Type.Likelihood,
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
         eval_split_size: float = 0.2,
@@ -38,32 +41,36 @@ class DocumentClassificationDataModule(LightningDataModule):
                 "eval_batch_size": eval_batch_size,
                 "eval_split_size": eval_split_size,
                 "feature_dim": feature_dim,
-                "feature_selection": str(feature_selection),
-                "feature_type": str(feature_type),
+                "slicer": str(slicer),
+                "featurizer": str(featurizer),
             }
         )
 
         self.mongodb_adapter = mongodb_adapter
-        match feature_selection:
+        match slicer:
+            case instance if isinstance(instance, Slicer):
+                self.slicer: Slicer = instance
+            case value if isinstance(value, Slicer.Type):
+                self.slicer: Slicer = value.into(feature_dim)
             case string if isinstance(string, str):
-                self.feature_selection = FeatureSelection.Type[string].into(feature_dim)
-            case value if isinstance(value, FeatureSelection.Type):
-                self.feature_selection = value.into(feature_dim)
+                self.slicer: Slicer = Slicer.Type[string].into(feature_dim)
             case _:
                 raise ValueError(
-                    f"Unsupported feature selection: {feature_selection}. Must be one of {FeatureSelection.Type.__members__.keys()}"
+                    f"Unsupported feature selection: {slicer}. "
+                    f"Must be a {Slicer.__name__} instance one of {Slicer.Type.__members__.keys()}"
                 )
 
-        match feature_type:
+        match featurizer:
+            case instance if isinstance(instance, FeatureExtractor):
+                self.featurizer: FeatureExtractor = instance
+            case value if isinstance(value, FeatureExtractor.Type):
+                self.featurizer: FeatureExtractor = value.into()
             case string if isinstance(string, str):
-                self.feature_algo = FeatureAlgorithm.Type[string].into(
-                    self.feature_selection
-                )
-            case value if isinstance(value, FeatureAlgorithm.Type):
-                self.feature_algo = value.into(self.feature_selection)
+                self.featurizer: FeatureExtractor = FeatureExtractor.Type[string].into()
             case _:
                 raise ValueError(
-                    f"Unsupported feature type: {feature_type}. Must be one of {FeatureAlgorithm.Type.__members__.keys()}"
+                    f"Unsupported feature type: {featurizer}. "
+                    f"Must be a {FeatureExtractor.Type.__name__} instance one of {FeatureExtractor.Type.__members__.keys()}"
                 )
 
         self.train_batch_size = train_batch_size
@@ -131,34 +138,30 @@ class DocumentClassificationDataModule(LightningDataModule):
                 )
             )
 
+        if (
+            getattr(self, "human_features", None) is None
+            or getattr(self, "synth_features", None) is None
+        ):
             keys = set(self._dataset.keys())
             if "source" not in keys:
                 raise ValueError(f"Expected a 'source' document type, but got {keys}")
             if len(self._dataset.keys()) > 2:
                 raise ValueError(f"Expected only two document types, but got {keys}")
 
-        if (
-            stage is None
-            or getattr(self, "human_features", None) is None
-            or getattr(self, "synth_features", None) is None
-        ):
             key = "source"
             keys.remove(key)
-            human_features = Dataset(self._dataset[key]["transition_scores"])
-            human_features.filter(
-                lambda ts: len(ts) >= self.feature_selection.required_size()
+            self.human_features = (
+                Dataset(self._dataset[key]["transition_scores"])
+                .flat_map(self._featurize)
+                .update(itertools.cycle([{"labels": 0}]))
             )
-            human_features.map(self.get_featurizer(0))
-            self.human_features = human_features
 
             (key,) = keys
-            synth_features = Dataset(self._dataset[key]["transition_scores"])
-            synth_features.filter(
-                lambda ts: len(ts) >= self.feature_selection.required_size()
+            self.synth_features = (
+                Dataset(self._dataset[key]["transition_scores"])
+                .flat_map(self._featurize)
+                .update(itertools.cycle([{"labels": 1}]))
             )
-            synth_features.map(self.get_featurizer(1))
-            self.synth_features = synth_features
-
 
         self.eval_data = []
         self.train_data = []
@@ -179,26 +182,25 @@ class DocumentClassificationDataModule(LightningDataModule):
         self.train_data.extend(_train_data)
         self.eval_data.extend(_eval_data)
 
-
-    def get_featurizer(
-        self,
-        label: int,
-    ) -> Callable[[TransitionScores], dict]:
-        def _featurizer(ts: TransitionScores) -> dict:
-            return {
-                "features": self.feature_algo.featurize(ts),
-                "labels": label,
-            }
-
-        return _featurizer
+    def _featurize(self, ts: TransitionScores) -> Iterable[dict[str, torch.Tensor]]:
+        slices = self.slicer.slice(len(ts))
+        features = self.featurizer.featurize(ts, slices)
+        yield from ({"features": feature} for feature in features)
 
     def train_dataloader(self):
         return DataLoader(
-            self.train_data, batch_size=self.train_batch_size, shuffle=True
+            self.train_data,
+            batch_size=self.train_batch_size,
+            shuffle=True,
+            collate_fn=self._collate_fn,
         )
 
     def val_dataloader(self):
-        return DataLoader(self.eval_data, batch_size=self.eval_batch_size)
+        return DataLoader(
+            self.eval_data,
+            batch_size=self.eval_batch_size,
+            collate_fn=self._collate_fn,
+        )
 
     # def test_dataloader(self):
     #     if len(self.eval_splits) == 1:
@@ -208,3 +210,14 @@ class DocumentClassificationDataModule(LightningDataModule):
     #             DataLoader(self.dataset[x], batch_size=self.eval_batch_size)
     #             for x in self.eval_splits
     #         ]
+
+    def _collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:
+        features = torch.nn.utils.rnn.pad_sequence(
+            [x["features"] for x in batch], batch_first=True
+        )
+        features = torch.nn.functional.pad(
+            features, (0, self.hparams.feature_dim[0] - features.size(1))
+        )
+        labels = torch.tensor([x["labels"] for x in batch])
+
+        return {"features": features, "labels": labels}
