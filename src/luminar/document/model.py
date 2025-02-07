@@ -2,11 +2,11 @@ from collections import defaultdict
 from typing import NamedTuple
 
 import evaluate
-from sklearn.metrics import auc, roc_curve
 import torch
 import torch.nn as nn
-from transformers import get_linear_schedule_with_warmup
 from lightning.pytorch import LightningModule
+from sklearn.metrics import auc, roc_curve
+from transformers import get_linear_schedule_with_warmup
 
 from luminar.features import OneDimFeatures, ThreeDimFeatures, TwoDimFeatures
 
@@ -111,18 +111,13 @@ class DocumentClassficationModel(LightningModule):
         self.outputs = defaultdict(list)
 
     def forward(self, features: torch.Tensor, **_):
-        # if features.isnan().any():
-        #     raise ValueError("NaNs in input features")
         if features.ndim == 2:
             features = features.unsqueeze(1)
+
         for layer in self.conv_layers:
             features = layer(features)
-        # if features.isnan().any():
-        #     raise ValueError("NaNs in CNN output")
-        logits = self.classifier(features.flatten(1))
-        # if logits.isnan().any():
-        #     raise ValueError("NaNs in logits")
-        return logits
+
+        return self.classifier(features.flatten(1))
 
     def training_step(self, batch, batch_idx):
         logits = self(**batch)
