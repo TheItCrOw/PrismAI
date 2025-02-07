@@ -149,7 +149,6 @@ class DocumentClassficationModel(pl.LightningModule):
             torch.cat([x["preds"] for x in flat_outputs])
             .detach()
             .sigmoid()
-            .gt(0.5)
             .flatten()
             .float()
             .cpu()
@@ -159,16 +158,12 @@ class DocumentClassficationModel(pl.LightningModule):
         loss = torch.stack([x["loss"] for x in flat_outputs]).mean()
 
         self.log("val_loss", loss, prog_bar=True)
+
+        fpr, tpr, _ = roc_curve(labels, preds)
+        self.log("roc_auc", auc(fpr, tpr), prog_bar=True)
+
+        preds = (preds > 0.5).astype(float)
         self.log("acc", (preds == labels).sum() / len(preds), prog_bar=True)
-        for metric in self.metrics.values():
-            self.log_dict(
-                metric.compute(
-                    predictions=preds,
-                    references=labels,
-                    average="micro",
-                ),
-                prog_bar=True,
-            )
         self.outputs.clear()
 
     def configure_optimizers(self):
