@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from functools import partial
 from typing import Generator
 
-import multiprocess
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
@@ -95,7 +94,6 @@ class TransitionScorer(ABC):
                 shuffle=False,
                 collate_fn=_collate_fn,
                 batch_size=self.batch_size,
-                num_workers=multiprocess.cpu_count() // 2,
             ),
             position=2,
             leave=False,
