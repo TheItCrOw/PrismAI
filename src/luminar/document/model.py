@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from lightning.pytorch import LightningModule
 from sklearn.metrics import auc, roc_curve
+from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 
 from luminar.features import OneDimFeatures, ThreeDimFeatures, TwoDimFeatures
@@ -32,11 +33,14 @@ class ConvolutionalLayerSpec(NamedTuple):
     def padding(self) -> int:
         return (self.kernel_size_1d - 1) // 2
 
+    def __repr__(self):
+        return repr(tuple(self))
+
 
 class DocumentClassficationModel(LightningModule):
     def __init__(
         self,
-        feature_size: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
+        feature_dim: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
         conv_layer_shapes: list[ConvolutionalLayerSpec] = None,
         projection_dim: int = 128,
         learning_rate: float = 0.001,
@@ -44,9 +48,11 @@ class DocumentClassficationModel(LightningModule):
         weight_decay: float = 0.0,
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
+        second_dim_as_channels: bool = False,
         **kwargs,
     ):
         super().__init__()
+        self.save_hyperparameters()
 
         conv_layer_shapes = conv_layer_shapes or (
             # Default CNN architecture from SeqXGPT paper (Wang et al., EMNLP 2023)
@@ -56,52 +62,71 @@ class DocumentClassficationModel(LightningModule):
             + [ConvolutionalLayerSpec(64, 3, 1)]
         )
 
-        self.example_input_array = torch.randn((1, *feature_size))
-        self.save_hyperparameters()
+        self.example_input_array = torch.randn((train_batch_size, *feature_dim))
 
-        self.conv_layers = nn.ModuleList()
+        self.conv_layers = nn.Sequential()
         for conv in conv_layer_shapes:
-            match feature_size:
+            match feature_dim:
                 case OneDimFeatures(_):
                     self.conv_layers.append(
-                        nn.Sequential(
-                            nn.LazyConv1d(
-                                conv.channels,
-                                conv.kernel_size_1d,
-                                conv.stride,
-                                conv.padding,
-                            ),
-                            nn.LeakyReLU(),
-                        )
+                        nn.LazyConv1d(
+                            conv.channels,
+                            conv.kernel_size,
+                            conv.stride,
+                            conv.padding,
+                        ),
                     )
-                case TwoDimFeatures(_, _):
                     self.conv_layers.append(
-                        nn.Sequential(
-                            nn.LazyConv2d(
-                                conv.channels,
-                                conv.kernel_size_2d,
-                                conv.stride,
-                                conv.padding,
-                            ),
-                            nn.LeakyReLU(),
-                        )
+                        nn.LeakyReLU(),
                     )
-                case ThreeDimFeatures(_, _, _):
+                case TwoDimFeatures(_, _) if second_dim_as_channels:
                     self.conv_layers.append(
-                        nn.Sequential(
-                            nn.LazyConv2d(
-                                conv.channels,
-                                conv.kernel_size_2d,
-                                conv.stride,
-                                conv.padding,
-                            ),
-                            nn.LeakyReLU(),
-                        )
+                        nn.LazyConv1d(
+                            conv.channels,
+                            conv.kernel_size,
+                            conv.stride,
+                            conv.padding,
+                        ),
                     )
+                    self.conv_layers.append(
+                        nn.LeakyReLU(),
+                    )
+                case TwoDimFeatures(_, _) if not second_dim_as_channels:
+                    self.conv_layers.append(
+                        nn.LazyConv2d(
+                            conv.channels,
+                            conv.kernel_size,
+                            conv.stride,
+                            conv.padding,
+                        ),
+                    )
+                    self.conv_layers.append(
+                        nn.LeakyReLU(),
+                    )
+                # case ThreeDimFeatures(_, _, _):
+                #     self.conv_layers.append(
+                #         nn.LazyConv2d(
+                #             conv.channels,
+                #             conv.kernel_size_2d,
+                #             conv.stride,
+                #             conv.padding,
+                #         ),
+                #     )
+                #     self.conv_layers.append(
+                #         nn.LeakyReLU(),
+                #     )
+                case _:
+                    raise RuntimeError("Unsupported feature size")
+        self.conv_layers.append(nn.Flatten())
 
-        self.classifier = nn.Sequential(
-            nn.LazyLinear(projection_dim), nn.LeakyReLU(), nn.LazyLinear(1)
-        )
+        if projection_dim:
+            self.projection = nn.Sequential(
+                nn.LazyLinear(projection_dim), nn.LeakyReLU()
+            )
+        else:
+            self.projection = nn.Identity()
+
+        self.classifier = nn.LazyLinear(1)
 
         self.criterion = nn.BCEWithLogitsLoss()
 
@@ -111,13 +136,20 @@ class DocumentClassficationModel(LightningModule):
         self.outputs = defaultdict(list)
 
     def forward(self, features: torch.Tensor, **_):
-        if features.ndim == 2:
+        if self.hparams.second_dim_as_channels:
+            # We are using 2D features (so `features` is a 3D tensor)
+            # but we want to treat the second feature dimension as channels.
+            # Thus, we need to transpose the tensor here
+            features = features.transpose(1, 2)
+        else:
+            # Otherwise, we assume single channel input
+            # and add the channel dimension here
             features = features.unsqueeze(1)
 
         for layer in self.conv_layers:
             features = layer(features)
 
-        return self.classifier(features.flatten(1))
+        return self.classifier(self.projection(features.flatten(1)))
 
     def training_step(self, batch, batch_idx):
         logits = self(**batch)
@@ -137,6 +169,42 @@ class DocumentClassficationModel(LightningModule):
         )
 
     def on_validation_epoch_end(self):
+        preds, labels, loss = self._process_outputs()
+
+        self.log("val_loss", loss, prog_bar=True)
+
+        fpr, tpr, _ = roc_curve(labels, preds)
+        self.log("val_roc_auc", auc(fpr, tpr), prog_bar=True)
+
+        preds = (preds > 0.5).astype(float)
+        self.log("val_acc", (preds == labels).sum() / len(preds), prog_bar=True)
+        self.outputs.clear()
+
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
+        logits = self(**batch)
+        test_loss = self.criterion(logits.view(-1), batch["labels"].float().view(-1))
+
+        preds = logits.squeeze()
+
+        labels = batch["labels"]
+
+        self.outputs[dataloader_idx].append(
+            {"loss": test_loss, "preds": preds, "labels": labels}
+        )
+
+    def on_test_epoch_end(self):
+        preds, labels, loss = self._process_outputs()
+
+        self.log("test_loss", loss, prog_bar=True)
+
+        fpr, tpr, _ = roc_curve(labels, preds)
+        self.log("test_roc_auc", auc(fpr, tpr), prog_bar=True)
+
+        preds = (preds > 0.5).astype(float)
+        self.log("test_acc", (preds == labels).sum() / len(preds), prog_bar=True)
+        self.outputs.clear()
+
+    def _process_outputs(self):
         flat_outputs = []
         for lst in self.outputs.values():
             flat_outputs.extend(lst)
@@ -152,15 +220,7 @@ class DocumentClassficationModel(LightningModule):
         )
         labels = torch.cat([x["labels"] for x in flat_outputs]).detach().cpu().numpy()
         loss = torch.stack([x["loss"] for x in flat_outputs]).mean()
-
-        self.log("val_loss", loss, prog_bar=True)
-
-        fpr, tpr, _ = roc_curve(labels, preds)
-        self.log("roc_auc", auc(fpr, tpr), prog_bar=True)
-
-        preds = (preds > 0.5).astype(float)
-        self.log("acc", (preds == labels).sum() / len(preds), prog_bar=True)
-        self.outputs.clear()
+        return preds, labels, loss
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)."""

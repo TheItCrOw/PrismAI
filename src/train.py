@@ -11,7 +11,7 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from luminar.document.data import DocumentClassificationDataModule
 from luminar.document.model import DocumentClassficationModel
 from luminar.features import OneDimFeatures
-from luminar.mongo import MongoDBAdapter
+from luminar.mongo import MongoDatset
 
 load_dotenv("../env")
 seed_everything(42)
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         for feature_size in (32, 64, 128, 256):
             feature_size = OneDimFeatures(feature_size)
             try:
-                db = MongoDBAdapter(
+                db = MongoDatset(
                     os.environ.get("MONGO_DB_CONNECTION"),
                     "prismai",
                     "collected_items",

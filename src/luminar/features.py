@@ -1,4 +1,5 @@
 import enum
+import warnings
 from abc import ABC, abstractmethod
 from typing import NamedTuple, Self
 
@@ -39,73 +40,66 @@ type AnyDimFeatures = OneDimFeatures | TwoDimFeatures | ThreeDimFeatures
 
 
 class Slicer(ABC):
-    def __init__(self, size: int, offset: int = 0):
+    def __init__(self, size: int, sort: bool = False):
         """
         Creates a single slice of sequences.
 
         Args:
             size (int): The size of the slice.
-            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
         """
         self.size = size
-        self.offset = offset
-
-    @abstractmethod
-    def slice(self, *args, **kwargs) -> tuple[slice]: ...
-
-    class Type(enum.Enum):
-        First = "first"
-        Random = "random"
-        RandomMultiple = "random_multiple"
-        RandomStrided = "random_strided"
-
-        def into(self, feature_dim: AnyDimFeatures) -> Self:
-            match self:
-                case self.First:
-                    return SliceFirst(feature_dim[0])
-                case self.Random:
-                    return SliceRandom(feature_dim[0])
-                case self.RandomMultiple:
-                    return SliceRandomMultiple(feature_dim[0], feature_dim[1])
-                case self.RandomStrided:
-                    return SliceRandomStrided(feature_dim[0], feature_dim[1])
-                case _:
-                    raise RuntimeError(f"Invalid Slicer type: {self}")
-
-
-class MutliSlicer(Slicer):
-    def __init__(self, size: int, multiple: int, offset: int = 0, sort: bool = False):
-        """
-        Creates multiple slices of sequences.
-
-        Args:
-            size (int): The size of the slices.
-            multiple (int): The number of slices to create.
-            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
-            sort (bool, optional): If true, sort the slices in ascending order.
-                Otherwise, the slices are in random order. Defaults to False.
-        """
-        super().__init__(size, offset)
-        self.multiple = multiple
         self.sort = sort
 
+    def __repr__(self):
+        return f"{type(self).__name__}(size={self.size}, sort={self.sort})"
+
     @abstractmethod
-    def slice(self, *args, **kwargs) -> tuple[slice, ...]: ...
+    def slice(self, length: int, *args, **kwargs) -> np.ndarray: ...
+
+    @abstractmethod
+    def sample(
+        self, length: int, num_samples: int, *args, **kwargs
+    ) -> list[np.ndarray]: ...
+
+    @classmethod
+    def First(cls, size: int) -> Self:
+        return SliceFirst(size)
+
+    @classmethod
+    def Random(cls, size: int) -> Self:
+        return SliceRandom(size)
+
+    @classmethod
+    def RandomMultiple(cls, size: int, multiple: int, sort: bool = False) -> Self:
+        return SliceRandomConcatMultiple(size, multiple, sort)
+
+    @classmethod
+    def RandomStrided(
+        cls,
+        size: int,
+        multiple: int,
+        stride: int | None = None,
+        sort: bool = False,
+    ) -> Self:
+        return SliceRandomStrided(size, multiple, stride, sort)
 
 
 class SliceFirst(Slicer):
-    def slice(self, *_args, **_kwargs) -> tuple[slice]:
+    def slice(self, length: int) -> np.ndarray:
         """
         Slice the first part of the sequence starting from the offset.
 
         Returns:
-            tuple[slice]: A tuple with a single slice.
+            np.ndarray: A single slice.
         """
-        return (slice(self.offset, self.offset + self.size),)
+        return np.arange(0, min(self.size, length))
+
+    def sample(self, length: int, _: int) -> list[np.ndarray]:
+        return [self.slice(length)]
 
 
 class SliceRandom(Slicer):
-    def slice(self, length: int) -> tuple[slice]:
+    def slice(self, length: int) -> np.ndarray:
         """
         Randomly slice a part of the sequence starting from the offset.
 
@@ -113,17 +107,15 @@ class SliceRandom(Slicer):
             length (int): The length of the sequence.
 
         Returns:
-            tuple[slice]: A tuple with a single slice.
+            np.ndarray: A single slice.
         """
-        upper = length - self.offset - self.size
+        upper = length - self.size
         if upper <= 0:
-            return slice(0, self.size)
-        i = np.random.randint(self.offset, upper)
-        return (slice(i, i + self.size),)
+            return (np.arange(0, min(self.size, length)),)
+        i = np.random.randint(0, upper)
+        return (np.arange(i, i + self.size),)
 
-
-class SliceRandomMultiple(MutliSlicer):
-    def slice(self, length: int, *_args, **_kwargs) -> tuple[slice, ...]:
+    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
         """
         Create random slices starting from the offset.
 
@@ -131,49 +123,49 @@ class SliceRandomMultiple(MutliSlicer):
             length (int): The length of the sequence.
 
         Returns:
-            tuple[slice, ...]: A tuple with the random slices.
+            list[np.ndarray]: A list with the random slices.
         """
-        upper = length - self.offset - self.size
-        if upper <= 0 or upper <= self.offset:
-            return [slice(0, self.size)]
+        upper = int(length - self.size)
+        if upper <= 0:
+            return [np.arange(0, min(self.size, length))]
 
-        slices = np.arange(self.offset, upper)
+        slices = np.arange(0, upper)
         slices = np.random.choice(
             slices,
-            min(upper - self.offset, self.multiple),
+            min(upper, num_slices),
             replace=False,
         )
 
         if self.sort:
             slices = sorted(slices)
 
-        return tuple(slice(i, i + self.size) for i in slices)
+        return [np.arange(i, i + self.size) for i in slices]
 
 
-class SliceRandomStrided(MutliSlicer):
+class SliceRandomStrided(SliceRandom):
     def __init__(
         self,
         size: int,
-        multiple: int,
         stride: int | None = None,
-        offset=0,
-        sort=False,
+        sort: bool = False,
     ):
         """
         Randomly slice a part of the sequence starting from the offset with a given stride.
 
         Args:
-            size (int): _description_
-            multiple (int): _description_
+            size (int): The size of the slices.
             stride (int | None, optional): Stride of the slices. Defaults to to `size`.
             offset (int, optional): Offset from the start of the sequence. Defaults to 0.
             sort (bool, optional): If true, sort the slices in ascending order.
                 Otherwise, the slices are in random order. Defaults to False.
         """
-        super().__init__(size, multiple, offset, sort)
+        super().__init__(size, sort)
         self.stride = stride or size
 
-    def slice(self, length: int, *_args, **_kwargs) -> tuple[slice, ...]:
+    def __repr__(self):
+        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, stride={self.stride})"
+
+    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
         """
         Create random slices with a given stride starting from the offset.
 
@@ -181,55 +173,100 @@ class SliceRandomStrided(MutliSlicer):
             length (int): The length of the sequence.
 
         Returns:
-            tuple[slice, ...]: A tuple with the random slices.
+            list[np.ndarray]: A list with the random slices.
         """
-        upper = length - self.offset - self.size
-        if upper <= 0 or upper <= self.offset:
-            return [slice(0, self.size)]
+        upper = length - 0 - self.size
+        if upper <= 0 or upper <= 0:
+            return [np.arange(0, min(self.size, length))]
 
-        slices = np.arange(self.offset, upper, self.stride)
+        slices = np.arange(0, upper, self.stride)
         slices = np.random.choice(
             slices,
-            min(upper - self.offset, self.multiple),
+            min(upper, num_slices),
             replace=False,
         )
 
         if self.sort:
             slices = sorted(slices)
 
-        return tuple(slice(i, i + self.size) for i in slices)
+        return [np.arange(i, i + self.size) for i in slices]
+
+
+class SliceRandomConcatMultiple(SliceRandom):
+    def __init__(self, size: int, multiple: int, sort: bool = False):
+        if size % multiple != 0:
+            raise ValueError(f"Size {size} must be a divisible by multiple {multiple}")
+
+        super().__init__(size / multiple, sort)
+        self.multiple = multiple
+
+    def __repr__(self):
+        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, multiple={self.multiple})"
+
+    def slice(self, length: int) -> np.ndarray:
+        return np.array(super().sample(length, self.multiple))
+
+    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
+        if num_slices > 1:
+            warnings.warn(
+                f"Sampling multiples slices is not supported for {type(self).__name__}."
+            )
+        return [self.slice(length)]
+
+
+class SliceRandomStridedMultiple(SliceRandomStrided):
+    def __init__(self, size: int, multiple: int, sort: bool = False):
+        if size & multiple != 0:
+            raise ValueError(f"Size {size} must be a divisible by multiple {multiple}")
+
+        super().__init__(size / multiple, sort)
+        self.multiple = multiple
+
+    def __repr__(self):
+        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, multiple={self.multiple})"
+
+    def slice(self, length: int) -> np.ndarray:
+        return np.array(super().sample(length, self.multiple))
+
+    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
+        if num_slices > 1:
+            warnings.warn(
+                f"Sampling multiples slices is not supported for {type(self).__name__}."
+            )
+        return [self.slice(length)]
 
 
 class FeatureExtractor(ABC):
     @abstractmethod
     def __call__(self, *features: torch.Tensor, **kwargs) -> torch.Tensor: ...
 
+    def __repr__(self):
+        return f"{type(self).__name__}()"
+
     @abstractmethod
     def featurize(
         self, transition_scores: TransitionScores, slices: tuple[slice, ...]
-    ) -> list[torch.Tensor]: ...
+    ) -> torch.Tensor: ...
 
-    class Type(enum.Enum):
-        Likelihood = "likelihood"
-        LogLikelihoodLogRankRatio = "log_likelihood_log_rank_ratio"
-        LikelihoodTopkLikelihoodRatio = "likelihood_topk_likelihood_ratio"
-        TopkLikelihoodLikelihoodRatio = "topk_likelihood_likelihood_ratio"
-        IntermediateLogits = "intermediate_logits"
+    @classmethod
+    def Likelihood(cls) -> Self:
+        return Likelihood()
 
-        def into(self, *args, **kwargs) -> Self:
-            match self:
-                case self.Likelihood:
-                    return Likelihood(*args, **kwargs)
-                case self.LogLikelihoodLogRankRatio:
-                    return LogLikelihoodLogRankRatio(*args, **kwargs)
-                case self.LikelihoodTopkLikelihoodRatio:
-                    return LikelihoodTopkLikelihoodRatio(*args, **kwargs)
-                case self.TopkLikelihoodLikelihoodRatio:
-                    return TopkLikelihoodLikelihoodRatio(*args, **kwargs)
-                case self.IntermediateLogits:
-                    return IntermediateLogits(*args, **kwargs)
-                case _:
-                    raise RuntimeError(f"Invalid FeatureExtractor type: {self}")
+    @classmethod
+    def LogLikelihoodLogRankRatio(cls) -> Self:
+        return LogLikelihoodLogRankRatio()
+
+    @classmethod
+    def LikelihoodTopkLikelihoodRatio(cls, top_k: int) -> Self:
+        return LikelihoodTopkLikelihoodRatio(top_k)
+
+    @classmethod
+    def TopkLikelihoodLikelihoodRatio(cls) -> Self:
+        return TopkLikelihoodLikelihoodRatio()
+
+    @classmethod
+    def IntermediateLogits(cls, last_n: int | None = None) -> Self:
+        return IntermediateLogits(last_n)
 
 
 class Likelihood(FeatureExtractor):
@@ -239,9 +276,12 @@ class Likelihood(FeatureExtractor):
     ) -> torch.Tensor:
         return target_probs.float()
 
-    def featurize(self, transition_scores: TransitionScores, slices: tuple[slice, ...]):
-        target_probs = torch.tensor(transition_scores.target_probs)
-        return [self(target_probs[s]) for s in slices]
+    def featurize(
+        self, ts: TransitionScores, slices: slice | list[slice]
+    ) -> torch.Tensor:
+        target_probs = torch.tensor(ts.target_probs)[slices].flatten()
+
+        return self(target_probs)
 
 
 class LogLikelihoodLogRankRatio(FeatureExtractor):
@@ -273,18 +313,22 @@ class LogLikelihoodLogRankRatio(FeatureExtractor):
             .float()
         )
 
-    def featurize(self, transition_scores: TransitionScores, slices: tuple[slice, ...]):
-        target_probs, target_ranks = (
-            torch.tensor(transition_scores.target_probs),
-            torch.tensor(transition_scores.target_ranks),
-        )
-        return [self(target_probs[s], target_ranks[s]) for s in slices]
+    def featurize(
+        self, ts: TransitionScores, slices: slice | list[slice]
+    ) -> torch.Tensor:
+        target_probs = torch.tensor(ts.target_probs)[slices].flatten()
+        target_ranks = torch.tensor(ts.target_ranks)[slices].flatten()
+
+        return self(target_probs, target_ranks)
 
 
 class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
-    def __init__(self, k: int = 8):
+    def __init__(self, top_k: int = 8):
         super().__init__()
-        self.k = k
+        self.top_k = top_k
+
+    def __repr__(self):
+        return f"{type(self).__name__}(top_k={self.top_k})"
 
     def __call__(
         self,
@@ -303,13 +347,13 @@ class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
         return torch.div(target_probs, top_k_probs)
 
     def featurize(
-        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
-    ) -> list[torch.Tensor]:
-        target_probs, top_k_probs = (
-            torch.tensor(transition_scores.target_probs),
-            torch.tensor(transition_scores.top_k_probs),
-        )
-        return [self(target_probs[s, self.k], top_k_probs[s, self.k]) for s in slices]
+        self, ts: TransitionScores, slices: slice | list[slice]
+    ) -> torch.Tensor:
+        target_probs = torch.tensor(ts.target_probs)[slices].view(-1, 1)
+        top_k_probs = torch.tensor(ts.top_k_probs)[slices]
+        top_k_probs = top_k_probs[..., : self.top_k].view(-1, self.top_k)
+
+        return self(target_probs, top_k_probs)
 
 
 class TopkLikelihoodLikelihoodRatio(LikelihoodTopkLikelihoodRatio):
@@ -328,6 +372,30 @@ class TopkLikelihoodLikelihoodRatio(LikelihoodTopkLikelihoodRatio):
             torch.Tensor: Tensor of the same shape as top_k_probs.
         """
         return torch.div(top_k_probs, target_probs)
+
+
+class IntermediateLogits(FeatureExtractor):
+    def __init__(self, last_n: int | None = None):
+        super().__init__()
+        self.last_n = last_n
+
+    def __repr__(self):
+        return f"{type(self).__name__}(last_n={self.last_n})"
+
+    def __call__(
+        self,
+        target_probs: torch.Tensor,
+    ) -> torch.Tensor:
+        return target_probs.float()
+
+    def featurize(
+        self, ts: TransitionScores, slices: slice | list[slice]
+    ) -> torch.Tensor:
+        logits = torch.tensor(ts.intermediate_probs)[slices]
+        last_n = self.last_n or logits.size(-1)
+        logits = logits[..., -last_n:].view(-1, last_n)
+
+        return self(logits)
 
 
 def log_likelihood_top_k_likelihood_ratio(
@@ -360,15 +428,3 @@ def log_likelihood_log_top_k_likelihood_ratio(
         torch.Tensor: Tensor of the same shape as target_probs and top_k_probs.
     """
     return torch.div(target_probs.log(), top_k_probs.log())
-
-
-class IntermediateLogits(Likelihood):
-    def __init__(self, layers: slice | None):
-        super().__init__()
-        self.layers = layers or slice(0, None)
-
-    def featurize(
-        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
-    ) -> list[torch.Tensor]:
-        intermediate_logits = torch.tensor(transition_scores.intermediate_logits)
-        return [self(intermediate_logits[s, self.layers]) for s in slices]
