@@ -73,7 +73,7 @@ def parse_scorer_model(args: Namespace) -> TransitionScorer:
                 device=args.device,
             )
         case _:
-            raise RuntimeError
+            raise RuntimeError(f"Invalid provider {args.provider}")
 
 
 class TryInsertError(Exception):
