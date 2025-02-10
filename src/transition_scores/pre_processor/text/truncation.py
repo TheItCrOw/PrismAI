@@ -75,7 +75,6 @@ class TruncationTextPreProcessor(TextPreProcessor):
 
     def pre_process(self, dataset: Dataset[str, Any]) -> Dataset[str, Any]:
         """Prepare the `text` of the samples in a dataset.
-        Adds `text_sha256` field to the dataset.
 
         Args:
             dataset (Dataset[str, Any]): A dataset containing with fields: `text: str` and `chunks: list[str]`.
