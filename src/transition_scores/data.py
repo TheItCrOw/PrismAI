@@ -124,6 +124,16 @@ class TransitionScores(DataClassMappingMixin):
             )
         )
 
+    def unpack(self) -> tuple:
+        return (
+            self.target_ids,
+            self.target_probs,
+            self.target_ranks,
+            self.top_k_indices,
+            self.top_k_probs,
+            self.intermediate_probs,
+        )
+
 
 class ModelMetadata(dict):
     @classmethod
