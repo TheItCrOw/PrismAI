@@ -122,59 +122,10 @@ class TransitionScorer(ABC):
         Args:
             input_ids (torch.Tensor): A list of input sequences, each represented as a list of token IDs.
             attention_mask (torch.Tensor): A list of attention masks for each input sequence.
+            pad_token_id (int): The token ID that has been used for padding.
 
         Returns:
             list[TransitionScores]: A list output probability tuples.
-        """
-        output_likelihoods, output_logits = self._forward(input_ids, attention_mask)
-
-        probabilities = []
-        for labels, likelihoods, logits in zip(
-            input_ids, output_likelihoods, output_logits
-        ):
-            # Truncate the sequence to the last non-pad token
-            target_ids = labels[1:]
-            target_ids = target_ids[: target_ids.ne(pad_token_id).sum()]
-            seq_length = len(target_ids)
-            target_probs = likelihoods[:seq_length]
-
-            # Get target and top-k probabilities
-            sorted_probs, sorted_indices = torch.sort(target_probs, descending=True)
-            target_probs = target_probs[torch.arange(seq_length), target_ids].flatten()
-
-            _, target_ranks = torch.where(sorted_indices.eq(target_ids.view(-1, 1)))
-
-            top_k_probs = sorted_probs[:, : self.top_k + 1]
-            top_k_indices = sorted_indices[:, : self.top_k + 1]
-
-            intermediate_logits = logits[:, torch.arange(seq_length), target_ids].T
-
-            probabilities.append(
-                TransitionScores(
-                    target_ids.tolist(),
-                    target_probs.tolist(),
-                    target_ranks.tolist(),
-                    top_k_indices.tolist(),
-                    top_k_probs.tolist(),
-                    intermediate_logits.tolist(),
-                )
-            )
-        return probabilities
-
-    def _forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Run a model forward pass for a batch of input sequences and return the log-likehoods and intermediate logits.
-
-        Args:
-            input_ids (torch.Tensor): A list of input sequences, each represented as a list of token IDs.
-            attention_mask (torch.Tensor): A list of attention masks for each input sequence.
-
-        Returns:
-            tuple[torch.Tensor, torch.Tensor]: A tuple of log-likelihoods and intermediate logits.
         """
         # Create `position_ids` on the fly, if required
         # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
@@ -190,14 +141,58 @@ class TransitionScorer(ABC):
                 position_ids=position_ids.to(self.device),
                 output_hidden_states=True,
             )
-
             likelihoods: torch.Tensor = outputs.logits.softmax(-1).cpu()
-            intermediate_logits = torch.stack(
-                [self._model_lm_head(hs).cpu() for hs in outputs.hidden_states],
-                dim=1,
-            )
 
-            return likelihoods, intermediate_logits
+            # Unpack hidden states to get one list of tensors per input sequence,
+            # instead of one hidden state per layer in the model
+            hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])
+
+            del outputs
+
+            probabilities = []
+            for target_ids, target_probs, intermediate_probs in zip(
+                input_ids, likelihoods, hidden_states
+            ):
+                # Truncate the sequence to the last non-pad token
+                target_ids = target_ids[1:]
+                target_ids = target_ids[: target_ids.ne(pad_token_id).sum()]
+                seq_length = len(target_ids)
+                target_probs = target_probs[:seq_length]
+
+                # Get target and top-k probabilities
+                sorted_probs, sorted_indices = torch.sort(target_probs, descending=True)
+                target_probs = target_probs[
+                    torch.arange(seq_length), target_ids
+                ].flatten()
+
+                _, target_ranks = torch.where(sorted_indices.eq(target_ids.view(-1, 1)))
+
+                top_k_probs = sorted_probs[:, : self.top_k + 1]
+                top_k_indices = sorted_indices[:, : self.top_k + 1]
+
+                # Calculate likelihoods using intermediate representations
+                # We need do this in a loop here to avoid running out of memory
+                intermediate_probs = torch.stack(
+                    [
+                        self._model_lm_head(probs[:seq_length].to(self.device))
+                        .softmax(-1)
+                        .cpu()[torch.arange(seq_length), target_ids]
+                        for probs in intermediate_probs
+                    ]
+                ).T  # transpose to get shape (seq_length, num_layers)
+
+                probabilities.append(
+                    TransitionScores(
+                        target_ids.tolist(),
+                        target_probs.tolist(),
+                        target_ranks.tolist(),
+                        top_k_indices.tolist(),
+                        top_k_probs.tolist(),
+                        intermediate_probs.tolist(),
+                    )
+                )
+
+            return probabilities
 
 
 def convert_to_mongo(
