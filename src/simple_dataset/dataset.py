@@ -563,3 +563,15 @@ class Dataset[K, V](UserList[dict[K, V]]):
             if not deep
             else type(self)(deepcopy(self.data))
         )
+
+    def __getitem__(self, key: int) -> dict[K, V]:
+        match key:
+            case s if isinstance(s, slice):
+                return type(self)(self.data[key])
+            case k if isinstance(k, str):
+                return [doc[key] for doc in self.data]
+            case _:
+                return self.data[key]
+
+    def column(self, key: K) -> list[V]:
+        return [doc[key] for doc in self.data]
