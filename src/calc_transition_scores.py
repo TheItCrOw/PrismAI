@@ -116,7 +116,7 @@ def try_insert_one(document: FeaturesDict, collection: Collection, recursion_dep
         )
 
 
-if __name__ == "__main__":
+def get_argparser():
     parser = ArgumentParser()
 
     model_group = parser.add_argument_group("Model")
@@ -334,7 +334,11 @@ if __name__ == "__main__":
         help="Global batch size override.",
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+if __name__ == "__main__":
+    args = get_argparser().parse_args()
 
     mongodb_batch_size = args.batch_size or args.mongodb_batch_size
     mongodb_filter_query = args.mongodb_filter or {}
