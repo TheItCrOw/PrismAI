@@ -13,9 +13,9 @@ from transition_scores.utils import DataClassMappingMixin
 
 
 @dataclass
-class TransitionScores(DataClassMappingMixin):
+class FeatureValues(DataClassMappingMixin):
     """
-    `dataclass` for storing transition scores.
+    `dataclass` for storing feature values.
     Supports slicing with the same semantics as a list for `int` and `slice` keys,
     while also implementing `Mapping` for MongoDB compatibility.
 
@@ -23,7 +23,7 @@ class TransitionScores(DataClassMappingMixin):
 
     `__len__`, however, returns the number of target probabilities.
 
-    To iterate over a zipped representation of the transition scores, use the `zipped` method.
+    To iterate over a zipped representation of the feature values, use the `zipped` method.
     """
 
     target_ids: list[int] = field(default_factory=list)
@@ -32,10 +32,11 @@ class TransitionScores(DataClassMappingMixin):
     top_k_indices: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
     intermediate_probs: list[list[float]] = field(default_factory=list)
+    metrics: list[dict[str, float]] = field(default_factory=list)
 
     def __getitem__(self, key):
         if isinstance(key, (int, slice)):
-            return TransitionScores(
+            return FeatureValues(
                 self.target_ids[key],
                 self.target_probs[key],
                 self.target_ranks[key],
@@ -56,6 +57,7 @@ class TransitionScores(DataClassMappingMixin):
         top_k_indices: list[int],
         top_k_probs: list[float],
         intermediate_probs: list[float],
+        metrics: dict[str, float],
     ):
         self.target_ids.append(target_id)
         self.target_probs.append(target_probs)
@@ -63,6 +65,7 @@ class TransitionScores(DataClassMappingMixin):
         self.top_k_indices.append(top_k_indices)
         self.top_k_probs.append(top_k_probs)
         self.intermediate_probs.append(intermediate_probs)
+        self.metrics.append(metrics)
 
     def extend(
         self,
@@ -72,6 +75,7 @@ class TransitionScores(DataClassMappingMixin):
         top_k_indices: list[list[int]],
         top_k_probs: list[list[float]],
         intermediate_probs: list[list[float]],
+        metrics: list[dict[str, float]],
     ):
         self.target_ids.extend(target_ids)
         self.target_probs.extend(target_probs)
@@ -79,6 +83,7 @@ class TransitionScores(DataClassMappingMixin):
         self.top_k_indices.extend(top_k_indices)
         self.top_k_probs.extend(top_k_probs)
         self.intermediate_probs.extend(intermediate_probs)
+        self.metrics.extend(metrics)
 
     @classmethod
     def merge(cls, others: list[Self]) -> Self:
@@ -92,6 +97,7 @@ class TransitionScores(DataClassMappingMixin):
                 other["top_k_indices"],
                 other["top_k_probs"],
                 other.get("intermediate_probs", []),
+                other.get("metrics", []),
             )
         return self
 
@@ -120,7 +126,7 @@ class TransitionScores(DataClassMappingMixin):
                 self["target_ranks"],
                 self["top_k_indices"],
                 self["top_k_probs"],
-                self.get("intermediate_probs", []),
+                self["intermediate_probs"],
             )
         )
 
@@ -217,7 +223,7 @@ class FeaturesDict(dict):
         document: DocumentMetadata | dict,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
-        transition_scores: TransitionScores,
+        transition_scores: FeatureValues,
         split: str | None = None,
         _id: ObjectId | None = None,
         **metadata,

@@ -7,7 +7,7 @@ from typing import NamedTuple, Self
 import numpy as np
 import torch
 
-from transition_scores.data import TransitionScores
+from transition_scores.data import FeatureValues
 
 
 class FeaturizedTransitionScores(NamedTuple):
@@ -230,7 +230,7 @@ class FeatureExtractor(ABC):
 
     @abstractmethod
     def featurize(
-        self, transition_scores: TransitionScores, slices: tuple[slice, ...]
+        self, transition_scores: FeatureValues, slices: tuple[slice, ...]
     ) -> torch.Tensor: ...
 
     @classmethod
@@ -261,9 +261,7 @@ class Likelihood(FeatureExtractor):
     ) -> torch.Tensor:
         return target_probs.float()
 
-    def featurize(
-        self, ts: TransitionScores, slices: slice | list[slice]
-    ) -> torch.Tensor:
+    def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         target_probs = torch.tensor(ts.target_probs)[slices].flatten()
 
         return self(target_probs)
@@ -298,9 +296,7 @@ class LogLikelihoodLogRankRatio(FeatureExtractor):
             .float()
         )
 
-    def featurize(
-        self, ts: TransitionScores, slices: slice | list[slice]
-    ) -> torch.Tensor:
+    def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         target_probs = torch.tensor(ts.target_probs)[slices].flatten()
         target_ranks = torch.tensor(ts.target_ranks)[slices].flatten()
 
@@ -332,9 +328,7 @@ class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
         """
         return torch.div(target_probs, target_probs + top_k_probs + 1e-8)
 
-    def featurize(
-        self, ts: TransitionScores, slices: slice | list[slice]
-    ) -> torch.Tensor:
+    def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         target_probs = torch.tensor(ts.target_probs)[slices].view(-1, 1)
         top_k_probs = torch.tensor(ts.top_k_probs)[slices]
         top_k_probs = top_k_probs[..., : self.top_k].view(-1, self.top_k)
@@ -374,9 +368,7 @@ class IntermediateLogits(FeatureExtractor):
     ) -> torch.Tensor:
         return target_probs.float()
 
-    def featurize(
-        self, ts: TransitionScores, slices: slice | list[slice]
-    ) -> torch.Tensor:
+    def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         logits = torch.tensor(ts.intermediate_probs)[slices]
         last_n = self.last_n or logits.size(-1)
         logits = logits[..., -last_n:].view(-1, last_n)

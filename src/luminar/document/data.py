@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader, Subset
 from torch.utils.data import Dataset as TorchDataset
 
 from luminar.features import (
-    AnyDimFeatures,
     FeatureExtractor,
     Likelihood,
     OneDimFeatures,
@@ -17,7 +16,7 @@ from luminar.features import (
     TwoDimFeatures,
 )
 from luminar.mongo import MongoDataset
-from transition_scores.data import TransitionScores
+from transition_scores.data import FeatureValues
 
 
 def flatten[T](iterables: Iterable[Iterable[T]]) -> Generator[T, None, None]:
@@ -43,7 +42,7 @@ class FeatureDataset(TorchDataset):
                     }
                     for sample in doc["features"]
                     for features in self._featurize(
-                        TransitionScores(**sample["transition_scores"]),
+                        FeatureValues(**sample["transition_scores"]),
                         slicer,
                         featurizer,
                         num_samples=num_samples or 1,
@@ -55,7 +54,7 @@ class FeatureDataset(TorchDataset):
 
     @staticmethod
     def _featurize(
-        ts: TransitionScores,
+        ts: FeatureValues,
         slicer: Slicer,
         featurizer: FeatureExtractor,
         num_samples: int,

@@ -1,6 +1,6 @@
 import torch
 
-from transition_scores.data import TransitionScores
+from transition_scores.data import FeatureValues
 
 
 def log_likelihood_log_rank_ratio(
@@ -9,7 +9,7 @@ def log_likelihood_log_rank_ratio(
     return -target_probs.log().sum().div(target_ranks.log1p().sum()).item()
 
 
-def llr_from_transition_scores(transition_scores: TransitionScores) -> float:
+def llr_from_transition_scores(transition_scores: FeatureValues) -> float:
     target_probs = torch.tensor(transition_scores.target_probs)
     target_ranks = torch.tensor(transition_scores.target_ranks)
     mask = target_probs.ne(0.0)

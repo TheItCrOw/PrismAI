@@ -5,8 +5,8 @@ from transformers import BatchEncoding
 
 from simple_dataset.dataset import Dataset
 from transition_scores.data import (
+    FeatureValues,
     PreProcessorMetadata,
-    TransitionScores,
 )
 from transition_scores.pre_processor.abc import (
     PreProcessor,
@@ -219,7 +219,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.update(1)
 
             tq.set_postfix_str("Merging Transition Scores")
-            dataset.apply(TransitionScores.merge, "transition_scores")
+            dataset.apply(FeatureValues.merge, "transition_scores")
             tq.update(1)
 
         return dataset

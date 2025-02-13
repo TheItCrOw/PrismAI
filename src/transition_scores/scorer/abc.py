@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import Generator
+from typing import Generator, Iterable
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -11,9 +11,9 @@ from tqdm import tqdm
 from simple_dataset.dataset import Dataset
 from transition_scores.data import (
     FeaturesDict,
+    FeatureValues,
     ModelMetadata,
     PreProcessorMetadata,
-    TransitionScores,
 )
 from transition_scores.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memory
 
@@ -86,7 +86,7 @@ class TransitionScorer(ABC):
 
     def _generate_scores(
         self, dataset: Dataset, pad_token_id: int
-    ) -> Generator[TransitionScores, None, None]:
+    ) -> Generator[FeatureValues, None, None]:
         _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
         for input_ids, attention_mask in tqdm(
             DataLoader(
@@ -112,7 +112,7 @@ class TransitionScorer(ABC):
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
         pad_token_id: int,
-    ) -> list[TransitionScores]:
+    ) -> list[FeatureValues]:
         """
         Process the a batch of input sequences and calculate transition scores.
         Runs a forward pass on the model and extracts the top k probabilities.
@@ -127,6 +127,80 @@ class TransitionScorer(ABC):
         """
         # Create `position_ids` on the fly, if required
         # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
+        likelihoods, log_likelihoods, hidden_states = self._forward(
+            input_ids, attention_mask
+        )
+
+        results = []
+        for target_ids, likelihood, log_likelihood, intermediate_probs in zip(
+            input_ids.to(self.device), likelihoods, log_likelihoods, hidden_states
+        ):
+            # Truncate the sequence to the last non-pad token
+            labels = target_ids[1:].view(-1, 1)
+            labels = labels[: labels.ne(pad_token_id).sum()]
+
+            likelihood: torch.Tensor = likelihood[: labels.size(0)]
+            log_likelihood: torch.Tensor = log_likelihood[: labels.size(0)]
+
+            # Get target likelihoods and ranks
+            target_probs = likelihood.gather(-1, labels).flatten().cpu()
+
+            target_ranks, top_k_indices, top_k_probs, llr, fast_detect_gpt = (
+                self._calculate_scores(likelihood, log_likelihood, labels)
+            )
+
+            del likelihood
+            del log_likelihood
+
+            intermediate_probs = self._calculate_intermediate_probs(
+                intermediate_probs, labels
+            )
+
+            results.append(
+                FeatureValues(
+                    target_ids.tolist(),
+                    target_probs.tolist(),
+                    target_ranks.tolist(),
+                    top_k_indices.tolist(),
+                    top_k_probs.tolist(),
+                    intermediate_probs.tolist(),
+                    [
+                        {
+                            "fast_detect_gpt": fast_detect_gpt,
+                            "llr": llr,
+                        }
+                    ],
+                )
+            )
+
+        return results
+
+    def _calculate_scores(self, likelihood, log_likelihood, labels):
+        target_ranks, top_k_probs, top_k_indices = self._get_rank_and_top_k(
+            likelihood, labels
+        )
+
+        # Get DetectLLM-LLR criterion
+        target_log_probs = log_likelihood.gather(-1, labels).squeeze(-1)
+
+        llr = self._calculate_log_likelihood_ratio(target_ranks, target_log_probs)
+
+        # Get Fast-DetectGPT criterion
+        fast_detect_gpt = self._calculate_fast_detect_gpt(
+            likelihood, log_likelihood, target_log_probs
+        )
+
+        return (
+            target_ranks.cpu(),
+            top_k_indices.cpu(),
+            top_k_probs.cpu(),
+            llr,
+            fast_detect_gpt,
+        )
+
+    def _forward(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, Iterable[tuple[torch.Tensor]]]:
         position_ids = None
         if self._requires_position_ids:
             position_ids = attention_mask.long().cumsum(-1) - 1
@@ -139,58 +213,72 @@ class TransitionScorer(ABC):
                 position_ids=position_ids.to(self.device),
                 output_hidden_states=True,
             )
-            likelihoods: torch.Tensor = outputs.logits.softmax(-1).cpu()
+
+            likelihoods: torch.Tensor = outputs.logits.softmax(-1)
+            log_likelihoods: torch.Tensor = outputs.logits.log_softmax(-1)
 
             # Unpack hidden states to get one list of tensors per input sequence,
             # instead of one hidden state per layer in the model
             hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])
 
             del outputs
+        return likelihoods, log_likelihoods, hidden_states
 
-            probabilities = []
-            for target_ids, target_probs, intermediate_probs in zip(
-                input_ids, likelihoods, hidden_states
-            ):
-                # Truncate the sequence to the last non-pad token
-                target_ids = target_ids[1:]
-                target_ids = target_ids[: target_ids.ne(pad_token_id).sum()]
-                seq_length = len(target_ids)
-                target_probs = target_probs[:seq_length]
+    def _get_rank_and_top_k(
+        self, likelihood: torch.Tensor, labels: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # Sort likelihoods and get ranks of target labels
+        sorted_probs, sorted_indices = torch.sort(likelihood, descending=True)
+        _, target_ranks = torch.where(sorted_indices.eq(labels))
 
-                # Get target and top-k probabilities
-                sorted_probs, sorted_indices = torch.sort(target_probs, descending=True)
-                target_probs = target_probs[
-                    torch.arange(seq_length), target_ids
-                ].flatten()
+        # Get top-k probabilities and indices
+        top_k_probs = sorted_probs[:, : self.top_k + 1]
+        top_k_indices = sorted_indices[:, : self.top_k + 1]
 
-                _, target_ranks = torch.where(sorted_indices.eq(target_ids.view(-1, 1)))
+        return target_ranks, top_k_probs, top_k_indices
 
-                top_k_probs = sorted_probs[:, : self.top_k + 1]
-                top_k_indices = sorted_indices[:, : self.top_k + 1]
+    def _calculate_intermediate_probs(
+        self, intermediate_probs: tuple[torch.Tensor], labels: torch.Tensor
+    ) -> torch.Tensor:
+        seq_length = labels.size(0)
 
-                # Calculate likelihoods using intermediate representations
-                # We need do this in a loop here to avoid running out of memory
-                intermediate_probs = torch.stack(
-                    [
-                        self._model_lm_head(probs[:seq_length].to(self.device))
-                        .softmax(-1)
-                        .cpu()[torch.arange(seq_length), target_ids]
-                        for probs in intermediate_probs
-                    ]
-                ).T  # transpose to get shape (seq_length, num_layers)
+        results = []
+        # Calculate likelihoods using intermediate representations
+        # We need do this in a loop here to avoid running out of memory
+        for probs in intermediate_probs:
+            results.append(
+                self._model_lm_head(probs[:seq_length].to(self.device))
+                .softmax(-1)
+                .gather(-1, labels)
+                .cpu()
+            )
+            del probs
 
-                probabilities.append(
-                    TransitionScores(
-                        target_ids.tolist(),
-                        target_probs.tolist(),
-                        target_ranks.tolist(),
-                        top_k_indices.tolist(),
-                        top_k_probs.tolist(),
-                        intermediate_probs.tolist(),
-                    )
-                )
+        # transpose to get shape (seq_length, num_layers)
+        return torch.stack(results).T
 
-            return probabilities
+    def _calculate_log_likelihood_ratio(
+        self, target_ranks: torch.Tensor, target_log_probs: torch.Tensor
+    ) -> float:
+        return -torch.div(
+            target_log_probs.sum(),
+            target_ranks.to(self.device).log1p().sum(),
+        ).item()
+
+    def _calculate_fast_detect_gpt(
+        self,
+        likelihood: torch.Tensor,
+        log_likelihood: torch.Tensor,
+        target_log_probs: torch.Tensor,
+    ) -> float:
+        expectation = (likelihood * log_likelihood).sum(-1)
+        variance = (likelihood * log_likelihood.square()).sum(-1) - expectation.square()
+
+        fast_detect_gpt = (
+            target_log_probs.sum(-1) - expectation.sum(-1)
+        ) / variance.sum(-1).sqrt()
+
+        return fast_detect_gpt.item()
 
 
 def convert_to_mongo(
