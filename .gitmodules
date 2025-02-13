@@ -1,0 +1,3 @@
+[submodule "related_work/fast-detect-gpt"]
+	path = related_work/fast-detect-gpt
+	url = git@github.com:baoguangsheng/fast-detect-gpt.git
