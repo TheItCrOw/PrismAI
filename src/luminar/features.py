@@ -1,6 +1,7 @@
 import enum
 import warnings
 from abc import ABC, abstractmethod
+from itertools import batched
 from typing import NamedTuple, Self
 
 import numpy as np
@@ -66,22 +67,25 @@ class Slicer(ABC):
         return SliceFirst(size)
 
     @classmethod
-    def Random(cls, size: int) -> Self:
-        return SliceRandom(size)
+    def Random(cls, size: int, stride: int = 1) -> Self:
+        return SliceRandom(size, stride=stride)
 
     @classmethod
-    def RandomMultiple(cls, size: int, multiple: int, sort: bool = False) -> Self:
-        return SliceRandomConcatMultiple(size, multiple, sort)
-
-    @classmethod
-    def RandomStrided(
+    def RandomMultiple(
         cls,
         size: int,
         multiple: int,
-        stride: int | None = None,
+        stride: int = 1,
         sort: bool = False,
+        infer_slice_size: bool = False,
     ) -> Self:
-        return SliceRandomStrided(size, multiple, stride, sort)
+        return SliceRandomMultiple(
+            size,
+            multiple,
+            stride=stride,
+            sort=sort,
+            infer_slice_size=infer_slice_size,
+        )
 
 
 class SliceFirst(Slicer):
@@ -99,6 +103,31 @@ class SliceFirst(Slicer):
 
 
 class SliceRandom(Slicer):
+    def __init__(
+        self,
+        size: int,
+        stride: int = 1,
+        sort: bool = False,
+    ):
+        """
+        Randomly slice a part of the sequence starting from the offset with a given stride.
+
+        Args:
+            size (int): The size of the slices.
+            stride (int, optional): Stride of the slices (for sampling). Defaults to to 1.
+            sort (bool, optional): If true, sort the slices in ascending order.
+                Otherwise, the slices are in random order. Defaults to False.
+        """
+        super().__init__(size, sort)
+        self.stride = stride
+
+    def __repr__(self):
+        return (
+            f"{type(self).__name__}(size={self.size}, sort={self.sort})"
+            if self.stride == 1
+            else f"{type(self).__name__}(size={self.size}, stride={self.stride}, sort={self.sort})"
+        )
+
     def slice(self, length: int) -> np.ndarray:
         """
         Randomly slice a part of the sequence starting from the offset.
@@ -115,12 +144,13 @@ class SliceRandom(Slicer):
         i = np.random.randint(0, upper)
         return (np.arange(i, i + self.size),)
 
-    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
+    def sample(self, length: int, num_samples: int) -> list[np.ndarray]:
         """
         Create random slices starting from the offset.
 
         Args:
             length (int): The length of the sequence.
+            num_samples (int): The number of samples to create.
 
         Returns:
             list[np.ndarray]: A list with the random slices.
@@ -129,60 +159,10 @@ class SliceRandom(Slicer):
         if upper <= 0:
             return [np.arange(0, min(self.size, length))]
 
-        slices = np.arange(0, upper)
-        slices = np.random.choice(
-            slices,
-            min(upper, num_slices),
-            replace=False,
-        )
-
-        if self.sort:
-            slices = sorted(slices)
-
-        return [np.arange(i, i + self.size) for i in slices]
-
-
-class SliceRandomStrided(SliceRandom):
-    def __init__(
-        self,
-        size: int,
-        stride: int | None = None,
-        sort: bool = False,
-    ):
-        """
-        Randomly slice a part of the sequence starting from the offset with a given stride.
-
-        Args:
-            size (int): The size of the slices.
-            stride (int | None, optional): Stride of the slices. Defaults to to `size`.
-            offset (int, optional): Offset from the start of the sequence. Defaults to 0.
-            sort (bool, optional): If true, sort the slices in ascending order.
-                Otherwise, the slices are in random order. Defaults to False.
-        """
-        super().__init__(size, sort)
-        self.stride = stride or size
-
-    def __repr__(self):
-        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, stride={self.stride})"
-
-    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
-        """
-        Create random slices with a given stride starting from the offset.
-
-        Args:
-            length (int): The length of the sequence.
-
-        Returns:
-            list[np.ndarray]: A list with the random slices.
-        """
-        upper = length - 0 - self.size
-        if upper <= 0 or upper <= 0:
-            return [np.arange(0, min(self.size, length))]
-
         slices = np.arange(0, upper, self.stride)
         slices = np.random.choice(
             slices,
-            min(upper, num_slices),
+            min(len(slices), num_samples),
             replace=False,
         )
 
@@ -192,48 +172,53 @@ class SliceRandomStrided(SliceRandom):
         return [np.arange(i, i + self.size) for i in slices]
 
 
-class SliceRandomConcatMultiple(SliceRandom):
-    def __init__(self, size: int, multiple: int, sort: bool = False):
-        if size % multiple != 0:
-            raise ValueError(f"Size {size} must be a divisible by multiple {multiple}")
+class SliceRandomMultiple(SliceRandom):
+    def __init__(
+        self,
+        size: int,
+        multiple: int,
+        stride: int = 1,
+        sort: bool = False,
+        infer_slice_size: bool = False,
+    ):
+        if infer_slice_size:
+            if size % multiple != 0:
+                raise ValueError(
+                    f"Size {size} must be a divisible by multiple {multiple}"
+                )
+            size //= multiple
 
-        super().__init__(size / multiple, sort)
+        super().__init__(size, stride=stride, sort=sort)
         self.multiple = multiple
 
     def __repr__(self):
-        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, multiple={self.multiple})"
+        return (
+            f"{type(self).__name__}(size={self.size}, multiple={self.multiple}, sort={self.sort})"
+            if self.stride == 1
+            else f"{type(self).__name__}(size={self.size}, multiple={self.multiple}, stride={self.stride}, sort={self.sort})"
+        )
 
     def slice(self, length: int) -> np.ndarray:
         return np.array(super().sample(length, self.multiple))
 
-    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
-        if num_slices > 1:
-            warnings.warn(
-                f"Sampling multiples slices is not supported for {type(self).__name__}."
-            )
-        return [self.slice(length)]
+    def sample(self, length: int, num_samples: int) -> list[np.ndarray]:
+        if num_samples == 1 or (length - self.size) <= 0:
+            return [self.slice(length)]
 
-
-class SliceRandomStridedMultiple(SliceRandomStrided):
-    def __init__(self, size: int, multiple: int, sort: bool = False):
-        if size & multiple != 0:
-            raise ValueError(f"Size {size} must be a divisible by multiple {multiple}")
-
-        super().__init__(size / multiple, sort)
-        self.multiple = multiple
-
-    def __repr__(self):
-        return f"{type(self).__name__}(size={self.size}, sort={self.sort}, multiple={self.multiple})"
-
-    def slice(self, length: int) -> np.ndarray:
-        return np.array(super().sample(length, self.multiple))
-
-    def sample(self, length: int, num_slices: int) -> list[np.ndarray]:
-        if num_slices > 1:
-            warnings.warn(
-                f"Sampling multiples slices is not supported for {type(self).__name__}."
-            )
-        return [self.slice(length)]
+        # non_overlapping_slices = (length / self.stride) // (self.size * self.multiple)
+        # if non_overlapping_slices < num_samples:
+        #     warnings.warn(
+        #         f"Sequence with length {length} can only contain {non_overlapping_slices} non-overlapping slices, but you set num_samples={num_samples}."
+        #         + (
+        #             " Sorting is disabled, so we may not get samples with overlapping slices."
+        #             if not self.sort
+        #             else " Sorting is ENABLED: we WILL get samples with overlapping slices! "
+        #         )
+        #         + " Reduce num_samples or slice size to avoid this warning."
+        #     )
+        samples = super().sample(length, self.multiple * num_samples)
+        samples = [np.array(batch) for batch in batched(samples, self.multiple)]
+        return samples[:num_samples]
 
 
 class FeatureExtractor(ABC):
@@ -261,8 +246,8 @@ class FeatureExtractor(ABC):
         return LikelihoodTopkLikelihoodRatio(top_k)
 
     @classmethod
-    def TopkLikelihoodLikelihoodRatio(cls) -> Self:
-        return TopkLikelihoodLikelihoodRatio()
+    def TopkLikelihoodLikelihoodRatio(cls, top_k: int) -> Self:
+        return TopkLikelihoodLikelihoodRatio(top_k)
 
     @classmethod
     def IntermediateLogits(cls, last_n: int | None = None) -> Self:
@@ -309,7 +294,7 @@ class LogLikelihoodLogRankRatio(FeatureExtractor):
                 # and add epsilon to avoid division by zero
                 torch.log1p(target_ranks) + epsilon,
             )
-            .exp()  # FIXME
+            .neg()
             .float()
         )
 
@@ -323,9 +308,10 @@ class LogLikelihoodLogRankRatio(FeatureExtractor):
 
 
 class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
-    def __init__(self, top_k: int = 8):
+    def __init__(self, top_k: int = 8, normalize: bool = True):
         super().__init__()
         self.top_k = top_k
+        self.normalize = normalize
 
     def __repr__(self):
         return f"{type(self).__name__}(top_k={self.top_k})"
@@ -344,7 +330,7 @@ class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
         Returns:
             torch.Tensor: Tensor of the same shape as target_probs and top_k_probs.
         """
-        return torch.div(target_probs, top_k_probs)
+        return torch.div(target_probs, target_probs + top_k_probs + 1e-8)
 
     def featurize(
         self, ts: TransitionScores, slices: slice | list[slice]

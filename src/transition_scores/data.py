@@ -197,14 +197,15 @@ class DocumentMetadata(DataClassMappingMixin):
             _synth_id = DBRef(source_collection, _id)
             _id = _ref_id
 
+        agent = document.pop("agent", None)
         document["document"] = cls(
             _id=_id,
             domain=document.pop("domain"),
             lang=document.pop("lang"),
             text_sha256=sha256(document["text"].encode()).hexdigest(),
             type=document.pop("type", "source"),
-            label=document.pop("label", None),
-            agent=document.pop("agent", None),
+            label=document.pop("label", "human" if not agent else "ai"),
+            agent=agent,
             _synth_id=_synth_id,
         )
 

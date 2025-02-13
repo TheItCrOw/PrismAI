@@ -1,3 +1,5 @@
+from hashlib import sha256
+from pathlib import Path
 from typing import Generator, Iterable, Self
 
 import torch
@@ -14,7 +16,7 @@ from luminar.features import (
     Slicer,
     TwoDimFeatures,
 )
-from luminar.mongo import MongoDatset
+from luminar.mongo import MongoDataset
 from transition_scores.data import TransitionScores
 
 
@@ -29,13 +31,15 @@ class FeatureDataset(TorchDataset):
         slicer: Slicer,
         featurizer: FeatureExtractor,
         num_samples: int = None,
+        label_field: str = "type",
+        label_zero: str = "source",
     ):
         self.data = list(
             flatten(
                 [
                     {
                         "features": features,
-                        "labels": 0 if sample["type"] == "source" else 1,
+                        "labels": 0 if sample[label_field] == label_zero else 1,
                     }
                     for sample in doc["features"]
                     for features in self._featurize(
@@ -99,9 +103,7 @@ def n_way_split(
 class DocumentClassificationDataModule(LightningDataModule):
     def __init__(
         self,
-        *train_datasets: MongoDatset,
-        eval_datasets: list[MongoDatset] = None,
-        test_datasets: list[MongoDatset] = None,
+        dataset: MongoDataset,
         feature_dim: OneDimFeatures | TwoDimFeatures = OneDimFeatures(256),
         slicer: Slicer = None,
         featurizer: FeatureExtractor = None,
@@ -110,12 +112,24 @@ class DocumentClassificationDataModule(LightningDataModule):
         eval_batch_size: int = 32,
         eval_split_size: float = 0.1,
         test_split_size: float = 0.2,
+        load_from_cache: bool = True,
         **kwargs,
     ):
         super().__init__()
+        if not dataset.use_cache:
+            raise ValueError("Dataset must use cache for this data module.")
 
+        self.dataset = dataset
         self.slicer = slicer or SliceFirst(feature_dim[0])
         self.featurizer = featurizer or Likelihood()
+
+        match feature_dim:
+            case (_,):
+                feature_dim = OneDimFeatures(*feature_dim)
+            case (_, _):
+                feature_dim = TwoDimFeatures(*feature_dim)
+            case _:
+                raise ValueError(f"Invalid feature_dim {feature_dim}")
 
         self.save_hyperparameters(
             {
@@ -124,49 +138,50 @@ class DocumentClassificationDataModule(LightningDataModule):
                 "eval_batch_size": eval_batch_size,
                 "eval_split_size": eval_split_size,
                 "test_split_size": test_split_size,
-                "feature_dim": tuple(feature_dim),
+                "feature_dim": feature_dim,
                 "slicer": str(self.slicer),
                 "featurizer": str(self.featurizer),
             }
         )
 
-        self.train_datasets = train_datasets
-        self.eval_datasets = eval_datasets
-        self.test_datasets = test_datasets
-
-        self.__finished_setup = False
+        self._load_from_cache
+        self._finished_setup = False
 
     def prepare_data(self):
-        for dataset in self.train_datasets:
-            if dataset.use_cache:
-                dataset.load()
+        if not self._finished_setup:
+            if not self.dataset.get_cache_file().exists():
+                self.dataset.load()
+                self.dataset._data = None
 
-        if self.eval_datasets:
-            for dataset in self.eval_datasets:
-                if dataset.use_cache:
-                    dataset.load()
+    def setup(self, stage=None):
+        if not self._finished_setup:
+            _hash = sha256()
+            _hash.update(f"num_samples={self.hparams['num_samples']}".encode())
+            _hash.update(f"feature_dim={self.hparams['feature_dim']}".encode())
+            _hash.update(f"slicer={self.hparams['slicer']}".encode())
+            _hash.update(f"featurizer={self.hparams['featurizer']}".encode())
+            _hash = _hash.hexdigest()
 
-        if self.test_datasets:
-            for dataset in self.test_datasets:
-                if dataset.use_cache:
-                    dataset.load()
+            dataset_cache_file = self.dataset.get_cache_file()
+            cache_file = dataset_cache_file.with_suffix("") / f"{_hash}.pt"
 
-        return super().prepare_data()
+            if self._load_from_cache:
+                if cache_file.exists():
+                    self.train_data, self.eval_data, self.test_data = torch.load(
+                        cache_file
+                    )
+                    self._finished_setup = True
+                    return
 
-    def setup(self, _stage=None):
-        if not self.__finished_setup:
             if not self.eval_datasets and not self.test_datasets:
                 splits: list[tuple[Subset, Subset, Subset]] = []
                 for dataset in self.train_datasets:
-                    total_length = len(dataset)
-                    size_val = int(total_length * self.hparams.eval_split_size)
-                    size_test = int(total_length * self.hparams.test_split_size)
-                    size_train = total_length - size_val - size_test
                     splits.append(
                         n_way_split(
                             dataset,
                             self.hparams.eval_split_size,
                             self.hparams.test_split_size,
+                            infer_first=True,
                         )
                     )
 
@@ -174,11 +189,12 @@ class DocumentClassificationDataModule(LightningDataModule):
             elif not self.eval_datasets:
                 splits: list[tuple[Subset, Subset]] = []
                 for dataset in self.train_datasets:
-                    total_length = len(dataset)
-                    size_val = int(total_length * self.hparams.eval_split_size)
-                    size_train = total_length - size_val
                     splits.append(
-                        torch.utils.data.random_split(dataset, [size_train, size_val])
+                        n_way_split(
+                            dataset,
+                            self.hparams.eval_split_size,
+                            infer_first=True,
+                        )
                     )
 
                 train_data, eval_data = zip(*splits)
@@ -202,7 +218,43 @@ class DocumentClassificationDataModule(LightningDataModule):
                 flatten(test_data), self.slicer, self.featurizer
             )
 
-            self.__finished_setup = True
+            if self._load_from_cache:
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
+                torch.save(
+                    (self.train_data, self.eval_data, self.test_data),
+                    cache_file,
+                )
+
+        self._finished_setup = True
+
+    def write_to_file(self, file: Path):
+        with file.open("wb") as fp:
+            torch.save(
+                {
+                    "hparams": self.hparams,
+                    "slicer": self.slicer,
+                    "featurizer": self.featurizer,
+                    "train_data": self.train_data,
+                    "eval_data": self.eval_data,
+                    "test_data": self.test_data,
+                },
+                fp,
+            )
+
+    @classmethod
+    def load_from_file(cls, file: Path):
+        with file.open(mode="rb") as fp:
+            data = torch.load(fp)
+        kwargs = data["hparams"] | {
+            "slicer": data["slicer"],
+            "featurizer": data["featurizer"],
+        }
+        self = cls([], **kwargs)
+        self.train_data = data["train_data"]
+        self.eval_data = data["eval_data"]
+        self.test_data = data["test_data"]
+        self._finished_setup = True
+        return self
 
     def train_dataloader(self):
         return PaddingDataloader(
@@ -239,9 +291,19 @@ class PaddingDataloader(DataLoader):
         features = torch.nn.utils.rnn.pad_sequence(
             [x["features"] for x in batch], batch_first=True
         )
-        features = torch.nn.functional.pad(
-            features, (0, self.feature_dim[0] - features.size(1))
-        )
+
+        # In case we get a batch of sequences, that are all too short,
+        # we need to pad them to the correct length as given by the feature_dim.
+        # - First dimension is the batch size.
+        # - Second dimension is the sequence length.
+        # - Third dimension is the feature dimension, if 2D features are used.
+        match features.shape, self.feature_dim:
+            case (_, s1), (d1,) if s1 < d1:
+                p2d = (0, 0, 0, d1 - s1)
+                features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
+            case (_, s1, _), (d1, _) if s1 < d1:
+                p2d = (0, 0, 0, d1 - s1, 0, 0)
+                features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
         labels = torch.tensor([x["labels"] for x in batch])
 
         return {"features": features, "labels": labels}

@@ -124,8 +124,8 @@ if __name__ == "__main__":
     provider_group_me = model_group.add_mutually_exclusive_group()
     provider_group_me.add_argument(
         "--provider",
-        choices=["hf", "onnx"],
-        help="Model execution provider. Either `hf` for huggingface transformers or `onnx` for the ONNX Runtime via optimum.",
+        choices=["hf", "onnx", "vllm"],
+        help="Model execution provider. Either `hf` for huggingface transformers, `onnx` for the ONNX Runtime via optimum, or `vllm` for vLLM.",
         default="hf",
     )
     provider_group_me.add_argument(
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     mongodb_group.add_argument(
         "--domains",
         type=str,
-        nargs="+",
+        nargs="*",
         dest="mongodb_filter_domains",
         help="Filter by domain. Overwrites the `filter` argument.",
         default=None,
@@ -354,9 +354,15 @@ if __name__ == "__main__":
     pre_processor = parse_pre_processors(args)
     pre_processor_metadata = pre_processor.get_metadata()
 
-    fields_projection = {"_id", "_ref_id", "domain", "lang", "type", "agent"} | set(
-        pre_processor.required_fields.keys()
-    )
+    fields_projection = {
+        "_id",
+        "_ref_id",
+        "domain",
+        "lang",
+        "type",
+        "agent",
+        "label",
+    } | set(pre_processor.required_fields.keys())
 
     split_field_name = None
     if ":" in args.split:
@@ -398,7 +404,17 @@ if __name__ == "__main__":
         num_documents = mongodb_source_collection.count_documents(mongodb_filter_query)
 
         mongodb_limit = args.mongodb_limit or num_documents
+        # if args.mongodb_limit:
+        #     mongodb_limit = args.mongodb_limit
+        #     if isinstance(args.mongodb_limit, float):
+        #         mongodb_limit = int(doc_count * args.mongodb_limit)
+
         mongodb_skip = args.mongodb_skip
+        # if isinstance(args.mongodb_limit, float):
+        #     skip_float = doc_count * args.mongodb_skip
+        #     mongodb_skip = int(skip_float)
+        #     if skip_float > mongodb_skip:
+        #         mongodb_skip += 1
 
         for dataset in batched(
             tqdm(

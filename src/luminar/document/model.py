@@ -2,10 +2,11 @@ from collections import defaultdict
 from typing import NamedTuple
 
 import evaluate
+import numpy as np
 import torch
 import torch.nn as nn
 from lightning.pytorch import LightningModule
-from sklearn.metrics import auc, roc_curve
+from sklearn.metrics import auc, precision_recall_curve, roc_curve
 from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 
@@ -52,6 +53,14 @@ class DocumentClassficationModel(LightningModule):
         **kwargs,
     ):
         super().__init__()
+        match feature_dim:
+            case (_,):
+                feature_dim = OneDimFeatures(*feature_dim)
+            case (_, _):
+                feature_dim = TwoDimFeatures(*feature_dim)
+            case _:
+                raise ValueError(f"Invalid feature_dim {feature_dim}")
+
         self.save_hyperparameters()
 
         conv_layer_shapes = conv_layer_shapes or (
@@ -66,8 +75,9 @@ class DocumentClassficationModel(LightningModule):
 
         self.conv_layers = nn.Sequential()
         for conv in conv_layer_shapes:
+            conv = ConvolutionalLayerSpec(*conv)
             match feature_dim:
-                case OneDimFeatures(_):
+                case (_,):
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
@@ -79,7 +89,7 @@ class DocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LeakyReLU(),
                     )
-                case TwoDimFeatures(_, _) if second_dim_as_channels:
+                case (_, _) if second_dim_as_channels:
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
@@ -91,7 +101,7 @@ class DocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LeakyReLU(),
                     )
-                case TwoDimFeatures(_, _) if not second_dim_as_channels:
+                case (_, _) if not second_dim_as_channels:
                     self.conv_layers.append(
                         nn.LazyConv2d(
                             conv.channels,
@@ -133,6 +143,7 @@ class DocumentClassficationModel(LightningModule):
         self.metrics = {
             metric: evaluate.load(metric) for metric in ("precision", "recall", "f1")
         }
+        self.best_threshold = 0.5
         self.outputs = defaultdict(list)
 
     def forward(self, features: torch.Tensor, **_):
@@ -158,9 +169,9 @@ class DocumentClassficationModel(LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         logits = self(**batch)
-        val_loss = self.criterion(logits.view(-1), batch["labels"].float().view(-1))
+        val_loss = self.criterion(logits.view(-1), batch["labels"].float().view((-1,)))
 
-        preds = logits.squeeze()
+        preds = logits.view((-1,))
 
         labels = batch["labels"]
 
@@ -172,19 +183,29 @@ class DocumentClassficationModel(LightningModule):
         preds, labels, loss = self._process_outputs()
 
         self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc@0.5", np.mean(((preds > 0.5) == labels)), prog_bar=True)
+
+        thresholds = np.linspace(0, 1, 10001)
+        preds_thresholded: np.ndarray = preds > thresholds.reshape(-1, 1)
+        acc_thresholded = np.mean((preds_thresholded == labels), axis=1)
+        self.best_threshold = thresholds[np.argmax(acc_thresholded)]
+
+        self.log(
+            "val_acc@best",
+            np.mean((preds > self.best_threshold) == labels),
+            prog_bar=True,
+        )
+        self.log("threshold", self.best_threshold, prog_bar=True)
 
         fpr, tpr, _ = roc_curve(labels, preds)
         self.log("val_roc_auc", auc(fpr, tpr), prog_bar=True)
-
-        preds = (preds > 0.5).astype(float)
-        self.log("val_acc", (preds == labels).sum() / len(preds), prog_bar=True)
         self.outputs.clear()
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         logits = self(**batch)
-        test_loss = self.criterion(logits.view(-1), batch["labels"].float().view(-1))
+        test_loss = self.criterion(logits.view(-1), batch["labels"].float().view((-1,)))
 
-        preds = logits.squeeze()
+        preds = logits.view((-1,))
 
         labels = batch["labels"]
 
@@ -196,12 +217,16 @@ class DocumentClassficationModel(LightningModule):
         preds, labels, loss = self._process_outputs()
 
         self.log("test_loss", loss, prog_bar=True)
+        self.log("test_acc@0.5", np.mean((preds > 0.5) == labels), prog_bar=True)
+
+        self.log(
+            "test_acc@best",
+            np.mean((preds > self.best_threshold) == labels),
+            prog_bar=True,
+        )
 
         fpr, tpr, _ = roc_curve(labels, preds)
         self.log("test_roc_auc", auc(fpr, tpr), prog_bar=True)
-
-        preds = (preds > 0.5).astype(float)
-        self.log("test_acc", (preds == labels).sum() / len(preds), prog_bar=True)
         self.outputs.clear()
 
     def _process_outputs(self):
