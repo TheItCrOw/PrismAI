@@ -137,7 +137,7 @@ class DocumentClassificationDataModule(LightningDataModule):
                 "eval_batch_size": eval_batch_size,
                 "eval_split_size": eval_split_size,
                 "test_split_size": test_split_size,
-                "feature_dim": feature_dim,
+                "feature_dim": tuple(feature_dim),
                 "slicer": str(self.slicer),
                 "featurizer": str(self.featurizer),
             }

@@ -6,8 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from lightning.pytorch import LightningModule
-from sklearn.metrics import auc, precision_recall_curve, roc_curve
-from torch.utils.data import DataLoader
+from sklearn.metrics import auc, roc_curve
 from transformers import get_linear_schedule_with_warmup
 
 from luminar.features import OneDimFeatures, ThreeDimFeatures, TwoDimFeatures
@@ -61,7 +60,20 @@ class DocumentClassficationModel(LightningModule):
             case _:
                 raise ValueError(f"Invalid feature_dim {feature_dim}")
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(
+            {
+                "feature_dim": tuple(feature_dim),
+                "conv_layer_shapes": conv_layer_shapes,
+                "projection_dim": projection_dim,
+                "learning_rate": learning_rate,
+                "warmup_steps": warmup_steps,
+                "weight_decay": weight_decay,
+                "train_batch_size": train_batch_size,
+                "eval_batch_size": eval_batch_size,
+                "second_dim_as_channels": second_dim_as_channels,
+                **kwargs,
+            }
+        )
 
         conv_layer_shapes = conv_layer_shapes or (
             # Default CNN architecture from SeqXGPT paper (Wang et al., EMNLP 2023)
