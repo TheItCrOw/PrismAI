@@ -21,7 +21,7 @@ elif Path("../.env").exists():
     load_dotenv("../.env")
 
 
-class MetricScorer(TransformersTransitionScorer):
+class IntermediateLikelihoodScorer(TransformersTransitionScorer):
     def process(
         self,
         dataset: Dataset | list[dict],
@@ -65,44 +65,22 @@ class MetricScorer(TransformersTransitionScorer):
         """
         # Create `position_ids` on the fly, if required
         # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
-        likelihoods, log_likelihoods = self._forward(input_ids, attention_mask)
+        hidden_states = self._forward(input_ids, attention_mask)
 
         results = []
-        for target_ids, likelihood, log_likelihood in zip(
-            input_ids, likelihoods, log_likelihoods
-        ):
+        for target_ids, intermediate_probs in zip(input_ids, hidden_states):
             # Truncate the sequence to the last non-pad token
             labels = target_ids[1:].view(-1, 1)
-            labels = labels[: labels.ne(pad_token_id).sum()]
-            seq_length = labels.size(0)
+            labels = labels[: labels.ne(pad_token_id).sum()].to(self.device)
 
-            likelihood: torch.Tensor = likelihood[:seq_length]
-            log_likelihood: torch.Tensor = log_likelihood[:seq_length]
-
-            # Sort likelihoods and get ranks of target labels
-            _, sorted_indices = torch.sort(likelihood, descending=True)
-            _, target_ranks = torch.where(sorted_indices.eq(labels))
-
-            # Get DetectLLM-LLR criterion
-            target_log_probs = log_likelihood.gather(-1, labels).squeeze(-1)
-
-            llr = self._calculate_log_likelihood_ratio(target_ranks, target_log_probs)
-
-            # Get Fast-DetectGPT criterion
-            fast_detect_gpt = self._calculate_fast_detect_gpt(
-                likelihood, log_likelihood, target_log_probs
+            intermediate_probs = self._calculate_intermediate_probs(
+                intermediate_probs, labels
             )
 
             results.append(
                 {
                     "values": {
-                        "transition_scores.target_ids": target_ids.cpu().tolist(),
-                        "metrics": [
-                            {
-                                "fast_detect_gpt": fast_detect_gpt,
-                                "llr": llr,
-                            }
-                        ],
+                        "transition_scores.intermediate_probs": intermediate_probs.tolist(),
                     }
                 }
             )
@@ -111,7 +89,7 @@ class MetricScorer(TransformersTransitionScorer):
 
     def _forward(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> list[tuple[torch.Tensor, ...]]:
         position_ids = None
         if self._requires_position_ids:
             position_ids = attention_mask.long().cumsum(-1) - 1
@@ -122,16 +100,18 @@ class MetricScorer(TransformersTransitionScorer):
                 input_ids=input_ids.to(self.device),
                 attention_mask=attention_mask.to(self.device),
                 position_ids=position_ids.to(self.device),
+                output_hidden_states=True,
             )
 
-            likelihoods: torch.Tensor = outputs.logits.softmax(-1).cpu()
-            log_likelihoods: torch.Tensor = outputs.logits.log_softmax(-1).cpu()
+            # Unpack hidden states to get one list of tensors per input sequence,
+            # instead of one hidden state per layer in the model
+            hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])
 
             del outputs
-        return likelihoods, log_likelihoods
+        return hidden_states
 
 
-def append_metrics(args: Namespace, filter_query: dict, pipeline: list[dict]):
+def append_il(args: Namespace, filter_query: dict, pipeline: list[dict]):
     mongodb_batch_size = args.batch_size or args.mongodb_batch_size
     dataset_batch_size = (
         args.batch_size or args.dataset_batch_size or mongodb_batch_size
@@ -143,7 +123,7 @@ def append_metrics(args: Namespace, filter_query: dict, pipeline: list[dict]):
 
     features_prismai = mongodb_database.get_collection(args.target_collection)
 
-    model = MetricScorer(
+    model = IntermediateLikelihoodScorer(
         args.model,
         batch_size=args.batch_size or args.model_batch_size,
         device=args.device,
@@ -201,7 +181,7 @@ if __name__ == "__main__":
         if domain:
             filter_query["document.domain"] = domain
 
-        append_metrics(
+        append_il(
             args,
             filter_query,
             [
@@ -241,7 +221,7 @@ if __name__ == "__main__":
         if domain:
             filter_query["document.domain"] = domain
 
-        append_metrics(
+        append_il(
             args,
             filter_query,
             [
