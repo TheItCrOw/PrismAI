@@ -70,8 +70,9 @@ class IntermediateLikelihoodScorer(TransformersTransitionScorer):
         results = []
         for target_ids, intermediate_probs in zip(input_ids, hidden_states):
             # Truncate the sequence to the last non-pad token
-            labels = target_ids[1:].view(-1, 1)
-            labels = labels[: labels.ne(pad_token_id).sum()].to(self.device)
+            labels = target_ids[1:]
+            labels = labels[: labels.ne(pad_token_id).sum()]
+            labels = labels.view(-1, 1).to(self.device)
 
             intermediate_probs = self._calculate_intermediate_probs(
                 intermediate_probs, labels
@@ -80,6 +81,7 @@ class IntermediateLikelihoodScorer(TransformersTransitionScorer):
             results.append(
                 {
                     "values": {
+                        "transition_scores.target_ids": target_ids.tolist(),
                         "transition_scores.intermediate_probs": intermediate_probs.tolist(),
                     }
                 }
@@ -174,7 +176,8 @@ if __name__ == "__main__":
     ):
         filter_query = {
             "model.name": args.model,
-            "document._synth_id": None,
+            "document.type": "source",
+            # "document._synth_id": None,
         }
         if args.mongodb_filter:
             filter_query.update(args.mongodb_filter)
@@ -214,7 +217,8 @@ if __name__ == "__main__":
 
         filter_query = {
             "model.name": args.model,
-            "document._synth_id": {"$ne": None},
+            "document.type": {"$ne": "source"},
+            # "document._synth_id": {"$ne": None},
         }
         if args.mongodb_filter:
             filter_query.update(args.mongodb_filter)

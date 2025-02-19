@@ -1,4 +1,5 @@
 import pickle
+from abc import abstractmethod
 from hashlib import sha256
 from pathlib import Path
 from typing import Final, Generator, Literal, Self
@@ -6,10 +7,10 @@ from typing import Final, Generator, Literal, Self
 import bson.json_util
 from pymongo import MongoClient
 from pymongo.collection import Collection as MongoCollection
+from pymongo.cursor import Cursor
 from pymongo.database import Database as MongoDatabase
 from torch.utils.data import Dataset as TorchDataset
-from tqdm import tqdm
-
+from tqdm.auto import tqdm
 
 DEFAULT_CACHE_DIR: Final[Path] = (
     Path("/nvme/.cache/luminar") if Path("/nvme").exists() else Path("/tmp/luminar")
@@ -20,18 +21,15 @@ class MongoDataset(TorchDataset):
     def __init__(
         self,
         mongo_db_connection: str,
+        database: str,
         collection: str,
-        pipeline: list[dict] = [],
-        database: str = "prismai",
         use_cache: bool = True,
         cache_dir: Path | None = None,
         update_cache: bool = False,
     ):
-        super().__init__()
         self.mongo_db_connection = mongo_db_connection
         self.database = database
         self.collection = collection
-        self.pipeline = pipeline
         self.use_cache = use_cache
         self.cache_dir = Path(cache_dir) if cache_dir else DEFAULT_CACHE_DIR
         self.update_cache = update_cache
@@ -40,6 +38,15 @@ class MongoDataset(TorchDataset):
     def data(self) -> list[list[dict]]:
         self.load()
         return self._data
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, idx: int) -> list[dict]:
+        return self.data[idx]
+
+    def __iter__(self) -> Generator[dict, None, None]:
+        return iter(self.data)
 
     def load(self) -> Self:
         if hasattr(self, "_data"):
@@ -53,15 +60,9 @@ class MongoDataset(TorchDataset):
                 self._data = pickle.load(fp)
         else:
             with MongoClient(self.mongo_db_connection) as client:
-                db: MongoDatabase = client.get_database(self.database)
-                collection: MongoCollection = db.get_collection(self.collection)
-
                 self._data: list[list[dict]] = list(
                     tqdm(
-                        collection.aggregate(
-                            self.pipeline,
-                            allowDiskUse=True,
-                        ),
+                        self._fetch_documents(client),
                         desc=f"[{type(self).__name__}] Loading Documents from MongoDB",
                     )
                 )
@@ -74,23 +75,99 @@ class MongoDataset(TorchDataset):
 
         return self
 
+    @abstractmethod
+    def _fetch_documents(self, client) -> Cursor: ...
+
+    @abstractmethod
+    def get_cache_file(self) -> Path: ...
+
+
+class MongoFindDataset(MongoDataset):
+    def __init__(
+        self,
+        *args,
+        mongo_db_connection: str,
+        collection: str,
+        database: str = "prismai",
+        use_cache: bool = True,
+        cache_dir: Path | None = None,
+        update_cache: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            mongo_db_connection=mongo_db_connection,
+            database=database,
+            collection=collection,
+            use_cache=use_cache,
+            cache_dir=cache_dir,
+            update_cache=update_cache,
+        )
+        self.args = args
+        self.kwargs = kwargs
+
+    def _fetch_documents(self, client: MongoClient) -> Cursor:
+        return (
+            client.get_database(self.database)
+            .get_collection(self.collection)
+            .find(
+                *self.args,
+                **self.kwargs,
+            )
+        )
+
+    def get_cache_file(self) -> Path:
+        _hash = sha256(self.collection.encode())
+        _hash.update(bson.json_util.dumps(self.args).encode())
+        _hash.update(
+            bson.json_util.dumps(
+                {k: self.kwargs[k] for k in sorted(self.kwargs.keys())}
+            ).encode()
+        )
+        cache_file = self.cache_dir / self.collection / f"{_hash.hexdigest()}.pkl"
+        return cache_file
+
+
+class MongoPipelineDataset(MongoDataset):
+    def __init__(
+        self,
+        mongo_db_connection: str,
+        collection: str,
+        pipeline: list[dict] = [],
+        database: str = "prismai",
+        use_cache: bool = True,
+        cache_dir: Path | None = None,
+        update_cache: bool = False,
+    ):
+        super().__init__(
+            mongo_db_connection=mongo_db_connection,
+            database=database,
+            collection=collection,
+            use_cache=use_cache,
+            cache_dir=cache_dir,
+            update_cache=update_cache,
+        )
+        self.pipeline = pipeline
+
+    def _fetch_documents(self, client: MongoClient) -> Cursor:
+        return (
+            client.get_database(self.database)
+            .get_collection(self.collection)
+            .aggregate(
+                self.pipeline,
+                allowDiskUse=True,
+            )
+        )
+
     def get_cache_file(self) -> Path:
         pipeline_hash = sha256(self.collection.encode())
         pipeline_hash.update(bson.json_util.dumps(self.pipeline).encode())
-        cache_file = self.cache_dir / f"{pipeline_hash.hexdigest()}.pkl"
+        cache_file = (
+            self.cache_dir / self.collection / f"{pipeline_hash.hexdigest()}.pkl"
+        )
         return cache_file
 
-    def __len__(self) -> int:
-        return len(self.data)
 
-    def __getitem__(self, idx: int) -> list[dict]:
-        return self.data[idx]
-
-    def __iter__(self) -> Generator[dict, None, None]:
-        return iter(self.data)
-
-
-class PrismaiDataset(MongoDataset):
+class PrismaiDataset(MongoPipelineDataset):
     def __init__(
         self,
         mongo_db_connection: str,
@@ -148,6 +225,7 @@ class PrismaiDataset(MongoDataset):
                             "type": "$document.type",
                             "split": "$split",
                             "transition_scores": "$transition_scores",
+                            "metrics": "$metrics",
                         }
                     },
                 }

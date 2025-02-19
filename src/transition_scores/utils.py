@@ -78,6 +78,7 @@ class PytorchGcLevel(enum.IntEnum):
     NONE = OFF = FALSE = DEFAULT = 0
     DATASET = 1
     BATCH = 2
+    INNER = 3
 
 
 _env_pytorch_gc_level = os.environ.get("PYTORCH_GC_LEVEL", "NONE").strip().upper()

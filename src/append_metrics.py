@@ -72,8 +72,9 @@ class MetricScorer(TransformersTransitionScorer):
             input_ids, likelihoods, log_likelihoods
         ):
             # Truncate the sequence to the last non-pad token
-            labels = target_ids[1:].view(-1, 1)
+            labels = target_ids[1:]
             labels = labels[: labels.ne(pad_token_id).sum()]
+            labels = labels.view(-1, 1)
             seq_length = labels.size(0)
 
             likelihood: torch.Tensor = likelihood[:seq_length]
@@ -151,7 +152,12 @@ def append_metrics(args: Namespace, filter_query: dict, pipeline: list[dict]):
     )
     pre_processor = parse_pre_processors(args)
 
-    num_documents = features_prismai.count_documents(filter_query)
+    kwargs = {}
+    if args.mongodb_limit:
+        kwargs["limit"] = args.mongodb_limit
+    if args.mongodb_skip:
+        kwargs["skip"] = args.mongodb_skip
+    num_documents = features_prismai.count_documents(filter_query, **kwargs)
     if not num_documents:
         return
 
@@ -186,12 +192,17 @@ def append_metrics(args: Namespace, filter_query: dict, pipeline: list[dict]):
 if __name__ == "__main__":
     args = get_argparser().parse_args()
 
-    for domain in tqdm(
-        args.mongodb_filter_domains or [None],
-        desc="Processing Domains"
+    domains = args.mongodb_filter_domains or [None]
+    tq = tqdm(
+        total=2 * len(domains),
+        desc=f"Processing {len(domains)} Domain{'s' if len(domains) > 1 else ''}"
         if args.mongodb_filter_domains
         else "Processing All Domains",
-    ):
+    )
+    for domain in domains:
+        if domain:
+            tq.set_postfix_str(f"Domain: {domain}")
+
         filter_query = {
             "model.name": args.model,
             "document._synth_id": None,
@@ -201,6 +212,7 @@ if __name__ == "__main__":
         if domain:
             filter_query["document.domain"] = domain
 
+        tq.set_description_str("Processing collected_items")
         append_metrics(
             args,
             filter_query,
@@ -231,6 +243,7 @@ if __name__ == "__main__":
                 {"$project": {"_id": 1, "text": "$source.text"}},
             ],
         )
+        tq.update(1)
 
         filter_query = {
             "model.name": args.model,
@@ -241,6 +254,7 @@ if __name__ == "__main__":
         if domain:
             filter_query["document.domain"] = domain
 
+        tq.set_description_str("Processing synthesized_texts")
         append_metrics(
             args,
             filter_query,
@@ -271,3 +285,4 @@ if __name__ == "__main__":
                 {"$project": {"_id": 1, "text": "$source.text"}},
             ],
         )
+        tq.update(1)

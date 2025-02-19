@@ -1,10 +1,8 @@
 import argparse
-import importlib
 import json
 import os
 from functools import partial
 
-import ray
 import torch
 from dotenv import load_dotenv
 from lightning.pytorch import Trainer, seed_everything
@@ -23,10 +21,8 @@ from ray.tune.schedulers import ASHAScheduler
 
 from luminar.document.data import (
     DocumentClassificationDataModule,
-    FeatureDataset,
-    n_way_split,
 )
-from luminar.document.model import ConvolutionalLayerSpec, DocumentClassficationModel
+from luminar.document.model import CNNDocumentClassficationModel
 from luminar.features import FeatureExtractor, OneDimFeatures, Slicer, TwoDimFeatures
 from luminar.mongo import PrismaiDataset
 
@@ -48,7 +44,7 @@ def train_func(config):
             raise ValueError(f"Unknown n_dim {config['n_dim']}")
 
     seed_everything(config["seed"])
-    model = DocumentClassficationModel(
+    model = CNNDocumentClassficationModel(
         feature_dim=config["feature_dim"],
         projection_dim=config["projection_dim"],
         conv_layer_shapes=config["conv_layer_shapes"],
@@ -250,7 +246,7 @@ if __name__ == "__main__":
                 "n_dim": 2,
                 "feature_dim": tune.choice([64, 128, 256]),
                 "second_dim": tune.choice(num_layers),
-                "featurizer": FeatureExtractor.IntermediateLogits,
+                "featurizer": FeatureExtractor.IntermediateLikelihood,
                 "second_dim_as_channels": True,
                 # "second_dim_as_channels": tune.choice([True, False]),
             }

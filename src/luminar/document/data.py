@@ -15,7 +15,7 @@ from luminar.features import (
     Slicer,
     TwoDimFeatures,
 )
-from luminar.mongo import MongoDataset
+from luminar.mongo import MongoPipelineDataset
 from transition_scores.data import FeatureValues
 
 
@@ -77,7 +77,7 @@ def n_way_split(
     dataset: TorchDataset,
     *sizes: float,
     infer_first: bool = False,
-) -> tuple[Subset, ...]:
+) -> list[Subset]:
     """
     Split a dataset into n subsets with the given sizes.
 
@@ -88,21 +88,18 @@ def n_way_split(
             If True, `len(sizes) + 1` Subsets will be returned.
 
     Returns:
-        tuple[Subset, ...]: The resulting subsets.
+        list[Subset]: The resulting subsets.
     """
-    total_length = len(dataset)
-    lengths = [int(total_length * size) for size in sizes]
-
     if infer_first:
-        lengths.insert(0, total_length - sum(lengths))
+        sizes = 1.0 - sum(sizes), *sizes
 
-    return torch.utils.data.random_split(dataset, lengths)
+    return torch.utils.data.random_split(dataset, sizes)
 
 
 class DocumentClassificationDataModule(LightningDataModule):
     def __init__(
         self,
-        dataset: MongoDataset,
+        dataset: MongoPipelineDataset,
         feature_dim: OneDimFeatures | TwoDimFeatures = OneDimFeatures(256),
         slicer: Slicer = None,
         featurizer: FeatureExtractor = None,
@@ -283,7 +280,8 @@ class DocumentClassificationDataModule(LightningDataModule):
 
 class PaddingDataloader(DataLoader):
     def __init__(self, *args, feature_dim: tuple[int, ...], **kwargs):
-        super().__init__(*args, collate_fn=self._collate_fn, **kwargs)
+        kwargs["collate_fn"] = self._collate_fn
+        super().__init__(*args, **kwargs)
         self.feature_dim = feature_dim
 
     def _collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:
@@ -298,11 +296,13 @@ class PaddingDataloader(DataLoader):
         # - Third dimension is the feature dimension, if 2D features are used.
         match features.shape, self.feature_dim:
             case (_, s1), (d1,) if s1 < d1:
-                p2d = (0, 0, 0, d1 - s1)
+                p2d = (0, d1 - s1)
                 features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
             case (_, s1, _), (d1, _) if s1 < d1:
                 p2d = (0, 0, 0, d1 - s1, 0, 0)
                 features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
+        features = torch.nan_to_num(features, nan=0.0, posinf=1.0, neginf=-1.0)
+
         labels = torch.tensor([x["labels"] for x in batch])
 
         return {"features": features, "labels": labels}

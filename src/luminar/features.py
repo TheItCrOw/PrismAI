@@ -21,17 +21,17 @@ class FeaturizedTransitionScores(NamedTuple):
 
 
 class OneDimFeatures(NamedTuple):
-    size: int
+    width: int
 
 
 class TwoDimFeatures(NamedTuple):
-    height: int
     width: int
+    height: int
 
 
 class ThreeDimFeatures(NamedTuple):
-    height: int
     width: int
+    height: int
     depth: int
 
 
@@ -248,8 +248,8 @@ class FeatureExtractor(ABC):
         return TopkLikelihoodLikelihoodRatio(top_k)
 
     @classmethod
-    def IntermediateLogits(cls, last_n: int | None = None) -> Self:
-        return IntermediateLogits(last_n)
+    def IntermediateLikelihood(cls, last_n: int | None = None) -> Self:
+        return IntermediateLikelihood(last_n)
 
 
 class Likelihood(FeatureExtractor):
@@ -257,7 +257,7 @@ class Likelihood(FeatureExtractor):
         self,
         target_probs: torch.Tensor,
     ) -> torch.Tensor:
-        return target_probs.float()
+        return target_probs.float()  # .mul(2).sub(1.0)
 
     def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         target_probs = torch.tensor(ts.target_probs)[slices].flatten()
@@ -324,7 +324,11 @@ class LikelihoodTopkLikelihoodRatio(FeatureExtractor):
         Returns:
             torch.Tensor: Tensor of the same shape as target_probs and top_k_probs.
         """
-        return torch.div(target_probs, target_probs + top_k_probs + 1e-8)
+        return (
+            torch.div(
+                target_probs, target_probs + top_k_probs + 1e-8
+            )  # .mul(2).sub(1.0)
+        )
 
     def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         target_probs = torch.tensor(ts.target_probs)[slices].view(-1, 1)
@@ -349,10 +353,12 @@ class TopkLikelihoodLikelihoodRatio(LikelihoodTopkLikelihoodRatio):
         Returns:
             torch.Tensor: Tensor of the same shape as top_k_probs.
         """
-        return torch.div(top_k_probs, target_probs)
+        return torch.div(
+            top_k_probs, target_probs + top_k_probs + 1e-8
+        )  # .mul(2).sub(1.0)
 
 
-class IntermediateLogits(FeatureExtractor):
+class IntermediateLikelihood(FeatureExtractor):
     def __init__(self, last_n: int | None = None):
         super().__init__()
         self.last_n = last_n
@@ -362,9 +368,9 @@ class IntermediateLogits(FeatureExtractor):
 
     def __call__(
         self,
-        target_probs: torch.Tensor,
+        intermediate_probs: torch.Tensor,
     ) -> torch.Tensor:
-        return target_probs.float()
+        return intermediate_probs.float()  # .mul(2).sub(1.0)
 
     def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
         logits = torch.tensor(ts.intermediate_probs)[slices]

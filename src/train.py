@@ -9,7 +9,7 @@ from lightning.pytorch import loggers as pl_loggers
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 from luminar.document.data import DocumentClassificationDataModule
-from luminar.document.model import DocumentClassficationModel
+from luminar.document.model import CNNDocumentClassficationModel
 from luminar.features import OneDimFeatures
 from luminar.mongo import PrismaiDataset
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 ):
                     try:
                         seed_everything(42)
-                        model = DocumentClassficationModel(
+                        model = CNNDocumentClassficationModel(
                             feature_size,
                             projection_dim=pdim,
                             learning_rate=lr,

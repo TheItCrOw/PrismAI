@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from lightning.pytorch import LightningModule
-from sklearn.metrics import auc, roc_curve
+from sklearn.metrics import auc, f1_score, roc_curve
 from transformers import get_linear_schedule_with_warmup
 
 from luminar.features import OneDimFeatures, ThreeDimFeatures, TwoDimFeatures
@@ -37,7 +37,7 @@ class ConvolutionalLayerSpec(NamedTuple):
         return repr(tuple(self))
 
 
-class DocumentClassficationModel(LightningModule):
+class CNNDocumentClassficationModel(LightningModule):
     def __init__(
         self,
         feature_dim: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
@@ -75,21 +75,21 @@ class DocumentClassficationModel(LightningModule):
             }
         )
 
-        conv_layer_shapes = conv_layer_shapes or (
-            # Default CNN architecture from SeqXGPT paper (Wang et al., EMNLP 2023)
-            # https://github.com/Jihuai-wpy/SeqXGPT/blob/da2f264160c12a95c9573c4820fefaa75a68a0f9/SeqXGPT/SeqXGPT/model.py#L52
-            [ConvolutionalLayerSpec(64, 5, 1)]
-            + [ConvolutionalLayerSpec(128, 3, 1)] * 3
-            + [ConvolutionalLayerSpec(64, 3, 1)]
-        )
-
+        conv_layer_shapes = conv_layer_shapes or []
+        # conv_layer_shapes = conv_layer_shapes or (
+        #     # Default CNN architecture from SeqXGPT paper (Wang et al., EMNLP 2023)
+        #     # https://github.com/Jihuai-wpy/SeqXGPT/blob/da2f264160c12a95c9573c4820fefaa75a68a0f9/SeqXGPT/SeqXGPT/model.py#L52
+        #     [ConvolutionalLayerSpec(64, 5, 1)]
+        #     + [ConvolutionalLayerSpec(128, 3, 1)] * 3
+        #     + [ConvolutionalLayerSpec(64, 3, 1)]
+        # )
         self.example_input_array = torch.randn((train_batch_size, *feature_dim))
 
         self.conv_layers = nn.Sequential()
-        for conv in conv_layer_shapes:
-            conv = ConvolutionalLayerSpec(*conv)
-            match feature_dim:
-                case (_,):
+        match feature_dim:
+            case (_,):
+                for conv in conv_layer_shapes:
+                    conv = ConvolutionalLayerSpec(*conv)
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
@@ -101,7 +101,9 @@ class DocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LeakyReLU(),
                     )
-                case (_, _) if second_dim_as_channels:
+            case (_, _) if second_dim_as_channels:
+                for conv in conv_layer_shapes:
+                    conv = ConvolutionalLayerSpec(*conv)
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
@@ -113,7 +115,9 @@ class DocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LeakyReLU(),
                     )
-                case (_, _) if not second_dim_as_channels:
+            case (_, _) if not second_dim_as_channels:
+                for conv in conv_layer_shapes:
+                    conv = ConvolutionalLayerSpec(*conv)
                     self.conv_layers.append(
                         nn.LazyConv2d(
                             conv.channels,
@@ -125,20 +129,8 @@ class DocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LeakyReLU(),
                     )
-                # case ThreeDimFeatures(_, _, _):
-                #     self.conv_layers.append(
-                #         nn.LazyConv2d(
-                #             conv.channels,
-                #             conv.kernel_size_2d,
-                #             conv.stride,
-                #             conv.padding,
-                #         ),
-                #     )
-                #     self.conv_layers.append(
-                #         nn.LeakyReLU(),
-                #     )
-                case _:
-                    raise RuntimeError("Unsupported feature size")
+            case _:
+                raise RuntimeError("Unsupported feature size")
         self.conv_layers.append(nn.Flatten())
 
         if projection_dim:
@@ -152,13 +144,14 @@ class DocumentClassficationModel(LightningModule):
 
         self.criterion = nn.BCEWithLogitsLoss()
 
-        self.metrics = {
-            metric: evaluate.load(metric) for metric in ("precision", "recall", "f1")
-        }
-        self.best_threshold = 0.5
+        self.acc_threshold = 0.5
+        self.f1_threshold = 0.5
         self.outputs = defaultdict(list)
 
     def forward(self, features: torch.Tensor, **_):
+        if isinstance(features, dict):
+            features = features["features"]
+
         if self.hparams.second_dim_as_channels:
             # We are using 2D features (so `features` is a 3D tensor)
             # but we want to treat the second feature dimension as channels.
@@ -195,19 +188,42 @@ class DocumentClassficationModel(LightningModule):
         preds, labels, loss = self._process_outputs()
 
         self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc@0.5", np.mean(((preds > 0.5) == labels)), prog_bar=True)
 
         thresholds = np.linspace(0, 1, 10001)
         preds_thresholded: np.ndarray = preds > thresholds.reshape(-1, 1)
-        acc_thresholded = np.mean((preds_thresholded == labels), axis=1)
-        self.best_threshold = thresholds[np.argmax(acc_thresholded)]
 
+        acc_thresholded = np.mean((preds_thresholded == labels), axis=1)
+        self.acc_threshold = thresholds[np.argmax(acc_thresholded)]
         self.log(
-            "val_acc@best",
-            np.mean((preds > self.best_threshold) == labels),
+            "val_acc@0.5",
+            np.mean((preds > 0.5) == labels),
             prog_bar=True,
         )
-        self.log("threshold", self.best_threshold, prog_bar=True)
+        self.log(
+            "val_acc@best",
+            np.mean((preds > self.acc_threshold) == labels),
+            prog_bar=True,
+        )
+        self.log("val_acc_threshold", self.acc_threshold, prog_bar=False)
+
+        tp = np.sum(preds_thresholded[:, labels == 0] == 0, axis=1)
+        # tn = np.sum(preds_thresholded[:, labels == 1] == 1, axis=1)
+        fp = np.sum(preds_thresholded[:, labels == 0] == 1, axis=1)
+        fn = np.sum(preds_thresholded[:, labels == 1] == 0, axis=1)
+
+        f1_thresholded = 2 * tp / (2 * tp + fp + fn)
+        self.f1_threshold = thresholds[np.argmax(f1_thresholded)]
+        self.log(
+            "val_f1@0.5",
+            f1_score(labels, preds > 0.5, zero_division=0.0),
+            prog_bar=True,
+        )
+        self.log(
+            "val_f1@best",
+            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),
+            prog_bar=True,
+        )
+        self.log("val_f1_threshold", self.f1_threshold, prog_bar=True)
 
         fpr, tpr, _ = roc_curve(labels, preds)
         self.log("val_roc_auc", auc(fpr, tpr), prog_bar=True)
@@ -229,13 +245,26 @@ class DocumentClassficationModel(LightningModule):
         preds, labels, loss = self._process_outputs()
 
         self.log("test_loss", loss, prog_bar=True)
-        self.log("test_acc@0.5", np.mean((preds > 0.5) == labels), prog_bar=True)
 
         self.log(
-            "test_acc@best",
-            np.mean((preds > self.best_threshold) == labels),
+            "test_f1@0.5",
+            f1_score(labels, preds > 0.5, zero_division=0.0),
             prog_bar=True,
         )
+        self.log(
+            "test_f1@best",
+            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),
+            prog_bar=True,
+        )
+        self.log("test_f1_threshold", self.f1_threshold, prog_bar=True)
+
+        self.log("test_acc@0.5", np.mean((preds > 0.5) == labels), prog_bar=True)
+        self.log(
+            "test_acc@best",
+            np.mean((preds > self.acc_threshold) == labels),
+            prog_bar=True,
+        )
+        self.log("test_acc_threshold", self.acc_threshold, prog_bar=True)
 
         fpr, tpr, _ = roc_curve(labels, preds)
         self.log("test_roc_auc", auc(fpr, tpr), prog_bar=True)
