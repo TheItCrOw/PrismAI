@@ -1,13 +1,11 @@
-import os
-import pathlib
 import json
-import pandas as pd
-import uuid
+import os
 import re
+import uuid
 
-from dotenv import load_dotenv
-from tqdm.notebook import tqdm
+import pandas as pd
 from cassis import *
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -75,11 +73,7 @@ class UIMAExporter:
                         documentUri=output_file,
                     )
                 )
-                cas.add(
-                    DocumentAnnotation(
-                        author="Bönisch, Kevin and Stoeckel, Manuel and Mehler, Alexander"
-                    )
-                )
+                cas.add(DocumentAnnotation(author="Anonymous"))
                 cas.add(
                     UceDynamicMetadata(
                         key="date",
