@@ -6,9 +6,7 @@ from typing import Final, Generator, Literal, Self
 
 import bson.json_util
 from pymongo import MongoClient
-from pymongo.collection import Collection as MongoCollection
 from pymongo.cursor import Cursor
-from pymongo.database import Database as MongoDatabase
 from torch.utils.data import Dataset as TorchDataset
 from tqdm.auto import tqdm
 
@@ -48,14 +46,17 @@ class MongoDataset(TorchDataset):
     def __iter__(self) -> Generator[dict, None, None]:
         return iter(self.data)
 
-    def load(self) -> Self:
+    def load(self, verbose=True) -> Self:
         if hasattr(self, "_data"):
             return self
 
         cache_file = self.get_cache_file()
 
         if self.use_cache and not self.update_cache and cache_file.exists():
-            print(f"[{type(self).__name__}] Loading Data from Cache File {cache_file}")
+            if verbose:
+                print(
+                    f"[{type(self).__name__}] Loading Data from Cache File {cache_file}"
+                )
             with cache_file.open("rb") as fp:
                 self._data = pickle.load(fp)
         else:
@@ -64,12 +65,14 @@ class MongoDataset(TorchDataset):
                     tqdm(
                         self._fetch_documents(client),
                         desc=f"[{type(self).__name__}] Loading Documents from MongoDB",
+                        disable=not verbose,
                     )
                 )
 
         if self.use_cache and self.update_cache or not cache_file.exists():
             cache_file.parent.mkdir(parents=True, exist_ok=True)
-            print(f"[{type(self).__name__}] Writing Cache File {cache_file}")
+            if verbose:
+                print(f"[{type(self).__name__}] Writing Cache File {cache_file}")
             with cache_file.open("wb") as fp:
                 pickle.dump(self._data, fp)
 
