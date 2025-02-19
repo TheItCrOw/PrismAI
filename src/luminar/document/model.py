@@ -1,7 +1,6 @@
 from collections import defaultdict
 from typing import NamedTuple
 
-import evaluate
 import numpy as np
 import torch
 import torch.nn as nn
@@ -226,7 +225,7 @@ class CNNDocumentClassficationModel(LightningModule):
         self.log("val_f1_threshold", self.f1_threshold, prog_bar=True)
 
         fpr, tpr, _ = roc_curve(labels, preds)
-        self.log("val_roc_auc", auc(fpr, tpr), prog_bar=True)
+        self.log("val_auroc", auc(fpr, tpr), prog_bar=True)
         self.outputs.clear()
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
@@ -267,7 +266,7 @@ class CNNDocumentClassficationModel(LightningModule):
         self.log("test_acc_threshold", self.acc_threshold, prog_bar=True)
 
         fpr, tpr, _ = roc_curve(labels, preds)
-        self.log("test_roc_auc", auc(fpr, tpr), prog_bar=True)
+        self.log("test_auroc", auc(fpr, tpr), prog_bar=True)
         self.outputs.clear()
 
     def _process_outputs(self):
