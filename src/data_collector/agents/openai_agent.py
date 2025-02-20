@@ -1,4 +1,5 @@
 from openai import OpenAI
+
 from data_collector.agents.ai_agent import Agent
 
 
@@ -9,14 +10,20 @@ class OpenAIAgent(Agent):
         self.client = OpenAI(api_key=api_key)
 
     def get_response(self, system_prompt, user_prompt, temperature=1, max_tokens=1024):
-        completion = self.client.chat.completions.create(
-            model=self.name,
-            messages=[
+        params = {
+            "model": self.name,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=temperature,
-            top_p=0.6,
-            max_tokens=max_tokens,
-        )
+            "temperature": temperature,
+        }
+        # Adjust max_tokens based on model name
+        if self.name == "o3-mini":
+            params["max_completion_tokens"] = max(2048, max_tokens)
+        else:
+            params["max_tokens"] = max_tokens
+            params["top_p"] = 0.6
+
+        completion = self.client.chat.completions.create(**params)
         return completion.choices[0].message.content

@@ -1,20 +1,20 @@
-from openai import OpenAI
-from abc import ABC, abstractmethod
-from data_collector.collected_item import CollectedItem
-from data_collector.collector import Collector
-from datetime import datetime
-
+import hashlib
 import os
 import random
 import re
-import hashlib
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+from data_collector.collected_item import CollectedItem
+from data_collector.collector import Collector
 
 
 class Agent(ABC):
-    def __init__(self, name):
+    def __init__(self, name, context_length=2048):
         self.name = name
         self.information_extract_prompt = self.get_prompt("extract_information.md")
         self.ghostwriting_prompt = self.get_prompt("ghostwrite.md")
+        self.context_length = context_length
 
     @abstractmethod
     def get_response(self, system_prompt, user_prompt, temperature=1, max_tokens=1024):
@@ -61,15 +61,28 @@ class Agent(ABC):
             system_prompt=self.information_extract_prompt,
             user_prompt="\n\n### Text:\n" + item.text[:5000],
         )
+        if self.name.startswith("deepseek-r1"):
+            synth_obj["extracted_information"] = synth_obj[
+                "extracted_information"
+            ].split("</think>")[1]
         synth_obj["extracted_information"] += (
             f"\n- The text must be around {min(2000, text_length)} words long."
         )
 
+        multiplier = 1.6
+        if self.name.startswith("deepseek-r1") or self.name == "o3-mini":
+            # In this case, we have a reasoning model. Their response looks differently,
+            # since they "<think></think>" before hand. We hence give them more tokens
+            multiplier = 15
         response = self.get_response(
             system_prompt=self.ghostwriting_prompt,
             user_prompt="### Text Requirements:\n" + synth_obj["extracted_information"],
-            max_tokens=(int)(text_length * 1.6),
+            max_tokens=(int)(text_length * multiplier),
         )
+        if self.name.startswith("deepseek-r1"):
+            response = re.sub(
+                r"<think>.*?</think>", "", response, flags=re.DOTALL
+            ).strip()
 
         synth_obj["synth_text"] = self.truncate_to_full_sentence(response)
         synth_obj["og_text_length"] = len(item.text.split())
@@ -141,11 +154,21 @@ class Agent(ABC):
         user_prompt = f"### START: {before.strip()}\n\n### END: {after.strip()}"
 
         # Generate the filling chunk gaps now with the AI response.
+        multiplier = 1.6
+        if self.name.startswith("deepseek-r1") or self.name == "o3-mini":
+            # In this case, we have a reasoning model. Their response looks differently,
+            # since they "<think></think>" before hand. We hence give them more tokens
+            multiplier = 15
         response = self.get_response(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            max_tokens=(int)(synth_obj["og_chunk_text_length"] * 1.6),
+            max_tokens=(int)(synth_obj["og_chunk_text_length"] * multiplier),
         )
+        if self.name.startswith("deepseek-r1"):
+            response = re.sub(
+                r"<think>.*?</think>", "", response, flags=re.DOTALL
+            ).strip()
+
         # Since we want to force a certain length of the response and set max_tokens, the model
         # sometimes doesnt end on a full sentence. In that case, we cut that faulty sentence off.
         cleaned_response = self.truncate_to_full_sentence(response)

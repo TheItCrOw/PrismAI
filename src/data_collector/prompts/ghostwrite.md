@@ -15,4 +15,4 @@ It is of utmost importance that you adhere to these requirements. Follow these k
 5. Proofread your text and ensure it matches the requirements, especially the linguistic style and length.
 6. Adjust the text if needed.
 
-Only output the final text such that it can be instantly filled into the missing section.
+Only output the final text.

@@ -13,6 +13,7 @@ class CollectedItem:
         feature_space=None,
         synthetization=None,
         id=None,
+        _id=None,
     ):
         self.text = text
         self.chunks = chunks
@@ -23,6 +24,7 @@ class CollectedItem:
         self.feature_space = feature_space if feature_space is not None else []
         self.synthetization = synthetization if synthetization is not None else []
         self.id = str(uuid.uuid4()) if id is None else id
+        self._id = str(uuid.uuid4()) if _id is None else _id
 
     @classmethod
     def from_dict(cls, data):

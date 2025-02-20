@@ -5,8 +5,8 @@ a script file with as much instances as we like, and then starting each script a
 process from here to log to a destined file. That way, we can collect many sources in parallel.
 """
 
-import subprocess
 import os
+import subprocess
 
 notebook_path = "main.ipynb"
 output_dir = "processes"
@@ -16,6 +16,7 @@ skip = 0
 batch_size = 50
 collect = False
 synthesize = False
+synchronize = True
 extract_features = True
 force = False
 

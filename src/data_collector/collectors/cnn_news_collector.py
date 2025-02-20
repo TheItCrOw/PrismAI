@@ -1,9 +1,9 @@
 import os
-import json
-import pandas as pd
-import importlib
-
 from datetime import datetime
+
+import pandas as pd
+import regex as re
+
 from data_collector.collected_item import CollectedItem
 from data_collector.collector import Collector
 
@@ -44,9 +44,14 @@ class CNNNewsCollector(Collector):
 
         for index, row in in_df.iterrows():
             article = row["article"]
+            sentences = re.findall(r"[^.!?]*[.!?]", article)
+
             item = CollectedItem(
                 text=article,
-                chunks=article.split("\n"),
+                # A single chunk will be 4 sentences.
+                chunks=[
+                    " ".join(sentences[i : i + 4]) for i in range(0, len(sentences), 4)
+                ],
                 domain="cnn_news",
                 date="2007-2015",
                 source="https://www.kaggle.com/datasets/gowrishankarp/newspaper-text-summarization-cnn-dailymail",
