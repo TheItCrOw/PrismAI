@@ -3,7 +3,6 @@ import io
 import json
 import os
 import re
-import sys
 import uuid
 
 import pandas as pd
@@ -11,8 +10,7 @@ import requests
 from cassis import *
 from dotenv import load_dotenv
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from mongodb_client import MongoDBConnection
+from data_collector.mongodb_client import MongoDBConnection
 
 load_dotenv()
 

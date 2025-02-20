@@ -46,13 +46,12 @@
 # In[1]:
 
 
-import sys
+import argparse
 import importlib
 import os
-import pandas as pd
 import time
-import argparse
 
+import pandas as pd
 from dotenv import load_dotenv
 from tqdm.notebook import tqdm
 
@@ -88,47 +87,40 @@ class CONFIG:
 # In[3]:
 
 
-# So that it includes local imports. This is some next level python shit import
-sys.path.insert(0, CONFIG.SRC_ROOT_PATH)
-sys.path.insert(0, CONFIG.SRC_ROOT_PATH_COLL)
-
-
 # In[4]:
 
 
-import collector
-import collected_item
-import collectors.bundestag_collector
-import collectors.house_of_commons_collector
-import collectors.student_essays_collector
-import collectors.arxiv_collector
-import collectors.spiegel_collector
-import collectors.cnn_news_collector
-import collectors.open_legal_data_collector
-import collectors.euro_court_cases_collector
-import collectors.religion_collector
-import collectors.gutenberg_collector
-import collectors.blog_corpus_collector
-import collectors.blog_corpus_collector
-
 import data_collector.agents.ai_agent
 import data_collector.agents.openai_agent
+import data_collector.collected_item
+import data_collector.collector
+import data_collector.collectors.arxiv_collector
+import data_collector.collectors.blog_corpus_collector
+import data_collector.collectors.bundestag_collector
+import data_collector.collectors.cnn_news_collector
+import data_collector.collectors.euro_court_cases_collector
+import data_collector.collectors.gutenberg_collector
+import data_collector.collectors.house_of_commons_collector
+import data_collector.collectors.open_legal_data_collector
+import data_collector.collectors.religion_collector
+import data_collector.collectors.spiegel_collector
+import data_collector.collectors.student_essays_collector
 
 
 def reload():
-    importlib.reload(collector)
-    importlib.reload(collected_item)
-    importlib.reload(collectors.bundestag_collector)
-    importlib.reload(collectors.house_of_commons_collector)
-    importlib.reload(collectors.student_essays_collector)
-    importlib.reload(collectors.arxiv_collector)
-    importlib.reload(collectors.spiegel_collector)
-    importlib.reload(collectors.cnn_news_collector)
-    importlib.reload(collectors.open_legal_data_collector)
-    importlib.reload(collectors.euro_court_cases_collector)
-    importlib.reload(collectors.religion_collector)
-    importlib.reload(collectors.gutenberg_collector)
-    importlib.reload(collectors.blog_corpus_collector)
+    importlib.reload(data_collector.collector)
+    importlib.reload(data_collector.collected_item)
+    importlib.reload(data_collector.collectors.bundestag_collector)
+    importlib.reload(data_collector.collectors.house_of_commons_collector)
+    importlib.reload(data_collector.collectors.student_essays_collector)
+    importlib.reload(data_collector.collectors.arxiv_collector)
+    importlib.reload(data_collector.collectors.spiegel_collector)
+    importlib.reload(data_collector.collectors.cnn_news_collector)
+    importlib.reload(data_collector.collectors.open_legal_data_collector)
+    importlib.reload(data_collector.collectors.euro_court_cases_collector)
+    importlib.reload(data_collector.collectors.religion_collector)
+    importlib.reload(data_collector.collectors.gutenberg_collector)
+    importlib.reload(data_collector.collectors.blog_corpus_collector)
 
     importlib.reload(data_collector.agents.ai_agent)
     importlib.reload(data_collector.agents.openai_agent)
@@ -206,7 +198,7 @@ try:
     CONFIG.FORCE_SYNTH = args.force
     CONFIG.FORCE_FEATURED = args.force
 
-    print(f"= Activated Levels:")
+    print("= Activated Levels:")
     print(f"- Collect: {args.collect}")
     CONFIG.COLLECT = args.collect
     print(f"- Synthesize: {args.synth}")
@@ -244,17 +236,19 @@ if CONFIG.RUN_AS_SCRIPT:
             print(f"Error creating collector '{collector_name}': {e}")
 else:
     collection = [
-        collectors.bundestag_collector.BundestagCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.house_of_commons_collector.HouseOfCommonsCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.student_essays_collector.StudentEssaysCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.arxiv_collector.ArxivCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.spiegel_collector.SpiegelCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.cnn_news_collector.CNNNewsCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.open_legal_data_collector.OpenLegalDataCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.euro_court_cases_collector.EuroCourtCasesCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.religion_collector.ReligionCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.gutenberg_collector.GutenbergCollector(CONFIG.DATA_ROOT_PATH),
-        # collectors.blog_corpus_collector.BlogCorpusCollector(CONFIG.DATA_ROOT_PATH)
+        data_collector.collectors.bundestag_collector.BundestagCollector(
+            CONFIG.DATA_ROOT_PATH
+        ),
+        # data_collector.collectors.house_of_commons_collector.HouseOfCommonsCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.student_essays_collector.StudentEssaysCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.arxiv_collector.ArxivCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.spiegel_collector.SpiegelCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.cnn_news_collector.CNNNewsCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.open_legal_data_collector.OpenLegalDataCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.euro_court_cases_collector.EuroCourtCasesCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.religion_collector.ReligionCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.gutenberg_collector.GutenbergCollector(CONFIG.DATA_ROOT_PATH),
+        # data_collector.collectors.blog_corpus_collector.BlogCorpusCollector(CONFIG.DATA_ROOT_PATH)
     ]
 
 if CONFIG.RUN_AS_SCRIPT:
@@ -356,7 +350,7 @@ if CONFIG.SYNTHESIZE:
                     items_count += 1
                     continue
 
-                item = collected_item.CollectedItem.from_dict(row)
+                item = data_collector.collected_item.CollectedItem.from_dict(row)
 
                 # We have multiple agents. Foreach agent, synthesize the item
                 for agent in agents:
@@ -401,8 +395,7 @@ else:
 # In[10]:
 
 
-from prismai import detector
-from prismai import causal_lm
+from prismai import causal_lm, detector
 
 importlib.reload(detector)
 importlib.reload(causal_lm)
@@ -480,7 +473,7 @@ if CONFIG.EXTRACT_FEATURES:
                 print(f"Featured {items_count} items; going to next collector.")
                 break
 
-            item = collected_item.CollectedItem.from_dict(row)
+            item = data_collector.collected_item.CollectedItem.from_dict(row)
 
             # Extract features from this item here.
             try:
