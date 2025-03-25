@@ -10,7 +10,7 @@ from typing import (
 
 from bson import DBRef, ObjectId
 
-from transition_scores.utils import DataClassMappingMixin
+from prismai_features.utils import DataClassMappingMixin
 
 
 @dataclass

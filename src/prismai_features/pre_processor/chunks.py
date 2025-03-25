@@ -3,19 +3,19 @@ from typing import Any
 from tqdm import tqdm
 from transformers import BatchEncoding
 
-from simple_dataset.dataset import Dataset
-from transition_scores.data import (
+from prismai_features.data import (
     FeatureValues,
     PreProcessorMetadata,
 )
-from transition_scores.pre_processor.abc import (
+from prismai_features.pre_processor.abc import (
     PreProcessor,
 )
-from transition_scores.utils import (
+from prismai_features.utils import (
     _explode_encodings,
     _pop_or_calc_length,
     chunks_to_text,
 )
+from simple_dataset.dataset import Dataset
 
 
 class RollingWindowChunkPreProcessor(PreProcessor):

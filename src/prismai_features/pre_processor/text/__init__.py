@@ -1,8 +1,8 @@
 from typing import Any
 
+from prismai_features.pre_processor.abc import PreProcessor
+from prismai_features.utils import normalize_text
 from simple_dataset.dataset import Dataset
-from transition_scores.pre_processor.abc import PreProcessor
-from transition_scores.utils import normalize_text
 
 
 class TextPreProcessor(PreProcessor):

@@ -10,12 +10,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM
 
-from simple_dataset.dataset import Dataset
-from transition_scores.data import (
+from prismai_features.data import (
     FeatureValues,
     ModelMetadata,
 )
-from transition_scores.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memory
+from prismai_features.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memory
+from simple_dataset.dataset import Dataset
 
 type _ModelOutput = dict[str, torch.Tensor | list[torch.Tensor]]
 

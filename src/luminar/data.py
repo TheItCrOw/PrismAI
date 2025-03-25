@@ -14,7 +14,7 @@ from luminar.features import (
     TwoDimFeatures,
 )
 from luminar.mongo import MongoPipelineDataset
-from transition_scores.data import FeatureValues
+from prismai_features.data import FeatureValues
 
 
 def flatten[T](iterables: Iterable[Iterable[T]]) -> Generator[T, None, None]:

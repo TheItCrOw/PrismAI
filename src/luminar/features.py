@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from transition_scores.data import FeatureValues
+from prismai_features.data import FeatureValues
 
 
 class FeaturizedTransitionScores(NamedTuple):

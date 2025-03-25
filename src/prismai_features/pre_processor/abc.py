@@ -3,11 +3,11 @@ from typing import Any
 
 from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 
-from simple_dataset.dataset import Dataset
-from transition_scores.data import (
+from prismai_features.data import (
     PreProcessorMetadata,
 )
-from transition_scores.utils import infer_max_length
+from prismai_features.utils import infer_max_length
+from simple_dataset.dataset import Dataset
 
 
 class PreProcessor(ABC):

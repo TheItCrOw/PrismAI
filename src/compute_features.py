@@ -13,13 +13,13 @@ from pymongo.collection import Collection
 from pymongo.errors import DocumentTooLarge, DuplicateKeyError, WriteError
 from tqdm import tqdm
 
-from simple_dataset.dataset import Dataset
-from transition_scores.data import DocumentMetadata, FeaturesDict, convert_to_mongo
-from transition_scores.model import (
+from prismai_features.data import DocumentMetadata, FeaturesDict, convert_to_mongo
+from prismai_features.model import (
     TransformersFeatureModel,
     TransformersMetricModel,
     TransformersModelABC,
 )
+from simple_dataset.dataset import Dataset
 
 if Path(".env").exists():
     load_dotenv()
@@ -33,7 +33,7 @@ MAX_TRY_INSERT_RECURSION_DEPTH = int(
 
 
 def parse_pre_processors(args: Namespace):
-    from transition_scores.pre_processor import (
+    from prismai_features.pre_processor import (
         RollingWindowChunkPreProcessor,
         SlidingWindowTextPreProcessor,
         TruncationTextPreProcessor,
