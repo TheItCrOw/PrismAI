@@ -1,12 +1,13 @@
 import inspect
-from abc import ABC, abstractmethod
 from functools import partial
+from pathlib import Path
 from typing import Generator, Iterable
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import AutoModelForCausalLM
 
 from simple_dataset.dataset import Dataset
 from transition_scores.data import (
@@ -20,16 +21,34 @@ from transition_scores.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memor
 type _ModelOutput = dict[str, torch.Tensor | list[torch.Tensor]]
 
 
-class TransitionScorer(ABC):
+class TransformersTransitionScorer:
     def __init__(
         self,
+        model: str | Path,
         batch_size: int = 128,
         top_k: int = 16,
         device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
+        load_in_8bit=False,
+        **kwargs,
     ):
         self.batch_size = batch_size
         self.top_k = top_k
         self.device = torch.device(device)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model,
+            load_in_8bit=load_in_8bit,
+            **kwargs,
+        )
+        if not load_in_8bit:
+            self.model = self.model.to(self.device)
+        self._load_in_8bit = load_in_8bit
+
+    def get_metadata(self) -> ModelMetadata:
+        return ModelMetadata.new(
+            name=self._model.name_or_path,
+            provider="transformers",
+            variant="8bit" if self._load_in_8bit else "default",
+        )
 
     @property
     def model(self):
@@ -52,9 +71,6 @@ class TransitionScorer(ABC):
         self.device = torch.device(device)
         self.model.to(self.device)
         return self
-
-    @abstractmethod
-    def get_metadata(self) -> ModelMetadata: ...
 
     def process(
         self,
