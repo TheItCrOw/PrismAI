@@ -173,13 +173,12 @@ class TransformersFeatureModel(TransformersModelABC):
             input_ids.to(self.device), batch_likelihoods, batch_hidden_states
         ):
             # Truncate the sequence to the last non-pad token
-            labels: torch.Tensor = target_ids[1:].view(-1, 1)
+            labels: torch.Tensor = target_ids[1:].view(-1, 1).cpu()
             labels = labels[: labels.ne(pad_token_id).sum()]
-            likelihoods: torch.Tensor = likelihoods[: labels.size(0)]
+            likelihoods: torch.Tensor = likelihoods[: labels.size(0)].cpu()
 
             # Get target likelihoods and ranks
-            target_probs = likelihoods.gather(-1, labels).flatten().cpu()
-            target_ranks, top_k_indices, top_k_probs = self._get_ranks_and_top_k(
+            target_ranks, top_k_ids, top_k_probs = self._get_ranks_and_top_k(
                 likelihoods, labels
             )
             del likelihoods
@@ -193,9 +192,8 @@ class TransformersFeatureModel(TransformersModelABC):
             yield {
                 "features": FeatureValues(
                     target_ids.tolist(),
-                    target_probs.tolist(),
                     target_ranks.tolist(),
-                    top_k_indices.tolist(),
+                    top_k_ids.tolist(),
                     top_k_probs.tolist(),
                     intermediate_likelihoods.tolist(),
                 )
@@ -240,28 +238,26 @@ class TransformersFeatureModel(TransformersModelABC):
         _, target_ranks = torch.where(sorted_indices.eq(labels))
 
         # Get top-k probabilities and indices
-        top_k_indices = sorted_indices[:, : self.top_k + 1]
+        top_k_ids = sorted_indices[:, : self.top_k + 1]
         top_k_probs = sorted_probs[:, : self.top_k + 1]
 
-        return target_ranks, top_k_indices, top_k_probs
+        return target_ranks, top_k_ids, top_k_probs
 
     def _calculate_intermediate_probs(
-        self, intermediate_probs: tuple[torch.Tensor], labels: torch.Tensor
+        self, hidden_states: tuple[torch.Tensor], labels: torch.Tensor
     ) -> torch.Tensor:
         seq_length = labels.size(0)
+        labels = labels.to(self.device)
 
         results = []
         # Calculate likelihoods using intermediate representations
         # We need do this in a loop here to avoid running out of memory
-        for probs in intermediate_probs:
+        for hs in hidden_states:
+            hs: torch.Tensor = hs[:seq_length].to(self.device)
             results.append(
-                self._model_lm_head(probs[:seq_length].to(self.device))
-                .softmax(-1)
-                .gather(-1, labels)
-                .squeeze(-1)
-                .cpu()
+                self._model_lm_head(hs).softmax(-1).gather(-1, labels).squeeze(-1).cpu()
             )
-            del probs
+            del hs
 
         # transpose to get shape (seq_length, num_layers)
         return torch.stack(results).T

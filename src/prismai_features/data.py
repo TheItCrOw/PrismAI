@@ -28,9 +28,8 @@ class FeatureValues(DataClassMappingMixin):
     """
 
     target_ids: list[int] = field(default_factory=list)
-    target_probs: list[float] = field(default_factory=list)
     target_ranks: list[int] = field(default_factory=list)
-    top_k_indices: list[list[int]] = field(default_factory=list)
+    top_k_ids: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
     intermediate_likelihoods: list[list[float]] = field(default_factory=list)
     metrics: list[dict[str, float]] = field(default_factory=list)
@@ -42,31 +41,32 @@ class FeatureValues(DataClassMappingMixin):
         if isinstance(key, slice):
             return FeatureValues(
                 self.target_ids[key],
-                self.target_probs[key],
                 self.target_ranks[key],
-                self.top_k_indices[key],
+                self.top_k_ids[key],
                 self.top_k_probs[key],
                 self.intermediate_likelihoods[key],
             )
         return super().__getitem__(key)
 
+    @property
+    def target_probs(self):
+        return [probs[-1] for probs in self.intermediate_likelihoods]
+
     def __len__(self):
-        return len(self.target_probs)
+        return len(self.intermediate_likelihoods)
 
     def append(
         self,
         target_id: int,
-        target_probs: float,
         target_ranks: int,
-        top_k_indices: list[int],
+        top_k_ids: list[int],
         top_k_probs: list[float],
         intermediate_probs: list[float],
         metrics: dict[str, float],
     ):
         self.target_ids.append(target_id)
-        self.target_probs.append(target_probs)
         self.target_ranks.append(target_ranks)
-        self.top_k_indices.append(top_k_indices)
+        self.top_k_ids.append(top_k_ids)
         self.top_k_probs.append(top_k_probs)
         self.intermediate_likelihoods.append(intermediate_probs)
         self.metrics.append(metrics)
@@ -74,17 +74,15 @@ class FeatureValues(DataClassMappingMixin):
     def extend(
         self,
         target_ids: list[int],
-        target_probs: list[float],
         target_ranks: list[int],
-        top_k_indices: list[list[int]],
+        top_k_ids: list[list[int]],
         top_k_probs: list[list[float]],
         intermediate_probs: list[list[float]],
         metrics: list[dict[str, float]],
     ):
         self.target_ids.extend(target_ids)
-        self.target_probs.extend(target_probs)
         self.target_ranks.extend(target_ranks)
-        self.top_k_indices.extend(top_k_indices)
+        self.top_k_ids.extend(top_k_ids)
         self.top_k_probs.extend(top_k_probs)
         self.intermediate_likelihoods.extend(intermediate_probs)
         self.metrics.extend(metrics)
@@ -96,9 +94,8 @@ class FeatureValues(DataClassMappingMixin):
         for other in others:
             self.extend(
                 other.target_ids,
-                other.target_probs,
                 other.target_ranks,
-                other.top_k_indices,
+                other.top_k_ids,
                 other.top_k_probs,
                 other.get(
                     "intermediate_likelihoods", other.get("intermediate_probs", [])
@@ -119,18 +116,17 @@ class FeatureValues(DataClassMappingMixin):
         """
         Iterate over a zipped representation of the transition scores.
         Roughly equivalent to:
-        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.intermediate_likelihoods, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
+        >>> yield from zip(ts.target_ids, ts.target_ranks, ts.intermediate_likelihoods, ts.top_k_ids, ts.top_k_probs)  # doctest: +SKIP
 
         Yields:
-            Item: A named tuple containing the target_id, target_prob, intermediate_likelihoods, top_k_indices, and top_k_probs.
+            Item: A named tuple containing the target_id, target_prob, intermediate_likelihoods, top_k_ids, and top_k_probs.
         """
         yield from (
             self.Item(*item)
             for item in zip(
                 self["target_ids"],
-                self["target_probs"],
                 self["target_ranks"],
-                self["top_k_indices"],
+                self["top_k_ids"],
                 self["top_k_probs"],
                 self["intermediate_likelihoods"],
             )
@@ -139,9 +135,8 @@ class FeatureValues(DataClassMappingMixin):
     def unpack(self) -> tuple:
         return (
             self.target_ids,
-            self.target_probs,
             self.target_ranks,
-            self.top_k_indices,
+            self.top_k_ids,
             self.top_k_probs,
             self.intermediate_likelihoods,
         )

@@ -9,18 +9,6 @@ from numpy.typing import NDArray
 from prismai_features.data import FeatureValues
 
 
-class FeaturizedTransitionScores(NamedTuple):
-    target_ids: torch.Tensor
-    target_probs: torch.Tensor
-    target_ranks: torch.Tensor
-    top_k_indices: torch.Tensor
-    top_k_probs: torch.Tensor
-    intermediate_logits: torch.Tensor
-
-    def __len__(self):
-        return len(self.target_probs)
-
-
 class OneDimFeatures(NamedTuple):
     width: int
 
