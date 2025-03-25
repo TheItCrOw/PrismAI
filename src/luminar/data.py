@@ -1,6 +1,4 @@
-from hashlib import sha256
-from pathlib import Path
-from typing import Generator, Iterable, Self
+from typing import Generator, Iterable, Iterator
 
 import torch
 from lightning.pytorch import LightningDataModule
@@ -29,7 +27,7 @@ class FeatureDataset(TorchDataset):
         data: Iterable[dict],
         slicer: Slicer,
         featurizer: FeatureExtractor,
-        num_samples: int = None,
+        num_samples: int = 1,
         label_field: str = "type",
         label_zero: str = "source",
     ):
@@ -45,7 +43,7 @@ class FeatureDataset(TorchDataset):
                         FeatureValues(**sample["transition_scores"]),
                         slicer,
                         featurizer,
-                        num_samples=num_samples or 1,
+                        num_samples=num_samples,
                     )
                 ]
                 for doc in data
@@ -58,7 +56,7 @@ class FeatureDataset(TorchDataset):
         slicer: Slicer,
         featurizer: FeatureExtractor,
         num_samples: int,
-    ) -> Iterable[dict[str, torch.Tensor]]:
+    ) -> Generator[torch.Tensor, None, None]:
         slices = slicer.sample(len(ts), num_samples)
         for s in slices:
             yield featurizer.featurize(ts, s)
@@ -69,7 +67,7 @@ class FeatureDataset(TorchDataset):
     def __getitem__(self, index) -> dict:
         return self.data[index]
 
-    def __iter__(self) -> Generator[dict, Self, None]:
+    def __iter__(self) -> Iterator[dict]:
         return iter(self.data)
 
 
@@ -99,23 +97,22 @@ def n_way_split(
 class DocumentClassificationDataModule(LightningDataModule):
     def __init__(
         self,
-        dataset: MongoPipelineDataset,
+        datasets: list[MongoPipelineDataset],
         feature_dim: OneDimFeatures | TwoDimFeatures = OneDimFeatures(256),
-        slicer: Slicer = None,
-        featurizer: FeatureExtractor = None,
-        num_samples: int = None,
+        slicer: Slicer | None = None,
+        featurizer: FeatureExtractor | None = None,
+        num_samples: int = 1,
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
         eval_split_size: float = 0.1,
         test_split_size: float = 0.2,
-        load_from_cache: bool = True,
         **kwargs,
     ):
         super().__init__()
-        if not dataset.use_cache:
+        if not all(ds.use_cache for ds in datasets):
             raise ValueError("Dataset must use cache for this data module.")
 
-        self.dataset = dataset
+        self.datasets = datasets
         self.slicer = slicer or SliceFirst(feature_dim[0])
         self.featurizer = featurizer or Likelihood()
 
@@ -140,69 +137,29 @@ class DocumentClassificationDataModule(LightningDataModule):
             }
         )
 
-        self._load_from_cache
         self._finished_setup = False
 
     def prepare_data(self):
         if not self._finished_setup:
-            if not self.dataset.get_cache_file().exists():
-                self.dataset.load()
-                self.dataset._data = None
+            for dataset in self.datasets:
+                if not dataset.get_cache_file().exists():
+                    dataset.load()
+                    dataset._data = None  # type: ignore
 
     def setup(self, stage=None):
         if not self._finished_setup:
-            _hash = sha256()
-            _hash.update(f"num_samples={self.hparams['num_samples']}".encode())
-            _hash.update(f"feature_dim={self.hparams['feature_dim']}".encode())
-            _hash.update(f"slicer={self.hparams['slicer']}".encode())
-            _hash.update(f"featurizer={self.hparams['featurizer']}".encode())
-            _hash = _hash.hexdigest()
-
-            dataset_cache_file = self.dataset.get_cache_file()
-            cache_file = dataset_cache_file.with_suffix("") / f"{_hash}.pt"
-
-            if self._load_from_cache:
-                if cache_file.exists():
-                    self.train_data, self.eval_data, self.test_data = torch.load(
-                        cache_file
+            splits: list[list[Subset]] = []
+            for dataset in self.datasets:
+                splits.append(
+                    n_way_split(
+                        dataset,
+                        self.hparams.eval_split_size,  # type: ignore
+                        self.hparams.test_split_size,  # type: ignore
+                        infer_first=True,
                     )
-                    self._finished_setup = True
-                    return
+                )
 
-            if not self.eval_datasets and not self.test_datasets:
-                splits: list[tuple[Subset, Subset, Subset]] = []
-                for dataset in self.train_datasets:
-                    splits.append(
-                        n_way_split(
-                            dataset,
-                            self.hparams.eval_split_size,
-                            self.hparams.test_split_size,
-                            infer_first=True,
-                        )
-                    )
-
-                train_data, eval_data, test_data = zip(*splits)
-            elif not self.eval_datasets:
-                splits: list[tuple[Subset, Subset]] = []
-                for dataset in self.train_datasets:
-                    splits.append(
-                        n_way_split(
-                            dataset,
-                            self.hparams.eval_split_size,
-                            infer_first=True,
-                        )
-                    )
-
-                train_data, eval_data = zip(*splits)
-                test_data = self.test_datasets
-            elif not self.test_datasets:
-                train_data = self.train_datasets
-                eval_data = self.eval_datasets
-                test_data = []
-            else:
-                train_data = self.train_datasets
-                eval_data = self.eval_datasets
-                test_data = self.test_datasets
+            train_data, eval_data, test_data = zip(*splits)
 
             self.train_data = FeatureDataset(
                 flatten(train_data), self.slicer, self.featurizer
@@ -214,49 +171,13 @@ class DocumentClassificationDataModule(LightningDataModule):
                 flatten(test_data), self.slicer, self.featurizer
             )
 
-            if self._load_from_cache:
-                cache_file.parent.mkdir(parents=True, exist_ok=True)
-                torch.save(
-                    (self.train_data, self.eval_data, self.test_data),
-                    cache_file,
-                )
-
         self._finished_setup = True
-
-    def write_to_file(self, file: Path):
-        with file.open("wb") as fp:
-            torch.save(
-                {
-                    "hparams": self.hparams,
-                    "slicer": self.slicer,
-                    "featurizer": self.featurizer,
-                    "train_data": self.train_data,
-                    "eval_data": self.eval_data,
-                    "test_data": self.test_data,
-                },
-                fp,
-            )
-
-    @classmethod
-    def load_from_file(cls, file: Path):
-        with file.open(mode="rb") as fp:
-            data = torch.load(fp)
-        kwargs = data["hparams"] | {
-            "slicer": data["slicer"],
-            "featurizer": data["featurizer"],
-        }
-        self = cls([], **kwargs)
-        self.train_data = data["train_data"]
-        self.eval_data = data["eval_data"]
-        self.test_data = data["test_data"]
-        self._finished_setup = True
-        return self
 
     def train_dataloader(self):
         return PaddingDataloader(
             self.train_data,
-            feature_dim=self.hparams.feature_dim,
-            batch_size=self.hparams.train_batch_size,
+            feature_dim=self.hparams.feature_dim,  # type: ignore
+            batch_size=self.hparams.train_batch_size,  # type: ignore
             pin_memory=True,
             shuffle=True,
         )
@@ -264,16 +185,16 @@ class DocumentClassificationDataModule(LightningDataModule):
     def val_dataloader(self):
         return PaddingDataloader(
             self.eval_data,
-            feature_dim=self.hparams.feature_dim,
-            batch_size=self.hparams.eval_batch_size,
+            feature_dim=self.hparams.feature_dim,  # type: ignore
+            batch_size=self.hparams.eval_batch_size,  # type: ignore
             pin_memory=True,
         )
 
     def test_dataloader(self):
         return PaddingDataloader(
             self.test_data,
-            feature_dim=self.hparams.feature_dim,
-            batch_size=self.hparams.eval_batch_size,
+            feature_dim=self.hparams.feature_dim,  # type: ignore
+            batch_size=self.hparams.eval_batch_size,  # type: ignore
             pin_memory=True,
         )
 
