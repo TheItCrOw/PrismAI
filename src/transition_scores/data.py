@@ -290,3 +290,19 @@ class FeaturesDict(dict):
                 }
             ),
         )
+
+
+def convert_to_mongo(
+    document: dict,
+    model_metadata: ModelMetadata,
+    pre_processor_metadata: PreProcessorMetadata,
+) -> FeaturesDict:
+    document_metadata = document.pop("document")
+    return FeaturesDict.new(
+        document=document_metadata,
+        model=model_metadata,
+        pre_processor=pre_processor_metadata,
+        transition_scores=document.pop("transition_scores"),
+        split=document.pop("split", None),
+        **document,
+    )

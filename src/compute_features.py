@@ -14,8 +14,12 @@ from pymongo.errors import DocumentTooLarge, DuplicateKeyError, WriteError
 from tqdm import tqdm
 
 from simple_dataset.dataset import Dataset
-from transition_scores.data import DocumentMetadata, FeaturesDict
-from transition_scores.scorer.abc import TransitionScorer, convert_to_mongo
+from transition_scores.data import DocumentMetadata, FeaturesDict, convert_to_mongo
+from transition_scores.model import (
+    TransformersFeatureModel,
+    TransformersMetricModel,
+    TransformersModelABC,
+)
 
 if Path(".env").exists():
     load_dotenv()
@@ -55,24 +59,21 @@ def parse_pre_processors(args: Namespace):
             raise RuntimeError
 
 
-def parse_scorer_model(args: Namespace) -> TransitionScorer:
-    match args.provider:
-        case "hf":
-            from transition_scores.scorer import TransformersTransitionScorer
-
-            return TransformersTransitionScorer(
+def parse_scorer_model(args: Namespace) -> TransformersModelABC:
+    match args.mode:
+        case "features":
+            return TransformersFeatureModel(
                 args.model,
                 batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
                 load_in_8bit=args.load_in_8bit,
             )
-        case "onnx":
-            from transition_scores.scorer import OnnxTransitionScorer
-
-            return OnnxTransitionScorer(
+        case "metrics":
+            return TransformersMetricModel(
                 args.model,
                 batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
+                load_in_8bit=args.load_in_8bit,
             )
         case _:
             raise RuntimeError(f"Invalid provider {args.provider}")
@@ -123,26 +124,26 @@ def get_argparser():
 
     model_group = parser.add_argument_group("Model")
     model_group.add_argument("model", type=str, help="Model name or path")
-    provider_group_me = model_group.add_mutually_exclusive_group()
-    provider_group_me.add_argument(
-        "--provider",
-        choices=["hf", "onnx", "vllm"],
-        help="Model execution provider. Either `hf` for huggingface transformers, `onnx` for the ONNX Runtime via optimum, or `vllm` for vLLM.",
-        default="hf",
+    provider_group_mode = model_group.add_mutually_exclusive_group()
+    provider_group_mode.add_argument(
+        "--mode",
+        choices=["features", "metrics"],
+        help="Model execution mode. ",
+        default="features",
     )
-    provider_group_me.add_argument(
-        "--hf",
+    provider_group_mode.add_argument(
+        "--features",
         action="store_const",
-        const="hf",
-        dest="provider",
-        help="Use huggingface transformers as the model provider.",
+        const="features",
+        dest="mode",
+        help="Calculate features.",
     )
-    provider_group_me.add_argument(
-        "--onnx",
+    provider_group_mode.add_argument(
+        "--metrics",
         action="store_const",
-        const="onnx",
-        dest="provider",
-        help="Use ONNX Runtime via optimum as the model provider.",
+        const="metrics",
+        dest="mode",
+        help="Calculate metrics.",
     )
 
     model_group.add_argument(
@@ -354,7 +355,7 @@ if __name__ == "__main__":
     mongodb_source_collection = mongodb_database.get_collection(args.source_collection)
     mongodb_target_collection = mongodb_database.get_collection(args.target_collection)
 
-    model = parse_scorer_model(args)
+    model: TransformersModelABC = parse_scorer_model(args)
     model_metadata = model.get_metadata()
 
     pre_processor = parse_pre_processors(args)
@@ -469,9 +470,9 @@ if __name__ == "__main__":
                 ]
                 try:
                     mongodb_target_collection.insert_many(batch)
-                except Exception as e:
-                    err_str = str(e)
-                    err_str = err_str[:44] + "..." if len(err_str) > 48 else err_str
+                except Exception:
+                    # err_str = str(e)
+                    # err_str = err_str[:44] + "..." if len(err_str) > 48 else err_str
                     # print(
                     #     f"Caught error during insert_many: {err_str}"
                     #     f" - attempting insert_one for {len(batch)} documents.",
@@ -485,7 +486,7 @@ if __name__ == "__main__":
                     ):
                         try:
                             try_insert_one(document, mongodb_target_collection)
-                        except TryInsertError as e:
+                        except TryInsertError:
                             traceback.print_exc()
                             continue
                         except RecursionError as e:
