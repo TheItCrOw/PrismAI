@@ -25,6 +25,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.28.3",
     "ipykernel>=6.29.5",
     "ipython>=8.32.0",
     "jupyter>=1.1.1",
@@ -47,3 +48,9 @@ conversion = [
     "pymupdf>=1.25.3",
     "spiegel-scraper>=1.1.1",
 ]
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportRedeclaration = false
