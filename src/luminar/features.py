@@ -380,7 +380,7 @@ class IntermediateLikelihood(FeatureExtractor):
         return intermediate_probs.float()  # .mul(2).sub(1.0)
 
     def featurize(self, ts: FeatureValues, slices: slice | list[slice]) -> torch.Tensor:
-        logits = torch.tensor(ts.intermediate_probs)[slices]
+        logits = torch.tensor(ts.intermediate_likelihoods)[slices]
         last_n = self.last_n or logits.size(-1)
         logits = logits[..., -last_n:].view(-1, last_n)
 

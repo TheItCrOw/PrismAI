@@ -32,7 +32,7 @@ class FeatureValues(DataClassMappingMixin):
     target_ranks: list[int] = field(default_factory=list)
     top_k_indices: list[list[int]] = field(default_factory=list)
     top_k_probs: list[list[float]] = field(default_factory=list)
-    intermediate_probs: list[list[float]] = field(default_factory=list)
+    intermediate_likelihoods: list[list[float]] = field(default_factory=list)
     metrics: list[dict[str, float]] = field(default_factory=list)
 
     def __getitem__(self, key):
@@ -46,7 +46,7 @@ class FeatureValues(DataClassMappingMixin):
                 self.target_ranks[key],
                 self.top_k_indices[key],
                 self.top_k_probs[key],
-                self.intermediate_probs[key],
+                self.intermediate_likelihoods[key],
             )
         return super().__getitem__(key)
 
@@ -68,7 +68,7 @@ class FeatureValues(DataClassMappingMixin):
         self.target_ranks.append(target_ranks)
         self.top_k_indices.append(top_k_indices)
         self.top_k_probs.append(top_k_probs)
-        self.intermediate_probs.append(intermediate_probs)
+        self.intermediate_likelihoods.append(intermediate_probs)
         self.metrics.append(metrics)
 
     def extend(
@@ -86,7 +86,7 @@ class FeatureValues(DataClassMappingMixin):
         self.target_ranks.extend(target_ranks)
         self.top_k_indices.extend(top_k_indices)
         self.top_k_probs.extend(top_k_probs)
-        self.intermediate_probs.extend(intermediate_probs)
+        self.intermediate_likelihoods.extend(intermediate_probs)
         self.metrics.extend(metrics)
 
     @classmethod
@@ -100,7 +100,9 @@ class FeatureValues(DataClassMappingMixin):
                 other.target_ranks,
                 other.top_k_indices,
                 other.top_k_probs,
-                other.get("intermediate_probs", []),
+                other.get(
+                    "intermediate_likelihoods", other.get("intermediate_probs", [])
+                ),
                 other.get("metrics", []),
             )
         return self
@@ -111,16 +113,16 @@ class FeatureValues(DataClassMappingMixin):
         target_rank: int
         top_k_index: list[int]
         top_k_prob: list[float]
-        intermediate_probs: list[float]
+        intermediate_likelihoods: list[float]
 
     def zipped(self) -> Generator[Item, None, None]:
         """
         Iterate over a zipped representation of the transition scores.
         Roughly equivalent to:
-        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.intermediate_probs, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
+        >>> yield from zip(ts.target_ids, ts.target_probs, ts.target_ranks, ts.intermediate_likelihoods, ts.top_k_indices, ts.top_k_probs)  # doctest: +SKIP
 
         Yields:
-            Item: A named tuple containing the target_id, target_prob, intermediate_probs, top_k_indices, and top_k_probs.
+            Item: A named tuple containing the target_id, target_prob, intermediate_likelihoods, top_k_indices, and top_k_probs.
         """
         yield from (
             self.Item(*item)
@@ -130,7 +132,7 @@ class FeatureValues(DataClassMappingMixin):
                 self["target_ranks"],
                 self["top_k_indices"],
                 self["top_k_probs"],
-                self["intermediate_probs"],
+                self["intermediate_likelihoods"],
             )
         )
 
@@ -141,7 +143,7 @@ class FeatureValues(DataClassMappingMixin):
             self.target_ranks,
             self.top_k_indices,
             self.top_k_probs,
-            self.intermediate_probs,
+            self.intermediate_likelihoods,
         )
 
 
