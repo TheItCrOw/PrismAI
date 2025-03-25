@@ -40,7 +40,7 @@ class CNNDocumentClassficationModel(LightningModule):
     def __init__(
         self,
         feature_dim: OneDimFeatures | TwoDimFeatures | ThreeDimFeatures,
-        conv_layer_shapes: list[ConvolutionalLayerSpec] = None,
+        conv_layer_shapes: list[ConvolutionalLayerSpec] | None = None,
         projection_dim: int = 128,
         learning_rate: float = 0.001,
         warmup_steps: int = 0,
@@ -92,7 +92,7 @@ class CNNDocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
-                            conv.kernel_size,
+                            conv.kernel_size,  # type: ignore
                             conv.stride,
                             conv.padding,
                         ),
@@ -106,7 +106,7 @@ class CNNDocumentClassficationModel(LightningModule):
                     self.conv_layers.append(
                         nn.LazyConv1d(
                             conv.channels,
-                            conv.kernel_size,
+                            conv.kernel_size,  # type: ignore
                             conv.stride,
                             conv.padding,
                         ),
@@ -147,11 +147,11 @@ class CNNDocumentClassficationModel(LightningModule):
         self.f1_threshold = 0.5
         self.outputs = defaultdict(list)
 
-    def forward(self, features: torch.Tensor, **_):
+    def forward(self, features: dict[str, torch.Tensor] | torch.Tensor, **_):
         if isinstance(features, dict):
-            features = features["features"]
+            features: torch.Tensor = features["features"]
 
-        if self.hparams.second_dim_as_channels:
+        if self.hparams.second_dim_as_channels:  # type: ignore
             # We are using 2D features (so `features` is a 3D tensor)
             # but we want to treat the second feature dimension as channels.
             # Thus, we need to transpose the tensor here
@@ -214,12 +214,12 @@ class CNNDocumentClassficationModel(LightningModule):
         self.f1_threshold = thresholds[np.argmax(f1_thresholded)]
         self.log(
             "val_f1@0.5",
-            f1_score(labels, preds > 0.5, zero_division=0.0),
+            f1_score(labels, preds > 0.5, zero_division=0.0),  # type: ignore
             prog_bar=True,
         )
         self.log(
             "val_f1@best",
-            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),
+            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),  # type: ignore
             prog_bar=True,
         )
         self.log("val_f1_threshold", self.f1_threshold, prog_bar=True)
@@ -247,12 +247,12 @@ class CNNDocumentClassficationModel(LightningModule):
 
         self.log(
             "test_f1@0.5",
-            f1_score(labels, preds > 0.5, zero_division=0.0),
+            f1_score(labels, preds > 0.5, zero_division=0.0),  # type: ignore
             prog_bar=True,
         )
         self.log(
             "test_f1@best",
-            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),
+            f1_score(labels, preds > self.f1_threshold, zero_division=0.0),  # type: ignore
             prog_bar=True,
         )
         self.log("test_f1_threshold", self.f1_threshold, prog_bar=True)
@@ -291,12 +291,12 @@ class CNNDocumentClassficationModel(LightningModule):
         """Prepare optimizer and schedule (linear warmup and decay)."""
         optimizer = torch.optim.AdamW(
             self.parameters(),
-            lr=self.hparams.learning_rate,
+            lr=self.hparams.learning_rate,  # type: ignore
         )
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=self.hparams.warmup_steps,
+            num_warmup_steps=self.hparams.warmup_steps,  # type: ignore
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}

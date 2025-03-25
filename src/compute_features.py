@@ -7,10 +7,10 @@ from argparse import ArgumentParser, Namespace
 from itertools import batched
 from pathlib import Path
 
-import pymongo
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.errors import DocumentTooLarge, DuplicateKeyError, WriteError
 from tqdm import tqdm
 
 from simple_dataset.dataset import Dataset
@@ -23,7 +23,9 @@ elif Path("../.env").exists():
     load_dotenv("../.env")
 
 
-MAX_TRY_INSERT_RECURSION_DEPTH = os.environ.get("MAX_TRY_INSERT_RECURSION_DEPTH", 0)
+MAX_TRY_INSERT_RECURSION_DEPTH = int(
+    os.environ.get("MAX_TRY_INSERT_RECURSION_DEPTH", "0")
+)
 
 
 def parse_pre_processors(args: Namespace):
@@ -91,11 +93,11 @@ class TryInsertError(Exception):
 def try_insert_one(document: FeaturesDict, collection: Collection, recursion_depth=0):
     try:
         mongodb_target_collection.insert_one(document)
-    except pymongo.errors.DuplicateKeyError:
+    except DuplicateKeyError:
         return  # ignore duplicates
-    except pymongo.errors.DocumentTooLarge:
+    except DocumentTooLarge:
         pass  # document still too large, variant 1
-    except pymongo.errors.WriteError:
+    except WriteError:
         pass  # document still too large, variant 2
     except Exception as e:
         if str(e).strip == "ValueError: Document would overflow BSON size limit":
@@ -368,32 +370,29 @@ if __name__ == "__main__":
         "label",
     } | set(pre_processor.required_fields.keys())
 
+    def _add_split(value):
+        if "train" in value:
+            return "train"
+        elif "test" in value:
+            return "test"
+        elif "val" in value or "dev" in value:
+            return "val"
+        else:
+            return None
+
     split_field_name = None
     if ":" in args.split:
         split_field_name, regex = args.split.split(":", 1)
         if regex:
-            split_field_name, regex = split_field_name.split(":", 1)
-            regex: re.Pattern = re.compile(regex)
-            if regex.groups == 0:
+            pattern: re.Pattern = re.compile(regex)
+            if pattern.groups == 0:
                 raise ValueError("Regex must contain at least one group.")
 
             def _add_split(value):
-                mtches: list[re.Match] = regex.findall(value)
+                mtches: list[re.Match] = pattern.findall(value)
                 if not mtches:
                     return None
                 return mtches[0].group(1)
-
-        else:
-
-            def _add_split(value):
-                if "train" in value:
-                    return "train"
-                elif "test" in value:
-                    return "test"
-                elif "val" in value or "dev" in value:
-                    return "val"
-                else:
-                    return None
 
         fields_projection.add(split_field_name)
 
@@ -437,8 +436,12 @@ if __name__ == "__main__":
             dataset_batch_size,
         ):
             dataset = Dataset(dataset)
+
             if split_field_name:
                 dataset.apply(_add_split, "split", split_field_name)
+            else:
+                dataset.modify(lambda doc: doc.update(split=args.split))
+
             dataset.modify(
                 DocumentMetadata.add_metadata_to_document,
                 source_collection=args.source_collection,
@@ -446,7 +449,6 @@ if __name__ == "__main__":
             dataset = pre_processor.pre_process(dataset)
             dataset = model.process(dataset, pre_processor.pad_token_id)
             dataset = pre_processor.post_process(dataset)
-            dataset.modify(lambda doc: doc.update(split=args.split))
 
             for batch in batched(
                 tqdm(

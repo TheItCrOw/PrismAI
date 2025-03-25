@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from itertools import batched
-from typing import NamedTuple, Self
+from typing import NamedTuple
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 
 from transition_scores.data import FeatureValues
 
@@ -53,19 +54,19 @@ class Slicer(ABC):
         return f"{type(self).__name__}(size={self.size}, sort={self.sort})"
 
     @abstractmethod
-    def slice(self, length: int, *args, **kwargs) -> np.ndarray: ...
+    def slice(self, length: int, *args, **kwargs) -> NDArray: ...
 
     @abstractmethod
     def sample(
         self, length: int, num_samples: int, *args, **kwargs
-    ) -> list[np.ndarray]: ...
+    ) -> list[NDArray]: ...
 
     @classmethod
-    def First(cls, size: int) -> Self:
+    def First(cls, size: int) -> "SliceFirst":
         return SliceFirst(size)
 
     @classmethod
-    def Random(cls, size: int, stride: int = 1) -> Self:
+    def Random(cls, size: int, stride: int = 1) -> "SliceRandom":
         return SliceRandom(size, stride=stride)
 
     @classmethod
@@ -76,7 +77,7 @@ class Slicer(ABC):
         stride: int = 1,
         sort: bool = False,
         infer_slice_size: bool = False,
-    ) -> Self:
+    ) -> "SliceRandomMultiple":
         return SliceRandomMultiple(
             size,
             multiple,
@@ -87,16 +88,16 @@ class Slicer(ABC):
 
 
 class SliceFirst(Slicer):
-    def slice(self, length: int) -> np.ndarray:
+    def slice(self, length: int) -> NDArray:
         """
         Slice the first part of the sequence starting from the offset.
 
         Returns:
-            np.ndarray: A single slice.
+            NDArray: A single slice.
         """
         return np.arange(0, min(self.size, length))
 
-    def sample(self, length: int, _: int) -> list[np.ndarray]:
+    def sample(self, length: int, _: int) -> list[NDArray]:
         return [self.slice(length)]
 
 
@@ -126,7 +127,7 @@ class SliceRandom(Slicer):
             else f"{type(self).__name__}(size={self.size}, stride={self.stride}, sort={self.sort})"
         )
 
-    def slice(self, length: int) -> np.ndarray:
+    def slice(self, length: int) -> NDArray:
         """
         Randomly slice a part of the sequence starting from the offset.
 
@@ -134,15 +135,15 @@ class SliceRandom(Slicer):
             length (int): The length of the sequence.
 
         Returns:
-            np.ndarray: A single slice.
+            NDArray: A single slice.
         """
         upper = length - self.size
         if upper <= 0:
-            return (np.arange(0, min(self.size, length)),)
+            return np.arange(0, min(self.size, length))
         i = np.random.randint(0, upper)
-        return (np.arange(i, i + self.size),)
+        return np.arange(i, i + self.size)
 
-    def sample(self, length: int, num_samples: int) -> list[np.ndarray]:
+    def sample(self, length: int, num_samples: int) -> list[NDArray]:
         """
         Create random slices starting from the offset.
 
@@ -151,7 +152,7 @@ class SliceRandom(Slicer):
             num_samples (int): The number of samples to create.
 
         Returns:
-            list[np.ndarray]: A list with the random slices.
+            list[NDArray]: A list with the random slices.
         """
         upper = int(length - self.size)
         if upper <= 0:
@@ -196,10 +197,10 @@ class SliceRandomMultiple(SliceRandom):
             else f"{type(self).__name__}(size={self.size}, multiple={self.multiple}, stride={self.stride}, sort={self.sort})"
         )
 
-    def slice(self, length: int) -> np.ndarray:
+    def slice(self, length: int) -> NDArray:
         return np.array(super().sample(length, self.multiple))
 
-    def sample(self, length: int, num_samples: int) -> list[np.ndarray]:
+    def sample(self, length: int, num_samples: int) -> list[NDArray]:
         if num_samples == 1 or (length - self.size) <= 0:
             return [self.slice(length)]
 
@@ -221,34 +222,40 @@ class SliceRandomMultiple(SliceRandom):
 
 class FeatureExtractor(ABC):
     @abstractmethod
-    def __call__(self, *features: torch.Tensor, **kwargs) -> torch.Tensor: ...
+    def __call__(self, *args: torch.Tensor, **kwargs) -> torch.Tensor: ...
 
     def __repr__(self):
         return f"{type(self).__name__}()"
 
     @abstractmethod
     def featurize(
-        self, transition_scores: FeatureValues, slices: tuple[slice, ...]
+        self, transition_scores: FeatureValues, slices: tuple[slice, ...] | NDArray
     ) -> torch.Tensor: ...
 
     @classmethod
-    def Likelihood(cls) -> Self:
+    def Likelihood(cls) -> "Likelihood":
         return Likelihood()
 
     @classmethod
-    def LogLikelihoodLogRankRatio(cls) -> Self:
+    def LogLikelihoodLogRankRatio(cls) -> "LogLikelihoodLogRankRatio":
         return LogLikelihoodLogRankRatio()
 
     @classmethod
-    def LikelihoodTopkLikelihoodRatio(cls, top_k: int) -> Self:
+    def LikelihoodTopkLikelihoodRatio(
+        cls, top_k: int
+    ) -> "LikelihoodTopkLikelihoodRatio":
         return LikelihoodTopkLikelihoodRatio(top_k)
 
     @classmethod
-    def TopkLikelihoodLikelihoodRatio(cls, top_k: int) -> Self:
+    def TopkLikelihoodLikelihoodRatio(
+        cls, top_k: int
+    ) -> "TopkLikelihoodLikelihoodRatio":
         return TopkLikelihoodLikelihoodRatio(top_k)
 
     @classmethod
-    def IntermediateLikelihood(cls, last_n: int | None = None) -> Self:
+    def IntermediateLikelihood(
+        cls, last_n: int | None = None
+    ) -> "IntermediateLikelihood":
         return IntermediateLikelihood(last_n)
 
 

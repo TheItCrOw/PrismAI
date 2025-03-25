@@ -6,6 +6,7 @@ from typing import Final, Generator, Literal, Self
 
 import bson.json_util
 from pymongo import MongoClient
+from pymongo.command_cursor import CommandCursor
 from pymongo.cursor import Cursor
 from torch.utils.data import Dataset as TorchDataset
 from tqdm.auto import tqdm
@@ -43,8 +44,8 @@ class MongoDataset(TorchDataset):
     def __getitem__(self, idx: int) -> list[dict]:
         return self.data[idx]
 
-    def __iter__(self) -> Generator[dict, None, None]:
-        return iter(self.data)
+    def __iter__(self) -> Generator[list[dict], None, None]:
+        yield from iter(self.data)
 
     def load(self, verbose=True) -> Self:
         if hasattr(self, "_data"):
@@ -151,7 +152,7 @@ class MongoPipelineDataset(MongoDataset):
         )
         self.pipeline = pipeline
 
-    def _fetch_documents(self, client: MongoClient) -> Cursor:
+    def _fetch_documents(self, client: MongoClient) -> CommandCursor:
         return (
             client.get_database(self.database)
             .get_collection(self.collection)

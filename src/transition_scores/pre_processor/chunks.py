@@ -25,7 +25,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
     """
 
     @property
-    def required_fields(self) -> tuple[str, ...]:
+    def required_fields(self) -> dict[str, ...]:
         return {
             "text": str,
             "chunks": list[str],
