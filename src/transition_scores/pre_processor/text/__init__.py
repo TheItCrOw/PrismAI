@@ -11,6 +11,6 @@ class TextPreProcessor(PreProcessor):
         dataset: Dataset[str, Any],
     ) -> Dataset[str, Any]:
         dataset = super()._prepare(dataset)
-        dataset.modify(normalize_text)
+        dataset.apply(normalize_text, "text")
         dataset.filter(lambda document: document["text"], in_place=True)
         return dataset

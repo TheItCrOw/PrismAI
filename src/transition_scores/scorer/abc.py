@@ -90,7 +90,7 @@ class TransitionScorer(ABC):
         _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
         for input_ids, attention_mask in tqdm(
             DataLoader(
-                dataset,
+                dataset,  # type: ignore
                 shuffle=False,
                 collate_fn=_collate_fn,
                 batch_size=self.batch_size,
@@ -129,7 +129,7 @@ class TransitionScorer(ABC):
         # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
         (
             likelihoods,
-            # log_likelihoods,
+            log_likelihoods,
             hidden_states,
         ) = self._forward(input_ids, attention_mask)
 
@@ -137,12 +137,12 @@ class TransitionScorer(ABC):
         for (
             target_ids,
             likelihood,
-            # log_likelihood,
+            log_likelihood,
             intermediate_probs,
         ) in zip(
             input_ids.to(self.device),
             likelihoods,
-            # log_likelihoods,
+            log_likelihoods,
             hidden_states,
         ):
             # Truncate the sequence to the last non-pad token
@@ -150,7 +150,7 @@ class TransitionScorer(ABC):
             labels = labels[: labels.ne(pad_token_id).sum()]
 
             likelihood: torch.Tensor = likelihood[: labels.size(0)]
-            # log_likelihood: torch.Tensor = log_likelihood[: labels.size(0)]
+            log_likelihood: torch.Tensor = log_likelihood[: labels.size(0)]
 
             # Get target likelihoods and ranks
             target_probs = likelihood.gather(-1, labels).flatten().cpu()
@@ -159,13 +159,12 @@ class TransitionScorer(ABC):
                 likelihood, labels
             )
 
-            # llr, fast_detect_gpt = self._calculate_scores(
-            #     likelihood, log_likelihood, labels, target_ranks
-            # )
-            llr, fast_detect_gpt = None, None
+            llr, fast_detect_gpt = self._calculate_scores(
+                likelihood, log_likelihood, labels, target_ranks
+            )
 
             del likelihood
-            # del log_likelihood
+            del log_likelihood
 
             if PYTORCH_GC_LEVEL == PytorchGcLevel.INNER:
                 free_memory()
@@ -213,26 +212,27 @@ class TransitionScorer(ABC):
         if self._requires_position_ids:
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids = position_ids.to(self.device)
 
         with torch.no_grad():
             outputs: _ModelOutput = self._model(
                 input_ids=input_ids.to(self.device),
                 attention_mask=attention_mask.to(self.device),
-                position_ids=position_ids.to(self.device),
+                position_ids=position_ids,
                 output_hidden_states=True,
             )
 
-            likelihoods: torch.Tensor = outputs.logits.softmax(-1)
-            # log_likelihoods: torch.Tensor = outputs.logits.log_softmax(-1)
+            likelihoods: torch.Tensor = outputs.logits.softmax(-1)  # type: ignore
+            log_likelihoods: torch.Tensor = outputs.logits.log_softmax(-1)  # type: ignore
 
             # Unpack hidden states to get one list of tensors per input sequence,
             # instead of one hidden state per layer in the model
-            hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])
+            hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])  # type: ignore
 
             del outputs
         return (
             likelihoods,
-            # log_likelihoods,
+            log_likelihoods,
             hidden_states,
         )
 
@@ -274,7 +274,7 @@ class TransitionScorer(ABC):
         self,
         target_ranks: torch.Tensor,
         target_log_probs: torch.Tensor,
-        device: torch.device = None,
+        device: torch.device | None = None,
     ) -> float:
         device = device or self.device
         return (
@@ -291,7 +291,7 @@ class TransitionScorer(ABC):
         likelihood: torch.Tensor,
         log_likelihood: torch.Tensor,
         target_log_probs: torch.Tensor,
-        device: torch.device = None,
+        device: torch.device | None = None,
     ) -> float:
         device = device or self.device
         expectation = (likelihood.to(device) * log_likelihood.to(device)).sum(-1)
@@ -325,7 +325,7 @@ def convert_to_mongo(
 def collate_fn(
     batch: list[dict],
     pad_token_id: int,
-) -> list[dict]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     input_ids, attention_mask = zip(
         *[(row["input_ids"], row.pop("attention_mask")) for row in batch]
     )

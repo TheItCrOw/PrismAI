@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import (
+    Any,
     Generator,
     Literal,
     NamedTuple,
@@ -35,7 +36,10 @@ class FeatureValues(DataClassMappingMixin):
     metrics: list[dict[str, float]] = field(default_factory=list)
 
     def __getitem__(self, key):
-        if isinstance(key, (int, slice)):
+        if isinstance(key, int):
+            key = slice(key, key + 1)
+
+        if isinstance(key, slice):
             return FeatureValues(
                 self.target_ids[key],
                 self.target_probs[key],
@@ -53,7 +57,7 @@ class FeatureValues(DataClassMappingMixin):
         self,
         target_id: int,
         target_probs: float,
-        target_ranks: float,
+        target_ranks: int,
         top_k_indices: list[int],
         top_k_probs: list[float],
         intermediate_probs: list[float],
@@ -71,7 +75,7 @@ class FeatureValues(DataClassMappingMixin):
         self,
         target_ids: list[int],
         target_probs: list[float],
-        target_ranks: list[float],
+        target_ranks: list[int],
         top_k_indices: list[list[int]],
         top_k_probs: list[list[float]],
         intermediate_probs: list[list[float]],
@@ -91,11 +95,11 @@ class FeatureValues(DataClassMappingMixin):
 
         for other in others:
             self.extend(
-                other["target_ids"],
-                other["target_probs"],
-                other["target_ranks"],
-                other["top_k_indices"],
-                other["top_k_probs"],
+                other.target_ids,
+                other.target_probs,
+                other.target_ranks,
+                other.top_k_indices,
+                other.top_k_probs,
                 other.get("intermediate_probs", []),
                 other.get("metrics", []),
             )
@@ -119,7 +123,7 @@ class FeatureValues(DataClassMappingMixin):
             Item: A named tuple containing the target_id, target_prob, intermediate_probs, top_k_indices, and top_k_probs.
         """
         yield from (
-            self.Item(item)
+            self.Item(*item)
             for item in zip(
                 self["target_ids"],
                 self["target_probs"],
@@ -164,7 +168,9 @@ class PreProcessorMetadata(dict):
     @classmethod
     def new(
         cls,
-        type: Literal["text", "chunk", "chunk-in-context", "sliding-window"],
+        type: Literal[
+            "text", "chunk", "chunk-in-context", "sliding-window", "truncate"
+        ],
         **metadata,
     ) -> Self:
         return cls(
@@ -192,7 +198,7 @@ class DocumentMetadata(DataClassMappingMixin):
     @classmethod
     def add_metadata_to_document(
         cls,
-        document: dict[str, str],
+        document: dict[str, Any],
         source_collection: str = "collected_items",
     ) -> None:
         _id: ObjectId | DBRef = document.pop("_id")
@@ -205,14 +211,14 @@ class DocumentMetadata(DataClassMappingMixin):
 
         agent = document.pop("agent", None)
         document["document"] = cls(
-            _id=_id,
+            _id=_id,  # type: ignore
             domain=document.pop("domain"),
             lang=document.pop("lang"),
             text_sha256=sha256(document["text"].encode()).hexdigest(),
             type=document.pop("type", "source"),
             label=document.pop("label", "human" if not agent else "ai"),
             agent=agent,
-            _synth_id=_synth_id,
+            _synth_id=_synth_id,  # type: ignore
         )
 
 
@@ -257,7 +263,7 @@ class FeaturesDict(dict):
             else:
                 ma[key], mb[key] = value, value
         return (
-            FeaturesDict(
+            type(self)(
                 {
                     "_id": ObjectId(),
                     "_split": _split + ".0",
@@ -269,7 +275,7 @@ class FeaturesDict(dict):
                     "metadata": ma,
                 }
             ),
-            FeaturesDict(
+            type(self)(
                 {
                     "_id": ObjectId(),
                     "_split": _split + ".1",

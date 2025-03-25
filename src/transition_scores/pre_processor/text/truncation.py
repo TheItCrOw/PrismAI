@@ -31,7 +31,7 @@ class TruncationTextPreProcessor(TextPreProcessor):
             max_length=self.max_length,
         )
 
-    def _process(self, text: list[str]) -> BatchEncoding:
+    def _process(self, text: list[str]) -> BatchEncoding | dict[str, list]:
         """Process a *batch* of samples.
 
         Note:
@@ -60,16 +60,14 @@ class TruncationTextPreProcessor(TextPreProcessor):
         )
 
         if self.include_text:
-            batch_encodings = [
-                batch_encoding
-                | {
-                    "text": self._tokenizer.batch_decode(
-                        batch_encoding["input_ids"],
-                        skip_special_tokens=True,
-                    )
-                }
+            texts = [
+                self._tokenizer.batch_decode(
+                    batch_encoding["input_ids"],
+                    skip_special_tokens=True,
+                )
                 for batch_encoding in batch_encodings
             ]
+            batch_encodings["text"] = texts
 
         return batch_encodings
 
@@ -90,7 +88,7 @@ class TruncationTextPreProcessor(TextPreProcessor):
 
                 tq.set_postfix_str("Tokenizing Text")
                 dataset.map(
-                    lambda document: document | self._process(document.pop("text"))
+                    lambda document: document | self._process(document.pop("text"))  # type: ignore
                 )
                 tq.update(1)
 

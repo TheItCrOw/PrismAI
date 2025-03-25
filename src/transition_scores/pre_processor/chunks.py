@@ -25,14 +25,14 @@ class RollingWindowChunkPreProcessor(PreProcessor):
     """
 
     @property
-    def required_fields(self) -> dict[str, ...]:
+    def required_fields(self) -> dict[str, type]:
         return {
             "text": str,
             "chunks": list[str],
         }
 
     @property
-    def additional_fields(self) -> tuple[str, ...]:
+    def additional_fields(self) -> dict[str, type]:
         fields = {
             "prefix_chunk_idx": int,
             "start_chunk_idx": int,
@@ -40,7 +40,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             "start_token_idx": int,
         }
         if self.include_text:
-            fields.update({"text": str, "prefix": str})
+            fields |= {"text": str, "prefix": str}
 
         return fields
 
@@ -99,7 +99,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
 
                 if (
                     prefix_start == chunk_idx
-                    or len(encoding["input_ids"]) <= self.max_length
+                    or len(encoding.input_ids) <= self.max_length
                 ):
                     break
 
@@ -108,13 +108,13 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             try:
                 char_idx = text.index(chunks[chunk_idx].strip())
                 word_idx = encoding.char_to_word(char_idx)
-                token_idx, _ = encoding.word_to_tokens(word_idx)
+                token_idx, _ = encoding.word_to_tokens(word_idx)  # type: ignore
             except Exception as e:
                 raise ValueError(
                     f"Could not find the start token of chunk {chunk_idx}:'{chunks[chunk_idx]}' in the encoding of '{text}'."
                 ) from e
 
-            if encoding["length"][0] > self.max_length:
+            if encoding.length[0] > self.max_length:
                 encoding = self._tokenizer(
                     text,
                     truncation=True,
@@ -123,17 +123,17 @@ class RollingWindowChunkPreProcessor(PreProcessor):
                     add_special_tokens=True,
                 )
 
-            batch_encoding["input_ids"].append(encoding["input_ids"])
-            batch_encoding["attention_mask"].append(encoding["attention_mask"])
-            batch_encoding["length"].extend(encoding["length"])
-            batch_encoding["prefix_chunk_idx"].append(prefix_start)
-            batch_encoding["start_chunk_idx"].append(chunk_idx)
-            batch_encoding["end_chunk_idx"].append(chunk_idx + 1)
-            batch_encoding["start_token_idx"].append(token_idx)
+            batch_encoding.input_ids.append(encoding["input_ids"])
+            batch_encoding.attention_mask.append(encoding["attention_mask"])
+            batch_encoding.length.extend(encoding["length"])
+            batch_encoding.prefix_chunk_idx.append(prefix_start)
+            batch_encoding.start_chunk_idx.append(chunk_idx)
+            batch_encoding.end_chunk_idx.append(chunk_idx + 1)
+            batch_encoding.start_token_idx.append(token_idx)
 
             if self.include_text:
-                batch_encoding["text"].append(text[char_idx:])
-                batch_encoding["prefix"].append(text[:char_idx])
+                batch_encoding.text.append(text[char_idx:])
+                batch_encoding.prefix.append(text[:char_idx])
 
         return batch_encoding
 

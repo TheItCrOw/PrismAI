@@ -51,7 +51,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             "window_size": int,
         }
         if self.include_text:
-            fields.update({"text": str, "prefix": str})
+            fields |= {"text": str, "prefix": str}
 
         return fields
 
@@ -93,7 +93,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
         del batch_encoding["overflow_to_sample_mapping"]
 
         max_sequences = (self.truncate - self.max_length + self.stride) // self.stride
-        batch_encoding.input_ids = batch_encoding.input_ids[:max_sequences]
+        batch_encoding["input_ids"] = batch_encoding.input_ids[:max_sequences]
 
         # As the first window is not a sliding window, it covers all tokens,
         # so we set the `start_token_idx` to 0.

@@ -24,9 +24,9 @@ class OnnxTransitionScorer(TransitionScorer):
             device=device,
         )
 
-        self.model_name_or_path = self.model_name = model
+        self.model_name_or_path = self.model_name = model  # type: ignore
         if Path(model).exists():
-            self.model_name = Path(model).stem
+            self.model_name: str = Path(model).stem
 
         self.model = ORTModelForCausalLM.from_pretrained(
             model,
@@ -42,12 +42,12 @@ class OnnxTransitionScorer(TransitionScorer):
         )
 
     def get_metadata(self) -> ModelMetadata:
-        match self.model_name_or_path.strip("/").split("_"):
+        match str(self.model_name_or_path).strip("/").split("_"):
             case [*_, variant] if variant.startswith("o") and variant[1:].isdigit():
                 return ModelMetadata.new(
                     name=self.model_name,
                     provider="onnx",
-                    variant=variant,
+                    variant=variant,  # type: ignore
                 )
             case _:
                 return ModelMetadata.new(

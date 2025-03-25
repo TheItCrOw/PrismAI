@@ -37,7 +37,7 @@ class PreProcessor(ABC):
                 raise ValueError(
                     f"max_length was not given and we could not infer the max_length from {type(tokenizer)}({tokenizer.name_or_path}). Please provide a max_length to the {type(self).__name__} constructor."
                 ) from e
-        self.max_length = max_length
+        self.max_length: int = max_length
         self.include_text = include_text
 
     @property
@@ -60,7 +60,13 @@ class PreProcessor(ABC):
 
     @property
     def pad_token_id(self) -> int:
-        return self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+        pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+        if isinstance(pad_token_id, int):
+            return pad_token_id
+
+        raise ValueError(
+            f"Could not infer pad_token_id from {type(self.tokenizer)}({self.tokenizer.name_or_path})."
+        )
 
     @property
     def all_special_ids(self) -> set[int]:

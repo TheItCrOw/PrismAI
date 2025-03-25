@@ -13,7 +13,7 @@ class ModelIntializationError(Exception):
 
 class DataClassMappingMixin(Mapping):
     def __iter__(self):
-        return iter(self.__dataclass_fields__.keys())
+        return iter(self.__dataclass_fields__.keys())  # type: ignore
 
     def __getitem__(self, key):
         if hasattr(self, key):
@@ -22,9 +22,9 @@ class DataClassMappingMixin(Mapping):
                 return dict(**value)
             return value
         raise KeyError(f"Key {key} not found in {type(self).__name__}")
-    
+
     def __len__(self):
-        return len(self.__dataclass_fields__)
+        return len(self.__dataclass_fields__)  # type: ignore
 
 
 def transpose_dict_of_lists[K, V](
@@ -54,7 +54,7 @@ def chunks_to_text(chunks: list[str]) -> str:
     return " ".join(chunk.strip() for chunk in chunks)
 
 
-def infer_max_length(model_name_or_path: str):
+def infer_max_length(model_name_or_path: str) -> int:
     config = AutoConfig.from_pretrained(model_name_or_path)
     if hasattr(config, "max_position_embeddings"):
         return config.max_position_embeddings
@@ -95,24 +95,24 @@ def free_memory():
     gc.collect()
 
 
-def normalize_text(document):
-    return " ".join(document["text"].strip().split())
+def normalize_text(text: str):
+    return " ".join(text.strip().split())
 
 
 def _explode_encodings(document: dict[str, Any], encoding: BatchEncoding):
     yield from (
         document | transposed
-        for transposed in transpose_dict_of_lists(encoding, iter=True)
+        for transposed in transpose_dict_of_lists(encoding, iter=True)  # type: ignore
     )
 
 
-def _pop_or_calc_length(document: dict[str, int | list]) -> int:
+def _pop_or_calc_length(document: dict[str, Any]) -> int:
     """Pop or calculate the length of the document.
     If the `length` field is present, it will be popped and returned.
     Otherwise, the length of the `input_ids` field will be returned.
 
     Args:
-        document (dict[str, int | list]): The document to calculate the length of.
+        document (dict[str, Any]): The document to calculate the length of.
 
     Returns:
         int: The length of the document.
