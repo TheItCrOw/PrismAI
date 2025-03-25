@@ -190,7 +190,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             tq.set_postfix_str("Truncating Transition Scores")
             dataset.apply(
                 lambda ts, idx: ts[idx:],
-                "transition_scores",
+                "features",
                 "start_token_idx",
             )
             tq.update(1)
@@ -199,7 +199,7 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             dataset.group_documents_by(
                 by="document",
                 deduplicate=("document",),
-                aggregate=tuple(self.additional_fields) + ("transition_scores",),
+                aggregate=tuple(self.additional_fields) + ("features",),
             )
             tq.update(1)
 
@@ -207,12 +207,12 @@ class SlidingWindowTextPreProcessor(TextPreProcessor):
             dataset.sort_documents_by(
                 "prefix_token_offset",
                 *self.additional_fields.keys(),
-                "transition_scores",
+                "features",
             )
             tq.update(1)
 
             tq.set_postfix_str("Merging Transition Scores")
-            dataset.apply(FeatureValues.merge, "transition_scores")
+            dataset.apply(FeatureValues.merge, "features")
             tq.update(1)
 
         return dataset

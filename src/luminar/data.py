@@ -40,7 +40,7 @@ class FeatureDataset(TorchDataset):
                     }
                     for sample in doc["features"]
                     for features in self._featurize(
-                        FeatureValues(**sample["transition_scores"]),
+                        FeatureValues(**sample["features"]),
                         slicer,
                         featurizer,
                         num_samples=num_samples,

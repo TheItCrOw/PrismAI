@@ -228,7 +228,7 @@ class PrismaiDataset(MongoPipelineDataset):
                             "label": "$document.label",
                             "type": "$document.type",
                             "split": "$split",
-                            "transition_scores": "$transition_scores",
+                            "features": "$features",
                             "metrics": "$metrics",
                         }
                     },

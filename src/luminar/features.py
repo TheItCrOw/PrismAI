@@ -229,7 +229,7 @@ class FeatureExtractor(ABC):
 
     @abstractmethod
     def featurize(
-        self, transition_scores: FeatureValues, slices: tuple[slice, ...] | NDArray
+        self, features: FeatureValues, slices: tuple[slice, ...] | NDArray
     ) -> torch.Tensor: ...
 
     @classmethod

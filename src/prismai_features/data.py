@@ -231,22 +231,26 @@ class FeaturesDict(dict):
         document: DocumentMetadata | dict,
         model: ModelMetadata | dict,
         pre_processor: PreProcessorMetadata | dict,
-        transition_scores: FeatureValues,
+        features: FeatureValues | None = None,
+        metrics: list[dict] | None = None,
         split: str | None = None,
         _id: ObjectId | None = None,
         **metadata,
     ) -> Self:
-        return cls(
-            {
-                "_id": _id or ObjectId(),
-                "document": document,
-                "model": model,
-                "pre_processor": pre_processor,
-                "transition_scores": transition_scores,
-                "split": split,
-                "metadata": metadata,
-            }
-        )
+        doc = {
+            "_id": _id or ObjectId(),
+            "document": document,
+            "model": model,
+            "pre_processor": pre_processor,
+            "split": split,
+            "metadata": metadata,
+        }
+        if features:
+            doc["features"] = features
+        if metrics:
+            doc["metrics"] = metrics
+
+        return cls(doc)
 
     @classmethod
     def from_tuple(cls, tup: tuple) -> Self:
@@ -254,9 +258,9 @@ class FeaturesDict(dict):
 
     def split(self) -> tuple[Self, Self]:
         _split = self.get("_split", str(self["_id"]))
-        ts = self["transition_scores"]
-        idx = len(ts) // 2
-        tsa, tsb = ts[:idx], ts[idx:]
+        features = self["features"]
+        idx = len(features) // 2
+        features_a, features_b = features[:idx], features[idx:]
         ma, mb = {}, {}
         for key, value in self["metadata"].items():
             if isinstance(value, (tuple, list)):
@@ -272,7 +276,7 @@ class FeaturesDict(dict):
                     "document": self["document"],
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
-                    "transition_scores": tsa,
+                    "features": features_a,
                     "split": self["split"],
                     "metadata": ma,
                 }
@@ -284,7 +288,7 @@ class FeaturesDict(dict):
                     "document": self["document"],
                     "model": self["model"],
                     "pre_processor": self["pre_processor"],
-                    "transition_scores": tsb,
+                    "features": features_b,
                     "split": self["split"],
                     "metadata": mb,
                 }
@@ -302,7 +306,6 @@ def convert_to_mongo(
         document=document_metadata,
         model=model_metadata,
         pre_processor=pre_processor_metadata,
-        transition_scores=document.pop("transition_scores"),
         split=document.pop("split", None),
         **document,
     )

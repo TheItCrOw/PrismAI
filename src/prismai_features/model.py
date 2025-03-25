@@ -87,7 +87,7 @@ class TransformersModelABC(ABC):
             KeyError: If the pre-processor requires a field that is not present in the given dataset.
 
         Returns:
-            Dataset: The processed dataset with a new "transition_scores" field.
+            Dataset: The processed dataset.
         """
         if not isinstance(dataset, Dataset):
             dataset = Dataset(dataset)

@@ -197,7 +197,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             tq.set_postfix_str("Truncating Transition Scores")
             dataset.apply(
                 lambda ts, idx: ts[idx:],
-                "transition_scores",
+                "features",
                 "start_token_idx",
             )
             tq.update(1)
@@ -206,7 +206,7 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             dataset.group_documents_by(
                 by="document",
                 deduplicate=("document",),
-                aggregate=tuple(self.additional_fields) + ("transition_scores",),
+                aggregate=tuple(self.additional_fields) + ("features",),
             )
             tq.update(1)
 
@@ -214,12 +214,12 @@ class RollingWindowChunkPreProcessor(PreProcessor):
             dataset.sort_documents_by(
                 "start_chunk_idx",
                 *self.additional_fields,
-                "transition_scores",
+                "features",
             )
             tq.update(1)
 
             tq.set_postfix_str("Merging Transition Scores")
-            dataset.apply(FeatureValues.merge, "transition_scores")
+            dataset.apply(FeatureValues.merge, "features")
             tq.update(1)
 
         return dataset
