@@ -1,10 +1,8 @@
 from collections import UserList
 from copy import deepcopy
-from typing import Callable, Concatenate, Iterable, ParamSpec, Self
+from typing import Any, Callable, Concatenate, Iterable, Self
 
 import numpy as np
-
-P = ParamSpec("P")
 
 
 class Dataset[K, V](UserList[dict[K, V]]):
@@ -86,8 +84,8 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
     def flat_map_zip(
         self,
-        map_fn: Callable[Concatenate[dict[K, V], P], Iterable[dict[K, V]]],
-        *iterables: P.args,
+        map_fn: Callable[Concatenate[dict[K, V], ...], Iterable[dict[K, V]]],
+        *iterables: Iterable,
         in_place: bool = True,
     ) -> Self:
         """
@@ -97,6 +95,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             map_fn (Callable): A function that takes a document and returns an iterable of documents.
             in_place (bool): Apply the operation **in-place**, modifying the original dataset.
                 Default: `True`.
+            *iterables (Iterable): Additional iterables to zip with the dataset.
 
         Returns:
             Dataset: The flat-mapped dataset.
@@ -179,8 +178,8 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
     def modify_zip(
         self,
-        map_fn: Callable[Concatenate[dict[K, V], P], None],
-        *iterables: P.args,
+        map_fn: Callable[Concatenate[dict[K, V], ...], None],
+        *iterables: Iterable,
         **fn_kwargs,
     ) -> Self:
         """
@@ -209,10 +208,10 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
     def apply(
         self,
-        apply_fn: Callable[..., V],
+        apply_fn: Callable[Concatenate[V, ...], V],
         column: K,
-        *additional_columns: P.args,
-        **fn_kwargs,
+        *additional_columns: K,
+        **fn_kwargs: Any,
     ):
         """
         Apply a function to a column in the dataset.
@@ -334,7 +333,6 @@ class Dataset[K, V](UserList[dict[K, V]]):
             >>> dataset.remove_columns("foo", "bar").data
             [{'values': [1, 2, 3]}, {'values': [4, 5, 6]}, {'values': [7, 8, 9]}]
         """
-        columns = set(columns)
         if in_place:
             for document in self.data:
                 for column in columns:
@@ -395,8 +393,8 @@ class Dataset[K, V](UserList[dict[K, V]]):
 
         if callable(by):
 
-            def _key(document: dict[K, V]) -> K_grouped:
-                return by(document)
+            def _key(document: dict[K, V]) -> K_grouped:  # type: ignore
+                return by(document)  # type: ignore
         else:
             remove_by_column = by not in (deduplicate + aggregate)
 
@@ -478,23 +476,23 @@ class Dataset[K, V](UserList[dict[K, V]]):
         """
         # lists & dicts are mutable, so we can just manipulate the values in-place
         for idx, document in enumerate(self.data):
-            len_row = len(document[by])
+            len_row = len(document[by])  # type: ignore
 
-            order = np.argsort(document[by], **kwargs)
+            order = np.argsort(document[by], **kwargs)  # type: ignore
             if reverse:
                 order = order[::-1]
 
             # If the by column is not in to_sort, we sort it manually
             # unless include_by_column is False
             if by not in to_sort and include_by_column:
-                document[by] = [document[by][i] for i in order]
+                document[by] = [document[by][i] for i in order]  # type: ignore
 
             for column in to_sort:
-                if disable_length_check and len(document[column]) != len_row:
+                if disable_length_check and len(document[column]) != len_row:  # type: ignore
                     raise ValueError(
-                        f"Column '{column}' in document {idx} has a different length than the column '{by}': {len(document[column])} != {len(document[by])}"
+                        f"Column '{column}' in document {idx} has a different length than the column '{by}': {len(document[column])} != {len(document[by])}"  # type: ignore
                     )
-                document[column] = [document[column][i] for i in order]
+                document[column] = [document[column][i] for i in order]  # type: ignore
         return self
 
     def sort_by(
@@ -530,7 +528,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
             [{'foo': 'bar'}, {'foo': 'baz'}, {'foo': 'qux'}]
         """
         if callable(by):
-            data = list(sorted(self.data, key=by, reverse=reverse))
+            data = list(sorted(self.data, key=by, reverse=reverse))  # type: ignore
         else:
             if remove_by_column:
 
@@ -542,7 +540,7 @@ class Dataset[K, V](UserList[dict[K, V]]):
                 def _get_or_pop(document: dict[K, V]) -> V:
                     return document[by]
 
-            data = list(sorted(self.data, key=_get_or_pop, reverse=reverse))
+            data = list(sorted(self.data, key=_get_or_pop, reverse=reverse))  # type: ignore
 
         if in_place:
             self.data = data
@@ -564,14 +562,17 @@ class Dataset[K, V](UserList[dict[K, V]]):
             else type(self)(deepcopy(self.data))
         )
 
-    def __getitem__(self, key: int) -> dict[K, V]:
+    def __getitem__(self, key: K | slice | int):  # type: ignore
         match key:
             case s if isinstance(s, slice):
-                return type(self)(self.data[key])
+                # slice the underlying data, return a new instance
+                return type(self)(self.data[key])  # type: ignore
             case k if isinstance(k, str):
-                return [doc[key] for doc in self.data]
+                # return all values for the given key
+                return [doc[key] for doc in self.data]  # type: ignore
             case _:
-                return self.data[key]
+                # return the item at the given index
+                return self.data[key]  # type: ignore
 
     def column(self, key: K) -> list[V]:
         return [doc[key] for doc in self.data]
