@@ -1,4 +1,4 @@
-from typing import Generator, Iterable, Iterator
+from typing import Callable, Generator, Iterable, Iterator, TypedDict
 
 import torch
 from lightning.pytorch import LightningDataModule
@@ -13,7 +13,7 @@ from luminar.features import (
     Slicer,
     TwoDimFeatures,
 )
-from luminar.mongo import MongoPipelineDataset
+from luminar.mongo import MongoPipelineDataset, PrismaiDocument
 from prismai_features.data import FeatureValues
 
 
@@ -21,54 +21,100 @@ def flatten[T](iterables: Iterable[Iterable[T]]) -> Generator[T, None, None]:
     yield from (item for iterable in iterables for item in iterable)
 
 
+def default_label_fn(sample: dict) -> int:
+    return 0 if sample["type"] == "source" else 1
+
+
+class SampleDict(TypedDict):
+    features: FeatureValues
+    label: int
+
+
+class FeatureDict(TypedDict):
+    features: torch.Tensor
+    label: int
+
+
 class FeatureDataset(TorchDataset):
     def __init__(
         self,
-        data: Iterable[dict],
+        data: Iterable[FeatureDict],
+    ):
+        self._data: list[FeatureDict] = list(data)
+
+    @classmethod
+    def from_samples(
+        cls,
+        data: Iterable[SampleDict],
         slicer: Slicer,
         featurizer: FeatureExtractor,
         num_samples: int = 1,
-        label_field: str = "type",
-        label_zero: str = "source",
     ):
-        self.data = list(
-            flatten(
-                [
-                    {
-                        "features": features,
-                        "labels": 0 if sample[label_field] == label_zero else 1,
-                    }
-                    for sample in doc["features"]
-                    for features in self._featurize(
-                        FeatureValues(**sample["features"]),
-                        slicer,
-                        featurizer,
-                        num_samples=num_samples,
-                    )
-                ]
-                for doc in data
-            )
+        """
+        Create a dataset for CNN training.
+        Uses the given `slicer` to extract feature (potentially multiple) slices from each sample.
+        Then applies the `featurizer` to each LLM feature slice to generate CNN input features for training.
+
+        Args:
+            data (Iterable[SampleDict]): An iterable of samples with LLM features and labels.
+            slicer (Slicer): A `Slicer` instance to extract slices from the LLM features.
+            featurizer (FeatureExtractor): A `FeatureExtractor` instance to extract CNN input features from the sliced LLM features.
+            num_samples (int, optional): _description_. Defaults to 1.
+        """
+        return cls(
+            [
+                {
+                    "features": featurizer.featurize(sample["features"], slice),
+                    "labels": sample["label"],
+                }
+                for sample in data
+                for slice in slicer.sample(len(sample["features"]), num_samples)
+            ]
         )
 
-    @staticmethod
-    def _featurize(
-        ts: FeatureValues,
+    @classmethod
+    def from_prismai(
+        cls,
+        dataset: Iterable[PrismaiDocument],
         slicer: Slicer,
         featurizer: FeatureExtractor,
-        num_samples: int,
-    ) -> Generator[torch.Tensor, None, None]:
-        slices = slicer.sample(len(ts), num_samples)
-        for s in slices:
-            yield featurizer.featurize(ts, s)
+        num_samples: int = 1,
+        label_fn: Callable[[dict], int] = default_label_fn,
+    ):
+        """Create a dataset with features for CNN training from a list of documents.
+        Each document is expected to have a list of samples.
+        Adapt `label_fn` to infer the label from a sample.
+        `label_fn` expects a dictionary with an entry "type" that is used to infer the label.
+
+        Args:
+            dataset (Iterable[PrismaiDocument]): An iterable over a list of documents.
+            label_fn (Callable[[dict], int], optional): Function that infers the label from a sample. Defaults to default_label_fn.
+
+        Returns:
+            FeatureDataset: A dataset with features and labels.
+        """
+        return cls.from_samples(
+            (
+                SampleDict(
+                    features=FeatureValues(**sample["features"]),
+                    label=label_fn(sample),
+                )
+                for document in dataset
+                for sample in document["samples"]
+            ),
+            slicer=slicer,
+            featurizer=featurizer,
+            num_samples=num_samples,
+        )
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self._data)
 
-    def __getitem__(self, index) -> dict:
-        return self.data[index]
+    def __getitem__(self, index) -> FeatureDict:
+        return self._data[index]
 
-    def __iter__(self) -> Iterator[dict]:
-        return iter(self.data)
+    def __iter__(self) -> Iterator[FeatureDict]:
+        return iter(self._data)
 
 
 def n_way_split(
@@ -161,13 +207,13 @@ class DocumentClassificationDataModule(LightningDataModule):
 
             train_data, eval_data, test_data = zip(*splits)
 
-            self.train_data = FeatureDataset(
+            self.train_data = FeatureDataset.from_prismai(
                 flatten(train_data), self.slicer, self.featurizer
             )
-            self.eval_data = FeatureDataset(
+            self.eval_data = FeatureDataset.from_prismai(
                 flatten(eval_data), self.slicer, self.featurizer
             )
-            self.test_data = FeatureDataset(
+            self.test_data = FeatureDataset.from_prismai(
                 flatten(test_data), self.slicer, self.featurizer
             )
 

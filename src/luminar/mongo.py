@@ -2,7 +2,7 @@ import pickle
 from abc import abstractmethod
 from hashlib import sha256
 from pathlib import Path
-from typing import Final, Generator, Literal, Self
+from typing import Final, Generator, Literal, Self, TypedDict
 
 import bson.json_util
 from pymongo import MongoClient
@@ -16,7 +16,7 @@ DEFAULT_CACHE_DIR: Final[Path] = (
 )
 
 
-class MongoDataset(TorchDataset):
+class MongoDataset[T](TorchDataset):
     def __init__(
         self,
         mongo_db_connection: str,
@@ -34,17 +34,17 @@ class MongoDataset(TorchDataset):
         self.update_cache = update_cache
 
     @property
-    def data(self) -> list[list[dict]]:
+    def data(self) -> list[T]:
         self.load()
         return self._data
 
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, idx: int) -> list[dict]:
+    def __getitem__(self, idx: int) -> T:
         return self.data[idx]
 
-    def __iter__(self) -> Generator[list[dict], None, None]:
+    def __iter__(self) -> Generator[T, None, None]:
         yield from iter(self.data)
 
     def load(self, verbose=True) -> Self:
@@ -131,7 +131,7 @@ class MongoFindDataset(MongoDataset):
         return cache_file
 
 
-class MongoPipelineDataset(MongoDataset):
+class MongoPipelineDataset[T: dict](MongoDataset[T]):
     def __init__(
         self,
         mongo_db_connection: str,
@@ -171,7 +171,19 @@ class MongoPipelineDataset(MongoDataset):
         return cache_file
 
 
-class PrismaiDataset(MongoPipelineDataset):
+class PrismaiSample(TypedDict):
+    features: dict
+    label: str
+    type: str
+    split: str
+    metrics: list[dict]
+
+
+class PrismaiDocument(TypedDict):
+    samples: list[PrismaiSample]
+
+
+class PrismaiDataset(MongoPipelineDataset[PrismaiDocument]):
     def __init__(
         self,
         mongo_db_connection: str,
@@ -223,7 +235,7 @@ class PrismaiDataset(MongoPipelineDataset):
             {
                 "$group": {
                     "_id": "$document._id.$id",
-                    "features": {
+                    "samples": {
                         "$push": {
                             "label": "$document.label",
                             "type": "$document.type",
