@@ -304,7 +304,9 @@ class TransformersMetricModel(TransformersModelABC):
             target_ranks = self._get_ranks(likelihoods, labels)
             target_log_probs = log_likelihoods.gather(-1, labels).squeeze(-1)
 
-            llr = self._calculate_log_likelihood_ratio(target_ranks, target_log_probs)
+            detect_llm_llr = self._calculate_log_likelihood_ratio(
+                target_ranks, target_log_probs
+            )
 
             # Get Fast-DetectGPT criterion
             fast_detect_gpt = self._calculate_fast_detect_gpt(
@@ -319,7 +321,7 @@ class TransformersMetricModel(TransformersModelABC):
                 "metrics": [
                     {
                         "fast_detect_gpt": fast_detect_gpt,
-                        "llr": llr,
+                        "detect_llm_llr": detect_llm_llr,
                     }
                 ]
             }
