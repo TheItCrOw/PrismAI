@@ -16,6 +16,7 @@ from tqdm import tqdm
 from prismai_features.data import DocumentMetadata, FeaturesDict, convert_to_mongo
 from prismai_features.model import (
     TransformersFeatureModel,
+    TransformersIntermediateMetricModel,
     TransformersMetricModel,
     TransformersModelABC,
 )
@@ -61,15 +62,22 @@ def parse_pre_processors(args: Namespace):
 
 def parse_scorer_model(args: Namespace) -> TransformersModelABC:
     match args.mode:
-        case "features":
+        case "f" | "features":
             return TransformersFeatureModel(
                 args.model,
                 batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
                 load_in_8bit=args.load_in_8bit,
             )
-        case "metrics":
+        case "m" | "metrics":
             return TransformersMetricModel(
+                args.model,
+                batch_size=args.batch_size or args.model_batch_size,
+                device=args.device,
+                load_in_8bit=args.load_in_8bit,
+            )
+        case "im" | "intermediate_metrics":
+            return TransformersIntermediateMetricModel(
                 args.model,
                 batch_size=args.batch_size or args.model_batch_size,
                 device=args.device,
@@ -127,7 +135,7 @@ def get_argparser():
     provider_group_mode = model_group.add_mutually_exclusive_group()
     provider_group_mode.add_argument(
         "--mode",
-        choices=["features", "metrics"],
+        choices=["features", "metrics", "intermediate_metrics"],
         help="Model execution mode. ",
         default="features",
     )
@@ -144,6 +152,14 @@ def get_argparser():
         const="metrics",
         dest="mode",
         help="Calculate metrics.",
+    )
+    provider_group_mode.add_argument(
+        "--intermediate_metrics",
+        "--intermediate-metrics",
+        action="store_const",
+        const="intermediate_metrics",
+        dest="mode",
+        help="Calculate metrics with intermediate likelihood.",
     )
 
     model_group.add_argument(

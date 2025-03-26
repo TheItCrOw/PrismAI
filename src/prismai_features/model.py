@@ -400,3 +400,106 @@ class TransformersMetricModel(TransformersModelABC):
         ) / variance.sum(-1).sqrt()
 
         return fast_detect_gpt.cpu().item()
+
+
+class TransformersIntermediateMetricModel(TransformersMetricModel):
+    def _process_batch(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        pad_token_id: int,
+    ) -> Generator[dict[str, FeatureValues], None, None]:
+        """
+        Process the a batch of input sequences and calculate features.
+        Runs a forward pass on the model and extracts likelihoods.
+
+        Args:
+            input_ids (torch.Tensor): A list of input sequences, each represented as a list of token IDs.
+            attention_mask (torch.Tensor): A list of attention masks for each input sequence.
+            pad_token_id (int): The token ID that has been used for padding.
+
+        Yields:
+            One feature dictionary for each input sequence.
+        """
+        batch_hidden_states = self._forward(input_ids, attention_mask)
+
+        for target_ids, hidden_states in zip(
+            input_ids.to(self.device),
+            batch_hidden_states,
+        ):
+            # Truncate the sequence to the last non-pad token
+            labels: torch.Tensor = target_ids[1:].view(-1, 1).cpu()
+            labels = labels[: labels.ne(pad_token_id).sum()]
+            seq_length = labels.size(0)
+
+            detect_llm_llr = []
+            fast_detect_gpt = []
+
+            with torch.no_grad():
+                for hs in hidden_states:
+                    hs: torch.Tensor = hs[:seq_length].to(self.device)
+                    logits: torch.Tensor = self._model_lm_head(hs)[:seq_length]
+                    del hs
+
+                    likelihoods: torch.Tensor = logits.softmax(-1).cpu()
+                    log_likelihoods: torch.Tensor = logits.log_softmax(-1).cpu()
+                    del logits
+
+                    # Get DetectLLM-LLR criterion
+                    target_ranks = self._get_ranks(likelihoods, labels)
+                    target_log_probs = log_likelihoods.gather(-1, labels).squeeze(-1)
+
+                    # Get Fast-DetectGPT criterion
+                    fast_detect_gpt.append(
+                        self._calculate_fast_detect_gpt(
+                            likelihoods, log_likelihoods, target_log_probs
+                        )
+                    )
+                    del likelihoods
+                    del log_likelihoods
+
+                    detect_llm_llr.append(
+                        self._calculate_log_likelihood_ratio(
+                            target_ranks, target_log_probs
+                        )
+                    )
+                    del target_log_probs
+                del hidden_states
+
+            yield {
+                "metrics": [
+                    {
+                        "fast_detect_gpt": fast_detect_gpt,
+                        "detect_llm_llr": detect_llm_llr,
+                    }
+                ]
+            }
+
+            if PYTORCH_GC_LEVEL == PytorchGcLevel.INNER:
+                free_memory()
+
+    def _forward(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+    ) -> Iterable[tuple[torch.Tensor]]:
+        with torch.no_grad():
+            # Create `position_ids` on the fly, if required
+            # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
+            position_ids = None
+            if self._requires_position_ids:
+                position_ids = attention_mask.long().cumsum(-1) - 1
+                position_ids.masked_fill_(attention_mask == 0, 1)
+                position_ids = position_ids.to(self.device)
+
+            outputs: _ModelOutput = self._model(
+                input_ids=input_ids.to(self.device),
+                attention_mask=attention_mask.to(self.device),
+                position_ids=position_ids,
+                output_hidden_states=True,
+            )
+
+            # Unpack hidden states to get one list of tensors per input sequence,
+            # instead of one hidden state per layer in the model
+            hidden_states = zip(*[hs.detach().cpu() for hs in outputs.hidden_states])  # type: ignore
+
+            del outputs
+        return hidden_states
