@@ -184,7 +184,7 @@ class TransformersFeatureModel(TransformersModelABC):
             del likelihoods
 
             # Calculate intermediate likelihoods from hidden states
-            intermediate_likelihoods = self._calculate_intermediate_probs(
+            intermediate_likelihoods = self._calculate_intermediate_likelihoods(
                 hidden_states, labels
             )
             del hidden_states
@@ -205,15 +205,15 @@ class TransformersFeatureModel(TransformersModelABC):
     def _forward(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> tuple[torch.Tensor, Iterable[tuple[torch.Tensor]]]:
-        # Create `position_ids` on the fly, if required
-        # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
-        position_ids = None
-        if self._requires_position_ids:
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids = position_ids.to(self.device)
-
         with torch.no_grad():
+            # Create `position_ids` on the fly, if required
+            # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
+            position_ids = None
+            if self._requires_position_ids:
+                position_ids = attention_mask.long().cumsum(-1) - 1
+                position_ids.masked_fill_(attention_mask == 0, 1)
+                position_ids = position_ids.to(self.device)
+
             outputs: _ModelOutput = self._model(
                 input_ids=input_ids.to(self.device),
                 attention_mask=attention_mask.to(self.device),
@@ -225,7 +225,7 @@ class TransformersFeatureModel(TransformersModelABC):
 
             # Unpack hidden states to get one list of tensors per input sequence,
             # instead of one hidden state per layer in the model
-            hidden_states = zip(*[hs.cpu() for hs in outputs.hidden_states])  # type: ignore
+            hidden_states = zip(*[hs.detach().cpu() for hs in outputs.hidden_states])  # type: ignore
 
             del outputs
         return likelihoods, hidden_states
@@ -243,21 +243,26 @@ class TransformersFeatureModel(TransformersModelABC):
 
         return target_ranks, top_k_ids, top_k_probs
 
-    def _calculate_intermediate_probs(
+    def _calculate_intermediate_likelihoods(
         self, hidden_states: tuple[torch.Tensor], labels: torch.Tensor
     ) -> torch.Tensor:
         seq_length = labels.size(0)
-        labels = labels.to(self.device)
 
         results = []
         # Calculate likelihoods using intermediate representations
         # We need do this in a loop here to avoid running out of memory
-        for hs in hidden_states:
-            hs: torch.Tensor = hs[:seq_length].to(self.device)
-            results.append(
-                self._model_lm_head(hs).softmax(-1).gather(-1, labels).squeeze(-1).cpu()
-            )
-            del hs
+        with torch.no_grad():
+            labels = labels.to(self.device)
+            for hs in hidden_states:
+                hs: torch.Tensor = hs[:seq_length].to(self.device)
+                results.append(
+                    self._model_lm_head(hs)
+                    .softmax(-1)
+                    .gather(-1, labels)
+                    .squeeze(-1)
+                    .cpu()
+                )
+                del hs
 
         # transpose to get shape (seq_length, num_layers)
         return torch.stack(results).T
@@ -282,30 +287,32 @@ class TransformersMetricModel(TransformersModelABC):
         Yields:
             One metrics dictionary for each input sequence.
         """
-        likelihoods, log_likelihoods = self._forward(input_ids, attention_mask)
+        batch_likelihoods, batch_log_likelihoods = self._forward(
+            input_ids, attention_mask
+        )
 
-        for target_ids, likelihood, log_likelihood in zip(
-            input_ids.to(self.device), likelihoods, log_likelihoods
+        for target_ids, likelihoods, log_likelihoods in zip(
+            input_ids.to(self.device), batch_likelihoods, batch_log_likelihoods
         ):
             # Truncate the sequence to the last non-pad token
             labels: torch.Tensor = target_ids[1:].view(-1, 1)
             labels = labels[: labels.ne(pad_token_id).sum()]
-            likelihood: torch.Tensor = likelihood[: labels.size(0)]
-            log_likelihood: torch.Tensor = log_likelihood[: labels.size(0)]
+            likelihoods: torch.Tensor = likelihoods[: labels.size(0)]
+            log_likelihoods: torch.Tensor = log_likelihoods[: labels.size(0)]
 
             # Get DetectLLM-LLR criterion
-            target_ranks = self._get_ranks(likelihood, labels)
-            target_log_probs = log_likelihood.gather(-1, labels).squeeze(-1)
+            target_ranks = self._get_ranks(likelihoods, labels)
+            target_log_probs = log_likelihoods.gather(-1, labels).squeeze(-1)
 
             llr = self._calculate_log_likelihood_ratio(target_ranks, target_log_probs)
 
             # Get Fast-DetectGPT criterion
             fast_detect_gpt = self._calculate_fast_detect_gpt(
-                likelihood, log_likelihood, target_log_probs
+                likelihoods, log_likelihoods, target_log_probs
             )
 
-            del likelihood
-            del log_likelihood
+            del likelihoods
+            del log_likelihoods
             del target_log_probs
 
             yield {
@@ -323,15 +330,15 @@ class TransformersMetricModel(TransformersModelABC):
     def _forward(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Create `position_ids` on the fly, if required
-        # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
-        position_ids = None
-        if self._requires_position_ids:
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids = position_ids.to(self.device)
-
         with torch.no_grad():
+            # Create `position_ids` on the fly, if required
+            # Source: https://github.com/huggingface/transformers/blob/v4.48.1/src/transformers/generation/utils.py#L414
+            position_ids = None
+            if self._requires_position_ids:
+                position_ids = attention_mask.long().cumsum(-1) - 1
+                position_ids.masked_fill_(attention_mask == 0, 1)
+                position_ids = position_ids.to(self.device)
+
             outputs: _ModelOutput = self._model(
                 input_ids=input_ids.to(self.device),
                 attention_mask=attention_mask.to(self.device),
@@ -350,7 +357,7 @@ class TransformersMetricModel(TransformersModelABC):
         self, likelihood: torch.Tensor, labels: torch.Tensor
     ) -> torch.Tensor:
         """Sort likelihoods and get ranks of target labels."""
-        sorted_probs, sorted_indices = torch.sort(likelihood, descending=True)
+        _, sorted_indices = torch.sort(likelihood, descending=True)
         _, target_ranks = torch.where(sorted_indices.eq(labels))
 
         return target_ranks
