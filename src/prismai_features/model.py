@@ -2,7 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from functools import partial
 from pathlib import Path
-from typing import Any, Generator, Iterable
+from typing import Any, Generator, Iterable, TypedDict
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -18,6 +18,11 @@ from prismai_features.utils import PYTORCH_GC_LEVEL, PytorchGcLevel, free_memory
 from simple_dataset.dataset import Dataset
 
 type _ModelOutput = dict[str, torch.Tensor | list[torch.Tensor]]
+
+
+class ModelInputDict(TypedDict, total=False):
+    input_ids: list[int]
+    attention_mask: list[int]
 
 
 class TransformersModelABC(ABC):
@@ -60,7 +65,7 @@ class TransformersModelABC(ABC):
     def set_model(self, model):
         self._model = model
         self._model_lm_head: torch.nn.Linear = (
-            model.lm_head if hasattr(self.model, "lm_head") else model.model.lm_head
+            model.lm_head if hasattr(model, "lm_head") else model.model.lm_head
         )
         self._requires_position_ids = "position_ids" in set(
             inspect.signature(self.model.forward).parameters.keys()
@@ -95,7 +100,7 @@ class TransformersModelABC(ABC):
         return dataset.update(self._process(dataset, pad_token_id))
 
     def _process(
-        self, dataset: Dataset, pad_token_id: int
+        self, dataset: Iterable[ModelInputDict], pad_token_id: int
     ) -> Generator[dict[str, FeatureValues], None, None]:
         _collate_fn = partial(collate_fn, pad_token_id=pad_token_id)
         for input_ids, attention_mask in tqdm(
@@ -225,7 +230,7 @@ class TransformersFeatureModel(TransformersModelABC):
 
             # Unpack hidden states to get one list of tensors per input sequence,
             # instead of one hidden state per layer in the model
-            hidden_states = zip(*[hs.detach().cpu() for hs in outputs.hidden_states])  # type: ignore
+            hidden_states = zip(*[hs for hs in outputs.hidden_states])  # type: ignore
 
             del outputs
         return likelihoods, hidden_states
@@ -428,7 +433,7 @@ class TransformersIntermediateMetricModel(TransformersMetricModel):
             batch_hidden_states,
         ):
             # Truncate the sequence to the last non-pad token
-            labels: torch.Tensor = target_ids[1:].view(-1, 1).cpu()
+            labels: torch.Tensor = target_ids[1:].view(-1, 1)
             labels = labels[: labels.ne(pad_token_id).sum()]
             seq_length = labels.size(0)
 
@@ -441,8 +446,8 @@ class TransformersIntermediateMetricModel(TransformersMetricModel):
                     logits: torch.Tensor = self._model_lm_head(hs)[:seq_length]
                     del hs
 
-                    likelihoods: torch.Tensor = logits.softmax(-1).cpu()
-                    log_likelihoods: torch.Tensor = logits.log_softmax(-1).cpu()
+                    likelihoods: torch.Tensor = logits.softmax(-1)
+                    log_likelihoods: torch.Tensor = logits.log_softmax(-1)
                     del logits
 
                     # Get DetectLLM-LLR criterion
@@ -499,7 +504,7 @@ class TransformersIntermediateMetricModel(TransformersMetricModel):
 
             # Unpack hidden states to get one list of tensors per input sequence,
             # instead of one hidden state per layer in the model
-            hidden_states = zip(*[hs.detach().cpu() for hs in outputs.hidden_states])  # type: ignore
+            hidden_states = zip(*[hs for hs in outputs.hidden_states])  # type: ignore
 
             del outputs
         return hidden_states
