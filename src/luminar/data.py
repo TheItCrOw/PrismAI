@@ -13,7 +13,7 @@ from luminar.features import (
     Slicer,
     TwoDimFeatures,
 )
-from luminar.mongo import MongoPipelineDataset, PrismaiDocument
+from luminar.mongo import PrismaiDocument
 from prismai_features.data import FeatureValues
 
 
@@ -143,11 +143,11 @@ def n_way_split(
 class DocumentClassificationDataModule(LightningDataModule):
     def __init__(
         self,
-        datasets: list[MongoPipelineDataset],
-        feature_dim: OneDimFeatures | TwoDimFeatures = OneDimFeatures(256),
+        dataset: Iterable[SampleDict],
         slicer: Slicer | None = None,
         featurizer: FeatureExtractor | None = None,
         num_samples: int = 1,
+        feature_dim: OneDimFeatures | TwoDimFeatures = OneDimFeatures(256),
         train_batch_size: int = 32,
         eval_batch_size: int = 32,
         eval_split_size: float = 0.1,
@@ -155,10 +155,8 @@ class DocumentClassificationDataModule(LightningDataModule):
         **kwargs,
     ):
         super().__init__()
-        if not all(ds.use_cache for ds in datasets):
-            raise ValueError("Dataset must use cache for this data module.")
 
-        self.datasets = datasets
+        self.dataset: list[SampleDict] = list(dataset)
         self.slicer = slicer or SliceFirst(feature_dim[0])
         self.featurizer = featurizer or Likelihood()
 
@@ -183,45 +181,31 @@ class DocumentClassificationDataModule(LightningDataModule):
             }
         )
 
-        self._finished_setup = False
-
     def prepare_data(self):
-        if not self._finished_setup:
-            for dataset in self.datasets:
-                if not dataset.get_cache_file().exists():
-                    dataset.load()
-                    dataset._data = None  # type: ignore
+        self._train_split, self._eval_split, self._test_split = n_way_split(
+            self.dataset,
+            self.hparams.eval_split_size,  # type: ignore
+            self.hparams.test_split_size,  # type: ignore
+            infer_first=True,
+        )
 
     def setup(self, stage=None):
-        if not self._finished_setup:
-            splits: list[list[Subset]] = []
-            for dataset in self.datasets:
-                splits.append(
-                    n_way_split(
-                        dataset,
-                        self.hparams.eval_split_size,  # type: ignore
-                        self.hparams.test_split_size,  # type: ignore
-                        infer_first=True,
-                    )
-                )
-
-            train_data, eval_data, test_data = zip(*splits)
-
-            self.train_data = FeatureDataset.from_prismai(
-                flatten(train_data), self.slicer, self.featurizer
+        if not stage or stage == "fit":
+            self._train_data = FeatureDataset.from_samples(
+                self._train_split, self.slicer, self.featurizer
             )
-            self.eval_data = FeatureDataset.from_prismai(
-                flatten(eval_data), self.slicer, self.featurizer
+        if not stage or stage == "validate":
+            self._eval_data = FeatureDataset.from_samples(
+                self._eval_split, self.slicer, self.featurizer
             )
-            self.test_data = FeatureDataset.from_prismai(
-                flatten(test_data), self.slicer, self.featurizer
+        if not stage or stage == "test":
+            self._test_data = FeatureDataset.from_samples(
+                self._test_split, self.slicer, self.featurizer
             )
-
-        self._finished_setup = True
 
     def train_dataloader(self):
         return PaddingDataloader(
-            self.train_data,
+            self._train_data,
             feature_dim=self.hparams.feature_dim,  # type: ignore
             batch_size=self.hparams.train_batch_size,  # type: ignore
             pin_memory=True,
@@ -230,7 +214,7 @@ class DocumentClassificationDataModule(LightningDataModule):
 
     def val_dataloader(self):
         return PaddingDataloader(
-            self.eval_data,
+            self._eval_data,
             feature_dim=self.hparams.feature_dim,  # type: ignore
             batch_size=self.hparams.eval_batch_size,  # type: ignore
             pin_memory=True,
@@ -238,7 +222,7 @@ class DocumentClassificationDataModule(LightningDataModule):
 
     def test_dataloader(self):
         return PaddingDataloader(
-            self.test_data,
+            self._test_data,
             feature_dim=self.hparams.feature_dim,  # type: ignore
             batch_size=self.hparams.eval_batch_size,  # type: ignore
             pin_memory=True,

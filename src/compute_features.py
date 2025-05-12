@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import sys
 import traceback
 from argparse import ArgumentParser, Namespace
@@ -35,7 +34,6 @@ MAX_TRY_INSERT_RECURSION_DEPTH = int(
 
 def parse_pre_processors(args: Namespace):
     from prismai_features.pre_processor import (
-        RollingWindowChunkPreProcessor,
         SlidingWindowTextPreProcessor,
         TruncationTextPreProcessor,
     )
@@ -45,10 +43,6 @@ def parse_pre_processors(args: Namespace):
             return TruncationTextPreProcessor.from_pretrained(
                 args.model, max_length=args.max_length
             )
-        case "RollingWindowChunkPreProcessor":
-            return RollingWindowChunkPreProcessor.from_pretrained(
-                args.model, max_length=args.max_length
-            )
         case "SlidingWindowTextPreProcessor":
             return SlidingWindowTextPreProcessor.from_pretrained(
                 args.model,
@@ -56,6 +50,8 @@ def parse_pre_processors(args: Namespace):
                 stride=args.stride,
                 truncate=args.truncate,
             )
+        case "RollingWindowChunkPreProcessor":
+            raise DeprecationWarning("Chunk Pre-Processors are deprecated.")
         case _:
             raise RuntimeError
 
@@ -178,7 +174,7 @@ def get_argparser():
         "-bsd",
         "--dataset_batch_size",
         type=int,
-        default=128,
+        default=None,
         metavar="N",
         help="Batch size for dataset processing. Defaults to the MongoDB batch size.",
     )
@@ -228,7 +224,7 @@ def get_argparser():
         "--rolling_window",
         action="append_const",
         const="RollingWindowChunkPreProcessor",
-        help="Use the RollingWindowChunkPreProcessor.",
+        help="Deprecated: Use the RollingWindowChunkPreProcessor.",
     )
     group_pre_processor.add_argument(
         "-slt",
@@ -258,16 +254,16 @@ def get_argparser():
         help="Truncate any document to at most N tokens.",
         default=None,
     )
-    group_pre_processor.add_argument(
-        "--split",
-        type=str,
-        help=(
-            "The split to assign to the processed documents. Defaults to `train`. "
-            "Can be either a split name or '${field_name}:[${regex}]' (e.g. 'source:' or  'file:(train|test|dev).*') to extract the split from a field. "
-            "If no regex is passed, will check for 'train', 'test' or 'val' in the field value."
-        ),
-        default="train",
-    )
+    # group_pre_processor.add_argument(
+    #     "--split",
+    #     type=str,
+    #     help=(
+    #         "The split to assign to the processed documents. Defaults to `train`. "
+    #         "Can be either a split name or '${field_name}:[${regex}]' (e.g. 'source:' or  'file:(train|test|dev).*') to extract the split from a field. "
+    #         "If no regex is passed, will check for 'train', 'test' or 'val' in the field value."
+    #     ),
+    #     default="train",
+    # )
 
     mongodb_group = parser.add_argument_group("MongoDB")
     mongodb_group.add_argument(
@@ -379,41 +375,43 @@ if __name__ == "__main__":
 
     fields_projection = {
         "_id",
-        "_ref_id",
-        "domain",
-        "lang",
-        "type",
+        "id",
         "agent",
+        "domain",
         "label",
-    } | set(pre_processor.required_fields.keys())
+        "lang",
+        "source",
+        "text",
+        "type",
+    }
 
-    def _add_split(value):
-        if "train" in value:
-            return "train"
-        elif "test" in value:
-            return "test"
-        elif "val" in value or "dev" in value:
-            return "val"
-        else:
-            return None
+    # def _add_split(value):
+    #     if "train" in value:
+    #         return "train"
+    #     elif "test" in value:
+    #         return "test"
+    #     elif "val" in value or "dev" in value:
+    #         return "val"
+    #     else:
+    #         return None
 
-    split_field_name = None
-    if ":" in args.split:
-        split_field_name, regex = args.split.split(":", 1)
-        if regex:
-            pattern: re.Pattern = re.compile(regex)
-            if pattern.groups == 0:
-                raise ValueError("Regex must contain at least one group.")
+    # split_field_name = None
+    # if ":" in args.split:
+    #     split_field_name, regex = args.split.split(":", 1)
+    #     if regex:
+    #         pattern: re.Pattern = re.compile(regex)
+    #         if pattern.groups == 0:
+    #             raise ValueError("Regex must contain at least one group.")
 
-            def _add_split(value):
-                mtches: list[re.Match] = pattern.findall(value)
-                if not mtches:
-                    return None
-                return mtches[0].group(1)
+    #         def _add_split(value):
+    #             mtches: list[re.Match] = pattern.findall(value)
+    #             if not mtches:
+    #                 return None
+    #             return mtches[0].group(1)
 
-        fields_projection.add(split_field_name)
+    #     fields_projection.add(split_field_name)
 
-    fields_projection = list(fields_projection)
+    # fields_projection = list(fields_projection)
 
     domains = args.mongodb_filter_domains or mongodb_filter_query.pop("domain", (None,))
 
@@ -454,10 +452,10 @@ if __name__ == "__main__":
         ):
             dataset = Dataset(dataset)
 
-            if split_field_name:
-                dataset.apply(_add_split, "split", split_field_name)
-            else:
-                dataset.modify(lambda doc: doc.update(split=args.split))
+            # if split_field_name:
+            #     dataset.apply(_add_split, "split", split_field_name)
+            # else:
+            #     dataset.modify(lambda doc: doc.update(split=args.split))
 
             dataset.modify(
                 DocumentMetadata.add_metadata_to_document,

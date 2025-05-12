@@ -180,14 +180,15 @@ class PreProcessorMetadata(dict):
 
 @dataclass
 class DocumentMetadata(DataClassMappingMixin):
-    _id: ObjectId
+    _id: DBRef
+    id: str
+    agent: str
     domain: str
+    label: Literal["human", "ai", "fusion"]
     lang: str
+    source: str
     text_sha256: str
-    type: Literal["source", "chunk", "fulltext"] = "source"
-    label: Literal["human", "ai", "fusion"] = "human"
-    agent: str | None = None
-    _synth_id: ObjectId | None = None
+    type: Literal["source", "chunk", "fulltext"]
 
     def __hash__(self):
         return self._id.__hash__()
@@ -196,26 +197,19 @@ class DocumentMetadata(DataClassMappingMixin):
     def add_metadata_to_document(
         cls,
         document: dict[str, Any],
-        source_collection: str = "collected_items",
+        source_collection: str,
     ) -> None:
-        _id: ObjectId | DBRef = document.pop("_id")
-        if (_ref_id := document.pop("_ref_id", None)) is None:
-            _id = DBRef(source_collection, _id)
-            _synth_id = None
-        else:
-            _synth_id = DBRef(source_collection, _id)
-            _id = _ref_id
-
         agent = document.pop("agent", None)
         document["document"] = cls(
-            _id=_id,  # type: ignore
+            _id=DBRef(source_collection, document.pop("_id")),  # type: ignore
+            id=document.pop("id"),
+            agent=agent,
             domain=document.pop("domain"),
+            label=document.pop("label", "human" if not agent else "ai"),
             lang=document.pop("lang"),
+            source=document.pop("source", None),
             text_sha256=sha256(document["text"].encode()).hexdigest(),
             type=document.pop("type", "source"),
-            label=document.pop("label", "human" if not agent else "ai"),
-            agent=agent,
-            _synth_id=_synth_id,  # type: ignore
         )
 
 
