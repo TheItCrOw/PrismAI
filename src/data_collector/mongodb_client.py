@@ -152,6 +152,61 @@ class MongoDBConnection:
             if cursor:
                 cursor.close()
 
+    def get_collected_items_with_synth(self, batch_size=100, skip=0):
+        client = MongoClient(self.connection_string)
+        try:
+            with client.start_session() as session:
+                cursor = client.get_database('prismai').get_collection('collected_items').find(
+                    {
+                        "$expr": { "$gt": [{ "$size": "$synthetization" }, 0] }
+                    },
+                    no_cursor_timeout=True,
+                    session=session
+                ).sort([('_id', 1)]).skip(skip)
+                
+                while True:
+                    batch = []
+                    for _ in range(batch_size):
+                        try:
+                            batch.append(next(cursor))
+                        except StopIteration:
+                            break
+                    if not batch:
+                        break
+                    for item in batch:
+                        yield item
+        except Exception as ex:
+            print('Error while fetching collected items:', ex)
+        finally:
+            if cursor:
+                cursor.close()
+
+    def get_secondary_dataset_items(self, name, batch_size=100, skip=0):
+        client = MongoClient(self.connection_string)
+        try:
+            with client.start_session() as session:
+                cursor = client.get_database('prismai').get_collection('dataset_' + name).find(
+                    no_cursor_timeout=True,
+                    session=session
+                ).sort([('_id', 1)]).skip(skip)
+                
+                while True:
+                    batch = []
+                    for _ in range(batch_size):
+                        try:
+                            batch.append(next(cursor))
+                        except StopIteration:
+                            break
+                    if not batch:
+                        break
+                    for item in batch:
+                        yield item
+        except Exception as ex:
+            print('Error while fetching collected items:', ex)
+        finally:
+            if cursor:
+                cursor.close()
+
     def close(self):
         self.client.close()
 
