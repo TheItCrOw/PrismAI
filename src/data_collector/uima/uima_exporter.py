@@ -4,6 +4,7 @@ import pathlib
 import json
 import pandas as pd
 import uuid
+import zipfile
 import re
 import requests
 import io
@@ -119,6 +120,25 @@ class UIMAExporter():
             print(ex)
             return None, None
 
+    def __write_xmi_to_disc(self, xmi_string, file_name, zip_writer=None, base_path=None):
+        """
+        Writes the XMI string to a zip archive if `zip_writer` is provided, 
+        otherwise writes to disk under base_path.
+        """
+        try:
+            xmi_filename = f"{file_name}.xmi"
+            if zip_writer is not None:
+                zip_writer.writestr(xmi_filename, xmi_string)
+            else:
+                if base_path is None:
+                    raise ValueError("base_path must be provided if not writing to a zip archive.")
+                os.makedirs(base_path, exist_ok=True)
+                file_path = os.path.join(base_path, xmi_filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(xmi_string)
+        except Exception as ex:
+            print(f"Failed to write {file_name}.xmi:", ex)
+
     def __upload_xmi_to_uce(self, xmi_string, file_name, corpusId):
         try:
             url = "http://141.2.108.197:4567/api/ie/upload/uima"
@@ -205,30 +225,29 @@ class UIMAExporter():
         
         concurrent.futures.wait(futures)
 
-    def export_from_disc_to_disc(self, level, force=False):
-        collector_paths = [ f.path for f in os.scandir(self.root_data_path) if f.is_dir() ]
-        for col_path in collector_paths:
-            input = os.path.join(col_path, level)
-            if not os.path.exists(input):
-                print(f'Input path: {input} not existing, skipping this collector then.')
-                continue
+    def export_datasets_to_disc(self, mongo_conn_string, output_path, dataset_name, authors):
+        print('Doing ' + dataset_name)
+        mongo_conn = MongoDBConnection(mongo_conn_string)
+        collected_items = mongo_conn.get_secondary_dataset_items(dataset_name)
 
-            output = os.path.join(col_path, 'xmi_' + level)
-            # If the path already exists, then we have already exported this collection on this leve.
-            if os.path.exists(output) and not force:
-                print('Skipping collection since already exported: ' + output)
-                continue            
-            self.counters[output] = 1
-            os.makedirs(output, exist_ok=True)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for item in collected_items:
+                futures.append(executor.submit(self.__build_xmi_from_secondary_db_item, item, authors))
 
-            print(f'Exporting {input} to {output}')
-            for filename in os.listdir(input):
+            base_output_path = os.path.join(output_path, dataset_name)
+            os.makedirs(base_output_path, exist_ok=True)
 
-                if filename.endswith('.json'): 
-                    file_path = os.path.join(input, filename)
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        data = json.load(file)
-                        self.__export_df(pd.DataFrame(data), output, level)
+            file_counter = 0
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Exporting XMI files to disc"):
+                xmi_string, file_name = future.result()
+                if xmi_string and file_name:
+                    file_counter += 1
+                    batch_dir_number = ((file_counter - 1) // 1000 + 1) * 1000  # 1000, 2000, 3000, ...
+                    batch_dir_path = os.path.join(base_output_path, str(batch_dir_number))
+                    os.makedirs(batch_dir_path, exist_ok=True)
+
+                    self.__write_xmi_to_disc(xmi_string, file_name, base_path=batch_dir_path)
 
 if __name__ == '__main__':
     print('Starting the UIMA exporter.')
@@ -239,5 +258,8 @@ if __name__ == '__main__':
     #exporter.synch_secondary_dataset_to_uce(os.getenv('MONGO_DB_CONNECTION'), 35, 'HC3-Plus', 'Zhenpeng Su, Xing Wu, Wei Zhou, Guangyuan Ma, Songlin Hu')
     #exporter.synch_secondary_dataset_to_uce(os.getenv('MONGO_DB_CONNECTION'), 35, 'SeqXGPT', 'Pengyu Wang, Linyang Li, Ke Ren, Botian Jiang, Dong Zhang, Xipeng Qiu')
     #exporter.synch_secondary_dataset_to_uce(os.getenv('MONGO_DB_CONNECTION'), 35, 'OpenLLMText', 'Yutian Chen, Hao Kang, Vivian Zhai, Liangze Li, Rita Singh, Bhiksha Raj')
-    exporter.synch_secondary_dataset_to_uce(os.getenv('MONGO_DB_CONNECTION'), 35, 'PrismAI', 'Manuel Schaaf, Kevin Bönisch, Alexander Mehler')
+    #exporter.synch_secondary_dataset_to_uce(os.getenv('MONGO_DB_CONNECTION'), 35, 'PrismAI', 'Manuel Schaaf, Kevin Bönisch, Alexander Mehler')
     #exporter.synch_collected_items_to_uce(os.getenv('MONGO_DB_CONNECTION'), 34)
+    
+    output = '/mnt/c/home/projects/prismAI/datasets/AIGT-World/xmi'
+    exporter.export_datasets_to_disc(os.getenv('MONGO_DB_CONNECTION'), output, 'SeqXGPT', 'Pengyu Wang, Linyang Li, Ke Ren, Botian Jiang, Dong Zhang, Xipeng Qiu')
