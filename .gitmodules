@@ -1,0 +1,3 @@
+[submodule "src/ghostbuster"]
+	path = src/ghostbuster
+	url = https://github.com/vivek3141/ghostbuster
