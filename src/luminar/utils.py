@@ -1,38 +1,55 @@
+import numpy as np
 import torch
 from attr import dataclass
 from datasets import Dataset, DatasetDict
-from torch.utils.data import DataLoader
+from numpy.typing import NDArray
 
 
 def get_matched_datasets(
     dataset: Dataset,
-    agent: str,
-    test_size=0.2,
-    seed=42,
+    *agents: str,
+    test_split: float = 0.2,
+    eval_split: float = 0.1,
+    seed: int = 42,
 ) -> DatasetDict:
+    agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
+    ids_agent: set[str] = set(
+        dataset.filter(lambda a: a in agent_set, input_columns=["agent"])["id_source"]
+    )
     ids_human: set[str] = set(
         dataset.filter(lambda a: a == "human", input_columns=["agent"])["id_source"]
     )
+    ids_matched: NDArray = np.array(list(ids_agent.intersection(ids_human)), dtype=str)
 
-    ds_agent: DatasetDict = (
-        dataset.filter(lambda a: a == agent, input_columns=["agent"])
-        .remove_columns(list(set(dataset.column_names).difference({"id_source"})))
-        .train_test_split(test_size, seed=seed)
+    indices = np.arange(len(ids_matched))
+
+    np.random.seed(seed)
+    np.random.shuffle(indices)
+
+    eval_offset = int(len(ids_matched) * (1 - eval_split - test_split))
+    test_offset = int(len(ids_matched) * (1 - test_split))
+    ids_train, ids_eval, ids_test = (
+        set(ids_matched[indices[:eval_offset]]),
+        set(ids_matched[indices[eval_offset:test_offset]]),
+        set(ids_matched[indices[test_offset:]]),
     )
 
-    ids_train: set[str] = set(ds_agent["train"]["id_source"]).intersection(ids_human)  # type: ignore
-    ids_eval: set[str] = set(ds_agent["test"]["id_source"]).intersection(ids_human)  # type: ignore
-    ids_matched: set[str] = ids_train | ids_eval
-
+    agent_set.add("human")
     return DatasetDict(
         {
             "train": dataset.filter(
-                lambda _id: _id in ids_train, input_columns=["id_source"]
+                lambda agent, _id: agent in agent_set and _id in ids_train,
+                input_columns=["agent", "id_source"],
+            ),
+            "eval": dataset.filter(
+                lambda agent, _id: agent in agent_set and _id in ids_eval,
+                input_columns=["agent", "id_source"],
             ),
             "test": dataset.filter(
-                lambda _id: _id in ids_eval, input_columns=["id_source"]
+                lambda agent, _id: agent in agent_set and _id in ids_test,
+                input_columns=["agent", "id_source"],
             ),
-            "test_unmatched": dataset.filter(
+            "unmatched": dataset.filter(
                 lambda _id: _id not in ids_matched, input_columns=["id_source"]
             ),
         }
