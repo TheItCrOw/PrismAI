@@ -56,47 +56,37 @@ def get_matched_datasets(
     )
 
 
-def collate_pad_features(
-    feature_dim: tuple[int, ...],
-    batch: list[dict[str, torch.Tensor]],
-) -> dict[str, torch.Tensor]:
-    features = torch.nn.utils.rnn.pad_sequence(
-        [item["features"] for item in batch], batch_first=True
-    )
-
-    # In case we get a batch of sequences, that are all too short,
-    # we need to pad them to the correct length as given by the feature_dim.
-    # - First dimension is the batch size.
-    # - Second dimension is the sequence length.
-    # - Third dimension is the feature dimension, if 2D features are used.
-    match features.shape, feature_dim:
-        case (_, s1), (d1,) if s1 < d1:
-            p2d = (0, d1 - s1)
-            features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
-        case (_, s1, _), (d1, _) if s1 < d1:
-            p2d = (0, 0, 0, d1 - s1, 0, 0)
-            features = torch.nn.functional.pad(features, p2d, "constant", 0.0)
-
-    features = torch.nan_to_num(features, nan=0.0, posinf=1.0, neginf=-1.0)
-
-    labels = torch.tensor([item["labels"] for item in batch])
-
-    return {"features": features, "labels": labels}
-
-
-class PaddingDataloader(DataLoader):
-    def __init__(self, *args, feature_dim: tuple[int, ...], **kwargs):
-        kwargs["collate_fn"] = self._collate_fn
-        super().__init__(*args, **kwargs)
-        self.feature_dim = feature_dim
-
-    def _collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:
-        return collate_pad_features(self.feature_dim, batch)
-
-
 @dataclass
 class PaddingDataCollator:
     feature_dim: tuple[int, ...]
 
     def __call__(self, batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
-        return collate_pad_features(self.feature_dim, batch)
+        features = torch.nn.utils.rnn.pad_sequence(
+            [torch.zeros(self.feature_dim)] + [item["features"] for item in batch],
+            batch_first=True,
+        )[1:]
+        features = torch.nan_to_num(features, nan=0.0, posinf=1.0, neginf=-1.0)
+
+        labels = torch.tensor([item["labels"] for item in batch])
+
+        return {"features": features, "labels": labels}
+
+
+@dataclass
+class MaskingDataCollator:
+    feature_dim: tuple[int, ...]
+
+    def __call__(self, batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+        features = torch.nn.utils.rnn.pad_sequence(
+            [torch.zeros(self.feature_dim)] + [item["features"] for item in batch],
+            batch_first=True,
+        )[1:]
+        features = torch.nan_to_num(features, nan=0.0, posinf=1.0, neginf=-1.0)
+
+        attention_mask = torch.full_like(features, False, dtype=torch.bool)
+        for i, item in enumerate(batch):
+            attention_mask[i, : item["features"].shape[0]] = True
+
+        labels = torch.tensor([item["labels"] for item in batch])
+
+        return {"features": features, "labels": labels}
