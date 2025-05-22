@@ -31,11 +31,9 @@ class ConvolutionalLayerSpec(NamedTuple):
 
 
 DEFAULT_CONV_LAYER_SHAPES: Final[tuple[ConvolutionalLayerSpec, ...]] = (
+    ConvolutionalLayerSpec(32, 5),
     ConvolutionalLayerSpec(64, 5),
-    ConvolutionalLayerSpec(128, 3),
-    ConvolutionalLayerSpec(128, 3),
-    ConvolutionalLayerSpec(128, 3),
-    ConvolutionalLayerSpec(64, 3),
+    ConvolutionalLayerSpec(32, 3),
 )
 
 
@@ -44,7 +42,7 @@ class LuminarCNN(nn.Module):
         self,
         feature_dim: tuple[int, int],
         conv_layer_shapes: Iterable[ConvolutionalLayerSpec] = DEFAULT_CONV_LAYER_SHAPES,
-        projection_dim: int = 128,
+        projection_dim: int | tuple[int, int] | tuple[int, int, int] | None = 32,
         **kwargs,
     ):
         super().__init__()
@@ -63,23 +61,40 @@ class LuminarCNN(nn.Module):
             self.conv_layers.append(
                 nn.LeakyReLU(),
             )
-        self.conv_layers.append(nn.Flatten())
 
-        if projection_dim:
-            self.projection = nn.Sequential(
-                nn.LazyLinear(projection_dim), nn.LeakyReLU()
-            )
-        else:
-            self.projection = nn.Identity()
+        match projection_dim:
+            case (c, h, p):
+                self.projection = nn.Sequential(
+                    nn.LazyLinear(c),
+                    nn.SiLU(),
+                    nn.LazyLinear(h),
+                    nn.SiLU(),
+                    nn.LazyLinear(p),
+                    nn.SiLU(),
+                    nn.Flatten(),
+                )
+            case (h, p):
+                self.projection = nn.Sequential(
+                    nn.LazyLinear(h),
+                    nn.SiLU(),
+                    nn.LazyLinear(p),
+                    nn.SiLU(),
+                    nn.Flatten(),
+                )
+            case p if isinstance(p, int):
+                self.projection = nn.Sequential(
+                    nn.LazyLinear(p), nn.SiLU(), nn.Flatten()
+                )
+            case None:
+                self.projection = nn.Flatten()
+            case _:
+                raise ValueError(
+                    f"projection_dim must be an int or a tuple of (projection_dim, hidden_size), got {projection_dim}"
+                )
 
         self.classifier = nn.LazyLinear(1)
 
         self.criterion = nn.BCEWithLogitsLoss()
-
-        self.forward(
-            torch.randn((kwargs.get("batch_size", 1), *feature_dim)),
-            labels=torch.randint(0, 2, (kwargs.get("batch_size", 1),)),
-        )
 
     def forward(
         self,
@@ -91,7 +106,7 @@ class LuminarCNN(nn.Module):
         # but we want to treat the second feature dimension as channels.
         # Thus, we need to transpose the tensor here
         logits = self.classifier(
-            self.projection(self.conv_layers(features.transpose(1, 2)).flatten(1))
+            self.projection(self.conv_layers(features.transpose(1, 2)).transpose(1, 2))
         )
 
         if labels is None:
