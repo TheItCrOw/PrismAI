@@ -1,68 +1,41 @@
-from typing import Final, Iterable, NamedTuple
-
 import torch
 from torch import nn
 from transformers.utils.generic import ModelOutput
 
-
-class ConvolutionalLayerSpec(NamedTuple):
-    channels: int
-    kernel_size: int | tuple[int, int]
-    stride: int = 1
-
-    @property
-    def kernel_size_1d(self):
-        if isinstance(self.kernel_size, int):
-            return self.kernel_size
-        return self.kernel_size[0]
-
-    @property
-    def kernel_size_2d(self):
-        if isinstance(self.kernel_size, int):
-            return (self.kernel_size, self.kernel_size)
-        return self.kernel_size
-
-    @property
-    def padding(self) -> int:
-        return (self.kernel_size_1d - 1) // 2
-
-    def __repr__(self):
-        return repr(tuple(self))
-
-
-DEFAULT_CONV_LAYER_SHAPES: Final[tuple[ConvolutionalLayerSpec, ...]] = (
-    ConvolutionalLayerSpec(32, 5),
-    ConvolutionalLayerSpec(64, 5),
-    ConvolutionalLayerSpec(32, 3),
-)
+from luminar.utils import ConvolutionalLayerSpec, LuminarTrainingConfig
 
 
 class LuminarCNN(nn.Module):
     def __init__(
         self,
-        feature_dim: tuple[int, int],
-        conv_layer_shapes: Iterable[ConvolutionalLayerSpec] = DEFAULT_CONV_LAYER_SHAPES,
-        projection_dim: int | tuple[int, int] | tuple[int, int, int] | None = 32,
         **kwargs,
     ):
         super().__init__()
 
+        config = LuminarTrainingConfig(**kwargs)
+
+        feature_len, feature_depth = config.feature_dim
+
         self.conv_layers = nn.Sequential()
-        for conv in conv_layer_shapes:
+        in_channels = feature_depth
+        for conv in config.conv_layer_shapes:
             conv = ConvolutionalLayerSpec(*conv)
+            out_channels = conv.channels
             self.conv_layers.append(
-                nn.LazyConv1d(
-                    conv.channels,
+                nn.Conv1d(
+                    in_channels,
+                    out_channels,
                     conv.kernel_size,  # type: ignore
                     conv.stride,
                     conv.padding,
                 ),
             )
+            in_channels = out_channels
             self.conv_layers.append(
                 nn.LeakyReLU(),
             )
 
-        match projection_dim:
+        match config.projection_dim:
             case (c, h, p):
                 self.projection = nn.Sequential(
                     nn.LazyLinear(c),
@@ -89,7 +62,7 @@ class LuminarCNN(nn.Module):
                 self.projection = nn.Flatten()
             case _:
                 raise ValueError(
-                    f"projection_dim must be an int or a tuple of (projection_dim, hidden_size), got {projection_dim}"
+                    f"projection_dim must be an int or a tuple of (projection_dim, hidden_size), got {config.projection_dim}"
                 )
 
         self.classifier = nn.LazyLinear(1)
