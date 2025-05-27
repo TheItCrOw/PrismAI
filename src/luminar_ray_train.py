@@ -6,8 +6,26 @@ from pathlib import Path
 from typing import Callable, Final
 from uuid import uuid4
 
+import datasets
+import evaluate
+import numpy as np
 import ray
+from datasets import Dataset, load_dataset
+from numpy.typing import NDArray
 from tqdm import trange
+from transformers import (
+    EarlyStoppingCallback,  # type: ignore
+    Trainer,  # type: ignore
+    TrainingArguments,  # type: ignore
+)
+
+from luminar.classifier import LuminarCNN
+from luminar.utils import (
+    ConvolutionalLayerSpec,
+    get_matched_datasets,
+    save_model,
+)
+from luminar.utils.data import get_pad_to_fixed_length_fn
 
 HF_TOKEN: Final[str] = (Path.home() / ".hf_token").read_text().strip()
 DATASET_PATH: Final[str] = "liberi-luminaris/PrismAI-encoded-gpt2"
@@ -30,24 +48,6 @@ DOMAINS: Final[tuple[str, ...]] = (
 
 @ray.remote(num_gpus=0.5)
 def train_luminar(args: argparse.Namespace):
-    import datasets
-    import evaluate
-    import numpy as np
-    from datasets import Dataset, load_dataset
-    from numpy.typing import NDArray
-    from transformers import (
-        EarlyStoppingCallback,  # type: ignore
-        Trainer,  # type: ignore
-        TrainingArguments,  # type: ignore
-    )
-
-    from luminar.classifier import ConvolutionalLayerSpec, LuminarCNN
-    from luminar.utils import (
-        get_matched_datasets,
-        get_pad_to_fixed_length_fn,
-        save_model,
-    )
-
     datasets.disable_progress_bars()
 
     run_uuid = str(uuid4())

@@ -38,34 +38,35 @@ class LuminarCNN(nn.Module):
         match config.projection_dim:
             case (c, h, p):
                 self.projection = nn.Sequential(
-                    nn.LazyLinear(c),
+                    nn.Linear(out_channels, c),
                     nn.SiLU(),
-                    nn.LazyLinear(h),
+                    nn.Linear(c, h),
                     nn.SiLU(),
-                    nn.LazyLinear(p),
+                    nn.Linear(h, p),
                     nn.SiLU(),
                     nn.Flatten(),
                 )
             case (h, p):
                 self.projection = nn.Sequential(
-                    nn.LazyLinear(h),
+                    nn.Linear(out_channels, h),
                     nn.SiLU(),
-                    nn.LazyLinear(p),
+                    nn.Linear(h, p),
                     nn.SiLU(),
                     nn.Flatten(),
                 )
             case p if isinstance(p, int):
                 self.projection = nn.Sequential(
-                    nn.LazyLinear(p), nn.SiLU(), nn.Flatten()
+                    nn.Linear(out_channels, p), nn.SiLU(), nn.Flatten()
                 )
             case None:
+                p = 1
                 self.projection = nn.Flatten()
             case _:
                 raise ValueError(
                     f"projection_dim must be an int or a tuple of (projection_dim, hidden_size), got {config.projection_dim}"
                 )
 
-        self.classifier = nn.LazyLinear(1)
+        self.classifier = nn.Linear(feature_len * p, 1)
 
         self.criterion = nn.BCEWithLogitsLoss()
 
