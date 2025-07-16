@@ -51,7 +51,7 @@ def get_matched_datasets(
             "train": dataset.filter(
                 lambda agent, _id: agent in agent_set and _id in ids_train,
                 input_columns=["agent", "id_source"],
-            ),
+            ).shuffle(seed=seed),
             "eval": dataset.filter(
                 lambda agent, _id: agent in agent_set and _id in ids_eval,
                 input_columns=["agent", "id_source"],
@@ -109,7 +109,7 @@ def get_matched_cross_validation_datasets(
                     "train": dataset.filter(
                         lambda agent, _id: agent in agent_set and _id in ids_train,
                         input_columns=["agent", "id_source"],
-                    ),
+                    ).shuffle(seed=seed),
                     "eval": dataset.filter(
                         lambda agent, _id: agent in agent_set and _id in ids_eval,
                         input_columns=["agent", "id_source"],
