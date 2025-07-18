@@ -1,5 +1,6 @@
 from typing import Callable, Generator, Iterable
 
+import datasets
 import numpy as np
 import torch
 from attr import dataclass
@@ -15,12 +16,24 @@ def flatten[T](outer: Iterable[Iterable[T]]) -> Generator[T, None, None]:
         yield from inner
 
 
-def get_matched_ids(dataset: Dataset, agent_set: set[str]) -> set[str]:
+def get_matched_ids(
+    dataset: Dataset,
+    agent_set: set[str],
+    num_proc: int | None = None,
+) -> set[str]:
     ids_agent: set[str] = set(
-        dataset.filter(lambda a: a in agent_set, input_columns=["agent"])["id_source"]
+        dataset.filter(
+            lambda a: a in agent_set,
+            input_columns=["agent"],
+            num_proc=num_proc,
+        )["id_source"]
     )
     ids_human: set[str] = set(
-        dataset.filter(lambda a: a == "human", input_columns=["agent"])["id_source"]
+        dataset.filter(
+            lambda a: a == "human",
+            input_columns=["agent"],
+            num_proc=num_proc,
+        )["id_source"]
     )
     return ids_agent.intersection(ids_human)
 
@@ -31,11 +44,15 @@ def get_matched_datasets(
     eval_split: float = 0.1,
     test_split: float = 0.2,
     seed: int = 42,
+    num_proc: int | None = None,
 ) -> tuple[DatasetDict, Dataset]:
+    datasets.disable_progress_bars()
+
     agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
-    ids_matched = np.array(list(get_matched_ids(dataset, agent_set)), dtype=str)
+    ids_matched_set = get_matched_ids(dataset, agent_set, num_proc=num_proc)
     agent_set.add("human")
 
+    ids_matched = np.array(list(ids_matched_set), dtype=str)
     ids_matched.sort()
     np.random.seed(seed)
     np.random.shuffle(ids_matched)
@@ -46,26 +63,37 @@ def get_matched_datasets(
         set, np.array_split(ids_matched, [eval_offset, test_offset])
     )
 
+    ds_agent = dataset.filter(
+        lambda agent: agent in agent_set,
+        input_columns=["agent"],
+        num_proc=num_proc,
+    )
     dataset_matched = DatasetDict(
         {
-            "train": dataset.filter(
-                lambda agent, _id: agent in agent_set and _id in ids_train,
-                input_columns=["agent", "id_source"],
+            "train": ds_agent.filter(
+                lambda _id: _id in ids_train,
+                input_columns=["id_source"],
+                num_proc=num_proc,
             ).shuffle(seed=seed),
-            "eval": dataset.filter(
-                lambda agent, _id: agent in agent_set and _id in ids_eval,
-                input_columns=["agent", "id_source"],
+            "eval": ds_agent.filter(
+                lambda _id: _id in ids_eval,
+                input_columns=["id_source"],
+                num_proc=num_proc,
             ),
-            "test": dataset.filter(
-                lambda agent, _id: agent in agent_set and _id in ids_test,
-                input_columns=["agent", "id_source"],
+            "test": ds_agent.filter(
+                lambda _id: _id in ids_test,
+                input_columns=["id_source"],
+                num_proc=num_proc,
             ),
         }
     )
     dataset_unmatched = dataset.filter(
-        lambda _id: _id not in ids_matched, input_columns=["id_source"]
+        lambda _id: _id not in ids_matched_set,
+        input_columns=["id_source"],
+        num_proc=num_proc,
     )
 
+    datasets.enable_progress_bars()
     return dataset_matched, dataset_unmatched
 
 

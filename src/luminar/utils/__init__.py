@@ -10,11 +10,9 @@ from .data import (
     get_pad_to_fixed_length_fn,
 )
 from .evaluation import (
-    Balanced,
-    LuminarEvaluationMetrics,
-    Unbalanced,
+    calculate_metrics,
     compute_metrics,
-    compute_scores,
+    find_threshold_for_fpr,
 )
 from .training import (
     DEFAULT_CONV_LAYER_SHAPES,
@@ -36,11 +34,9 @@ __all__ = [
     "get_matched_ids",
     "get_pad_to_fixed_length_fn",
     "visualize_features",
-    "Balanced",
-    "LuminarEvaluationMetrics",
-    "Unbalanced",
+    "find_threshold_for_fpr",
     "compute_metrics",
-    "compute_scores",
+    "calculate_metrics",
     "DEFAULT_CONV_LAYER_SHAPES",
     "ConvolutionalLayerSpec",
     "LuminarTrainingConfig",
