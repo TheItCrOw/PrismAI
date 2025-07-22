@@ -1,8 +1,23 @@
+from collections import OrderedDict
+
 import torch
+import torch.nn.functional as F
 from torch import nn
 from transformers.utils.generic import ModelOutput
 
 from luminar.utils import ConvolutionalLayerSpec, LuminarTrainingConfig
+
+
+class FeatureRescaler(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.requires_grad_(False)
+
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
+        """
+        Rescale features from range [0, 1] to the range [-1, 1].
+        """
+        return features.mul(2).sub(1)
 
 
 class LuminarCNN(nn.Module):
@@ -16,12 +31,23 @@ class LuminarCNN(nn.Module):
 
         feature_len, feature_depth = config.feature_dim
 
-        self.conv_layers = nn.Sequential()
-        in_channels = feature_depth
+        if config.rescale_features:
+            self.rescale = FeatureRescaler()
+        else:
+            self.rescale = nn.Identity()
+
+        in_channels: int = feature_depth
+        if config.projection_dim:
+            self.projection = nn.Linear(in_channels, config.projection_dim)
+            in_channels = config.projection_dim
+        else:
+            self.projection = nn.Identity()
+
+        self.cnn = nn.Sequential()
         for conv in config.conv_layer_shapes:
             conv = ConvolutionalLayerSpec(*conv)
             out_channels = conv.channels
-            self.conv_layers.append(
+            self.cnn.append(
                 nn.Conv1d(
                     in_channels,
                     out_channels,
@@ -31,42 +57,35 @@ class LuminarCNN(nn.Module):
                 ),
             )
             in_channels = out_channels
-            self.conv_layers.append(
+            self.cnn.append(
                 nn.LeakyReLU(),
             )
 
-        match config.projection_dim:
-            case (c, h, p):
-                self.projection = nn.Sequential(
-                    nn.Linear(out_channels, c),
-                    nn.SiLU(),
-                    nn.Linear(c, h),
-                    nn.SiLU(),
-                    nn.Linear(h, p),
-                    nn.SiLU(),
-                    nn.Flatten(),
+        ff_input_dim = out_channels
+        match config.feed_forward_dim:
+            case None | 0:
+                ff_output_dim: int = feature_len
+                self.feed_forward = nn.Flatten()
+            case dim if isinstance(dim, int):
+                self.feed_forward = nn.Sequential(
+                    nn.Linear(ff_input_dim, dim), nn.SiLU(), nn.Flatten()
                 )
-            case (h, p):
-                self.projection = nn.Sequential(
-                    nn.Linear(out_channels, h),
-                    nn.SiLU(),
-                    nn.Linear(h, p),
-                    nn.SiLU(),
-                    nn.Flatten(),
-                )
-            case p if isinstance(p, int):
-                self.projection = nn.Sequential(
-                    nn.Linear(out_channels, p), nn.SiLU(), nn.Flatten()
-                )
-            case None:
-                p = 1
-                self.projection = nn.Flatten()
+                ff_output_dim = dim * feature_len
+            case tup if isinstance(tup, (tuple, list)):
+                modules = []
+                for dim in tup:
+                    modules.append(nn.Linear(ff_input_dim, dim))
+                    modules.append(nn.SiLU())
+                    ff_input_dim = dim
+                modules.append(nn.Flatten())
+                self.feed_forward = nn.Sequential(*modules)
+                ff_output_dim = dim * feature_len  # type: ignore
             case _:
                 raise ValueError(
-                    f"projection_dim must be an int or a tuple of (projection_dim, hidden_size), got {config.projection_dim}"
+                    f"projection_dim must be None, an int or a tuple of ints, got {config.feed_forward_dim}"
                 )
 
-        self.classifier = nn.Linear(feature_len * p, 1)
+        self.classifier = nn.Linear(ff_output_dim, 1)
 
         self.criterion = nn.BCEWithLogitsLoss()
 
@@ -80,12 +99,19 @@ class LuminarCNN(nn.Module):
         # but we want to treat the second feature dimension as channels.
         # Thus, we need to transpose the tensor here
         logits = self.classifier(
-            self.projection(self.conv_layers(features.transpose(1, 2)).transpose(1, 2))
+            self.feed_forward(
+                self.cnn(
+                    self.projection(self.rescale(features)).transpose(1, 2)
+                ).transpose(1, 2)
+            )
         )
 
         if labels is None:
-            return ModelOutput(
-                logits=logits,
+            return ModelOutput(logits=logits)
+
+        loss = self.criterion(logits.view(-1), labels.float().view(-1))
+
+        return ModelOutput(logits=logits, loss=loss)
             )
 
         loss = self.criterion(logits.view(-1), labels.float().view(-1))
