@@ -112,7 +112,93 @@ class LuminarCNN(nn.Module):
         loss = self.criterion(logits.view(-1), labels.float().view(-1))
 
         return ModelOutput(logits=logits, loss=loss)
+
+
+class SelfAttention(nn.Module):
+    def __init__(
+        self, embed_dim: int, dropout: float = 0.0, scale: float | None = None
+    ):
+        self.key = nn.Linear(embed_dim, embed_dim)
+        self.query = nn.Linear(embed_dim, embed_dim)
+        self.value = nn.Linear(embed_dim, embed_dim)
+        self.dropout_p = dropout
+        self.scale = scale
+
+    def forward(
+        self, features: torch.Tensor, attention_mask: torch.Tensor | None = None
+    ):
+        return F.scaled_dot_product_attention(
+            self.query(features),
+            self.key(features),
+            self.value(features),
+            attn_mask=attention_mask,
+            dropout_p=self.dropout_p if self.training else 0.0,
+            scale=self.scale,
+        )
+
+
+class FeedForward(nn.Module):
+    def __init__(self, embed_dim: int, ff_dim: int):
+        super().__init__()
+        self.linear1 = nn.Linear(embed_dim, ff_dim)
+        self.linear2 = nn.Linear(ff_dim, embed_dim)
+
+    def forward(self, x: torch.Tensor):
+        return self.linear2(F.silu(self.linear1(x)))
+
+
+class LuminarAttention(nn.Module):
+    """WIP"""
+    def __init__(
+        self,
+        feature_dim: tuple[int, int],
+        embed_dim: int = 32,
+        ff_dim: int = 32,
+        num_layers: int = 1,
+        rescale_features: bool = True,
+        **kwargs,
+    ):
+        super().__init__()
+
+        _, feature_depth = feature_dim
+        self.projection = nn.Linear(feature_depth, embed_dim)
+        self.self_attn = nn.Sequential(
+            OrderedDict(
+                {
+                    f"layer_{i}": nn.Sequential(
+                        OrderedDict(
+                            {
+                                "attn": SelfAttention(embed_dim),
+                                "ff": FeedForward(embed_dim, ff_dim),
+                            }
+                        )
+                    )
+                    for i in range(num_layers)
+                }
             )
+        )
+        self.classifier = nn.Linear(ff_dim, 1)
+
+        self._rescale_features = rescale_features
+
+        self.criterion = nn.BCEWithLogitsLoss()
+
+    def forward(
+        self,
+        features: torch.Tensor,
+        attention_mask: torch.Tensor | None = None,
+        labels: torch.Tensor | None = None,
+        **kwargs,
+    ) -> ModelOutput:
+        if self._rescale_features:
+            features = features.mul(2).sub(1)
+
+        logits = self.classifier(
+            self.self_attn(self.projection(features), attention_mask)
+        )
+
+        if labels is None:
+            return ModelOutput(logits=logits)
 
         loss = self.criterion(logits.view(-1), labels.float().view(-1))
 
