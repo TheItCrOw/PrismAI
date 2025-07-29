@@ -69,6 +69,7 @@ class LuminarTrainingConfig(argparse.Namespace):
     projection_dim: ProjectionDim = (1024, 32)
     lstm_hidden_dim: int = 128
     lstm_layers: int = 1
+    stack_spans : int = 0
 
     max_epochs: int = 25
     learning_rate: float = 5e-4

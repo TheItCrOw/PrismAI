@@ -1,0 +1,328 @@
+
+========== Fold 1/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=128, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0005, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/40
+Train Loss: 0.4532 | Eval Loss: 0.5286
+
+Epoch 2/40
+Train Loss: 0.3435 | Eval Loss: 0.3406
+
+Epoch 3/40
+Train Loss: 0.3130 | Eval Loss: 0.2709
+
+Epoch 4/40
+Train Loss: 0.2881 | Eval Loss: 0.3219
+
+Epoch 5/40
+Train Loss: 0.2744 | Eval Loss: 0.2459
+
+Epoch 6/40
+Train Loss: 0.2585 | Eval Loss: 0.2612
+
+Epoch 7/40
+Train Loss: 0.2483 | Eval Loss: 0.2310
+
+Epoch 8/40
+Train Loss: 0.2366 | Eval Loss: 0.2461
+
+Epoch 9/40
+Train Loss: 0.2300 | Eval Loss: 0.2241
+
+Epoch 10/40
+Train Loss: 0.2233 | Eval Loss: 0.2194
+
+Epoch 11/40
+Train Loss: 0.2157 | Eval Loss: 0.2172
+
+Epoch 12/40
+Train Loss: 0.2104 | Eval Loss: 0.2167
+
+Epoch 13/40
+Train Loss: 0.2029 | Eval Loss: 0.2980
+
+Epoch 14/40
+Train Loss: 0.1957 | Eval Loss: 0.2084
+
+Epoch 15/40
+Train Loss: 0.1891 | Eval Loss: 0.1847
+
+Epoch 16/40
+Train Loss: 0.1868 | Eval Loss: 0.1790
+
+Epoch 17/40
+Train Loss: 0.1794 | Eval Loss: 0.1788
+
+Epoch 18/40
+Train Loss: 0.1753 | Eval Loss: 0.1739
+
+Epoch 19/40
+Train Loss: 0.1714 | Eval Loss: 0.1712
+
+Epoch 20/40
+Train Loss: 0.1678 | Eval Loss: 0.1761
+
+Epoch 21/40
+Train Loss: 0.1644 | Eval Loss: 0.1777
+
+Epoch 22/40
+Train Loss: 0.1590 | Eval Loss: 0.1806
+Early stopping after 22 epochs.
+
+Best Eval Loss: 0.1712 | Best Train Loss: 0.1714
+[Fold 1] Final Accuracy: 0.9248 | F1: 0.9337
+
+========== Fold 2/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=128, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0005, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/40
+Train Loss: 0.4520 | Eval Loss: 0.3428
+
+Epoch 2/40
+Train Loss: 0.3409 | Eval Loss: 0.4178
+
+Epoch 3/40
+Train Loss: 0.3107 | Eval Loss: 0.3139
+
+Epoch 4/40
+Train Loss: 0.2900 | Eval Loss: 0.2627
+
+Epoch 5/40
+Train Loss: 0.2789 | Eval Loss: 0.2542
+
+Epoch 6/40
+Train Loss: 0.2671 | Eval Loss: 0.2436
+
+Epoch 7/40
+Train Loss: 0.2514 | Eval Loss: 0.2353
+
+Epoch 8/40
+Train Loss: 0.2460 | Eval Loss: 0.2460
+
+Epoch 9/40
+Train Loss: 0.2352 | Eval Loss: 0.2223
+
+Epoch 10/40
+Train Loss: 0.2265 | Eval Loss: 0.2173
+
+Epoch 11/40
+Train Loss: 0.2194 | Eval Loss: 0.2258
+
+Epoch 12/40
+Train Loss: 0.2140 | Eval Loss: 0.2189
+
+Epoch 13/40
+Train Loss: 0.2101 | Eval Loss: 0.1963
+
+Epoch 14/40
+Train Loss: 0.2008 | Eval Loss: 0.1995
+
+Epoch 15/40
+Train Loss: 0.1999 | Eval Loss: 0.2410
+
+Epoch 16/40
+Train Loss: 0.1954 | Eval Loss: 0.1883
+
+Epoch 17/40
+Train Loss: 0.1883 | Eval Loss: 0.1947
+
+Epoch 18/40
+Train Loss: 0.1842 | Eval Loss: 0.2180
+
+Epoch 19/40
+Train Loss: 0.1773 | Eval Loss: 0.2319
+Early stopping after 19 epochs.
+
+Best Eval Loss: 0.1883 | Best Train Loss: 0.1954
+[Fold 2] Final Accuracy: 0.9051 | F1: 0.9171
+
+========== Fold 3/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=128, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0005, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/40
+Train Loss: 0.4678 | Eval Loss: 0.3902
+
+Epoch 2/40
+Train Loss: 0.3411 | Eval Loss: 0.2945
+
+Epoch 3/40
+Train Loss: 0.3082 | Eval Loss: 0.3120
+
+Epoch 4/40
+Train Loss: 0.2921 | Eval Loss: 0.3479
+
+Epoch 5/40
+Train Loss: 0.2760 | Eval Loss: 0.3031
+Early stopping after 5 epochs.
+
+Best Eval Loss: 0.2945 | Best Train Loss: 0.3411
+[Fold 3] Final Accuracy: 0.8643 | F1: 0.8645
+
+========== Fold 4/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=128, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0005, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/40
+Train Loss: 0.4346 | Eval Loss: 0.3608
+
+Epoch 2/40
+Train Loss: 0.3463 | Eval Loss: 0.3470
+
+Epoch 3/40
+Train Loss: 0.3142 | Eval Loss: 0.2901
+
+Epoch 4/40
+Train Loss: 0.2930 | Eval Loss: 0.2751
+
+Epoch 5/40
+Train Loss: 0.2770 | Eval Loss: 0.2549
+
+Epoch 6/40
+Train Loss: 0.2596 | Eval Loss: 0.3011
+
+Epoch 7/40
+Train Loss: 0.2519 | Eval Loss: 0.2309
+
+Epoch 8/40
+Train Loss: 0.2427 | Eval Loss: 0.2269
+
+Epoch 9/40
+Train Loss: 0.2308 | Eval Loss: 0.2429
+
+Epoch 10/40
+Train Loss: 0.2153 | Eval Loss: 0.2250
+
+Epoch 11/40
+Train Loss: 0.2125 | Eval Loss: 0.2165
+
+Epoch 12/40
+Train Loss: 0.2029 | Eval Loss: 0.2025
+
+Epoch 13/40
+Train Loss: 0.2013 | Eval Loss: 0.2028
+
+Epoch 14/40
+Train Loss: 0.1961 | Eval Loss: 0.1880
+
+Epoch 15/40
+Train Loss: 0.1884 | Eval Loss: 0.1865
+
+Epoch 16/40
+Train Loss: 0.1850 | Eval Loss: 0.2335
+
+Epoch 17/40
+Train Loss: 0.1824 | Eval Loss: 0.1901
+
+Epoch 18/40
+Train Loss: 0.1749 | Eval Loss: 0.1773
+
+Epoch 19/40
+Train Loss: 0.1727 | Eval Loss: 0.1754
+
+Epoch 20/40
+Train Loss: 0.1717 | Eval Loss: 0.1687
+
+Epoch 21/40
+Train Loss: 0.1672 | Eval Loss: 0.1983
+
+Epoch 22/40
+Train Loss: 0.1629 | Eval Loss: 0.1662
+
+Epoch 23/40
+Train Loss: 0.1591 | Eval Loss: 0.1699
+
+Epoch 24/40
+Train Loss: 0.1560 | Eval Loss: 0.1717
+
+Epoch 25/40
+Train Loss: 0.1545 | Eval Loss: 0.1731
+Early stopping after 25 epochs.
+
+Best Eval Loss: 0.1662 | Best Train Loss: 0.1629
+[Fold 4] Final Accuracy: 0.9272 | F1: 0.9306
+
+========== Fold 5/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=128, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0005, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/40
+Train Loss: 0.4346 | Eval Loss: 0.3913
+
+Epoch 2/40
+Train Loss: 0.3369 | Eval Loss: 0.3021
+
+Epoch 3/40
+Train Loss: 0.3064 | Eval Loss: 0.2770
+
+Epoch 4/40
+Train Loss: 0.2904 | Eval Loss: 0.2964
+
+Epoch 5/40
+Train Loss: 0.2715 | Eval Loss: 0.2510
+
+Epoch 6/40
+Train Loss: 0.2602 | Eval Loss: 0.2562
+
+Epoch 7/40
+Train Loss: 0.2492 | Eval Loss: 0.2525
+
+Epoch 8/40
+Train Loss: 0.2361 | Eval Loss: 0.2281
+
+Epoch 9/40
+Train Loss: 0.2299 | Eval Loss: 0.2173
+
+Epoch 10/40
+Train Loss: 0.2245 | Eval Loss: 0.2130
+
+Epoch 11/40
+Train Loss: 0.2145 | Eval Loss: 0.2544
+
+Epoch 12/40
+Train Loss: 0.2091 | Eval Loss: 0.2185
+
+Epoch 13/40
+Train Loss: 0.1997 | Eval Loss: 0.1926
+
+Epoch 14/40
+Train Loss: 0.1940 | Eval Loss: 0.1916
+
+Epoch 15/40
+Train Loss: 0.1882 | Eval Loss: 0.1867
+
+Epoch 16/40
+Train Loss: 0.1843 | Eval Loss: 0.1814
+
+Epoch 17/40
+Train Loss: 0.1793 | Eval Loss: 0.1815
+
+Epoch 18/40
+Train Loss: 0.1764 | Eval Loss: 0.1746
+
+Epoch 19/40
+Train Loss: 0.1695 | Eval Loss: 0.1937
+
+Epoch 20/40
+Train Loss: 0.1662 | Eval Loss: 0.2052
+
+Epoch 21/40
+Train Loss: 0.1644 | Eval Loss: 0.1892
+Early stopping after 21 epochs.
+
+Best Eval Loss: 0.1746 | Best Train Loss: 0.1764
+[Fold 5] Final Accuracy: 0.9211 | F1: 0.9249
+
+========== K-Fold Cross Validation Results ==========
+Fold 1: Accuracy = 0.9248, F1 = 0.9337
+Fold 2: Accuracy = 0.9051, F1 = 0.9171
+Fold 3: Accuracy = 0.8643, F1 = 0.8645
+Fold 4: Accuracy = 0.9272, F1 = 0.9306
+Fold 5: Accuracy = 0.9211, F1 = 0.9249
+
+Average Accuracy: 0.9085 | Average F1: 0.9142
+
+
+========== Test Evaluation of all K-Fold Cross Model ==========
+K-Fold 0: Test Accuracy = 0.9258, Test F1 = 0.9341
+K-Fold 1: Test Accuracy = 0.9068, Test F1 = 0.9190
+K-Fold 2: Test Accuracy = 0.8649, Test F1 = 0.8650
+K-Fold 3: Test Accuracy = 0.9272, Test F1 = 0.9308
+K-Fold 4: Test Accuracy = 0.9218, Test F1 = 0.9253

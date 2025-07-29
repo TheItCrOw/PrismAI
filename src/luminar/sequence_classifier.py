@@ -5,6 +5,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from transformers.utils.generic import ModelOutput
 from src.luminar.utils import ConvolutionalLayerSpec, LuminarTrainingConfig
 
+
 class FeatureRescaler(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -15,6 +16,7 @@ class FeatureRescaler(nn.Module):
         Rescale features from range [0, 1] to the range [-1, 1].
         """
         return features.mul(2).sub(1)
+
 
 class LuminarSequence(nn.Module):
     """
@@ -28,13 +30,14 @@ class LuminarSequence(nn.Module):
     """
 
     def __init__(
-        self,
-        **kwargs,
+            self,
+            **kwargs,
     ):
         super().__init__()
 
         config = LuminarTrainingConfig(**kwargs)
         print(config)
+        self.stack_spans = config.stack_spans if hasattr(config, "stack_spans") else 0
         feature_len, feature_depth = config.feature_dim
 
         if config.rescale_features:
@@ -90,7 +93,9 @@ class LuminarSequence(nn.Module):
         self.classifier = nn.Linear(ff_output_dim, 1)
         self.criterion = nn.BCEWithLogitsLoss()
 
-    def forward(self, features, sentence_spans, span_labels=None):
+    def forward(
+            self, features, sentence_spans, span_labels=None
+    ):
         """
         features: (batch, seq_len, feature_dim)
         sentence_spans: List[List[Tuple[start, end]]] per batch item
@@ -100,7 +105,15 @@ class LuminarSequence(nn.Module):
         batch_lengths = []
 
         for i, spans in enumerate(sentence_spans):
-            for (start, end) in spans:
+            for j, (start, end) in enumerate(spans):
+                if self.stack_spans > 0:
+                    # Stack spans if specified
+                    if j > self.stack_spans - 1:
+                        (prev_begin, prev_end) = spans[j - self.stack_spans]
+                        start = prev_begin
+                    if j < len(spans) - 1 - self.stack_spans - 1:
+                        (next_begin, next_end) = spans[j + self.stack_spans]
+                        end = next_end
                 span_feat = features[i, start:end, :]
                 batch_sentence_features.append(span_feat)
                 batch_lengths.append(end - start)
