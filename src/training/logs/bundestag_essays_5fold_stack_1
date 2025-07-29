@@ -1,0 +1,1475 @@
+Training on domain: bundestag
+Train Dataset Size: 16090
+Test Dataset Size: 4024
+
+========== Fold 1/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.6754 | Eval Loss: 0.6554
+
+Epoch 2/60
+Train Loss: 0.6296 | Eval Loss: 0.6041
+
+Epoch 3/60
+Train Loss: 0.5817 | Eval Loss: 0.5873
+
+Epoch 4/60
+Train Loss: 0.5486 | Eval Loss: 0.5502
+
+Epoch 5/60
+Train Loss: 0.5381 | Eval Loss: 0.5286
+
+Epoch 6/60
+Train Loss: 0.5266 | Eval Loss: 0.5293
+
+Epoch 7/60
+Train Loss: 0.5197 | Eval Loss: 0.5154
+
+Epoch 8/60
+Train Loss: 0.5048 | Eval Loss: 0.4899
+
+Epoch 9/60
+Train Loss: 0.4898 | Eval Loss: 0.5122
+
+Epoch 10/60
+Train Loss: 0.4715 | Eval Loss: 0.4576
+
+Epoch 11/60
+Train Loss: 0.4575 | Eval Loss: 0.4487
+
+Epoch 12/60
+Train Loss: 0.4505 | Eval Loss: 0.4306
+
+Epoch 13/60
+Train Loss: 0.4327 | Eval Loss: 0.4308
+
+Epoch 14/60
+Train Loss: 0.4268 | Eval Loss: 0.4012
+
+Epoch 15/60
+Train Loss: 0.4119 | Eval Loss: 0.3990
+
+Epoch 16/60
+Train Loss: 0.4080 | Eval Loss: 0.3875
+
+Epoch 17/60
+Train Loss: 0.4011 | Eval Loss: 0.4344
+
+Epoch 18/60
+Train Loss: 0.3954 | Eval Loss: 0.3692
+
+Epoch 19/60
+Train Loss: 0.3974 | Eval Loss: 0.3644
+
+Epoch 20/60
+Train Loss: 0.3882 | Eval Loss: 0.3729
+
+Epoch 21/60
+Train Loss: 0.3967 | Eval Loss: 0.4106
+
+Epoch 22/60
+Train Loss: 0.3776 | Eval Loss: 0.3576
+
+Epoch 23/60
+Train Loss: 0.3591 | Eval Loss: 0.3606
+
+Epoch 24/60
+Train Loss: 0.3569 | Eval Loss: 0.3621
+
+Epoch 25/60
+Train Loss: 0.3522 | Eval Loss: 0.3453
+
+Epoch 26/60
+Train Loss: 0.3558 | Eval Loss: 0.3659
+
+Epoch 27/60
+Train Loss: 0.3495 | Eval Loss: 0.3271
+
+Epoch 28/60
+Train Loss: 0.3521 | Eval Loss: 0.3646
+
+Epoch 29/60
+Train Loss: 0.3327 | Eval Loss: 0.3180
+
+Epoch 30/60
+Train Loss: 0.3312 | Eval Loss: 0.3350
+
+Epoch 31/60
+Train Loss: 0.3432 | Eval Loss: 0.3142
+
+Epoch 32/60
+Train Loss: 0.3350 | Eval Loss: 0.3165
+
+Epoch 33/60
+Train Loss: 0.3283 | Eval Loss: 0.3060
+
+Epoch 34/60
+Train Loss: 0.3261 | Eval Loss: 0.3647
+
+Epoch 35/60
+Train Loss: 0.3112 | Eval Loss: 0.3745
+
+Epoch 36/60
+Train Loss: 0.3272 | Eval Loss: 0.3024
+
+Epoch 37/60
+Train Loss: 0.3124 | Eval Loss: 0.2951
+
+Epoch 38/60
+Train Loss: 0.3130 | Eval Loss: 0.3046
+
+Epoch 39/60
+Train Loss: 0.3035 | Eval Loss: 0.3018
+
+Epoch 40/60
+Train Loss: 0.3063 | Eval Loss: 0.2921
+
+Epoch 41/60
+Train Loss: 0.3123 | Eval Loss: 0.3313
+
+Epoch 42/60
+Train Loss: 0.3028 | Eval Loss: 0.3626
+
+Epoch 43/60
+Train Loss: 0.3067 | Eval Loss: 0.2868
+
+Epoch 44/60
+Train Loss: 0.2913 | Eval Loss: 0.2753
+
+Epoch 45/60
+Train Loss: 0.2929 | Eval Loss: 0.2774
+
+Epoch 46/60
+Train Loss: 0.2855 | Eval Loss: 0.2888
+
+Epoch 47/60
+Train Loss: 0.3049 | Eval Loss: 0.3307
+
+Epoch 48/60
+Train Loss: 0.2942 | Eval Loss: 0.2877
+
+Epoch 49/60
+Train Loss: 0.3093 | Eval Loss: 0.3452
+Early stopping after 49 epochs.
+
+Best Eval Loss: 0.2753 | Best Train Loss: 0.2913
+[Fold 1] Final Accuracy: 0.8531 | F1: 0.8086
+
+========== Fold 2/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.6820 | Eval Loss: 0.6649
+
+Epoch 2/60
+Train Loss: 0.6348 | Eval Loss: 0.5892
+
+Epoch 3/60
+Train Loss: 0.5723 | Eval Loss: 0.5713
+
+Epoch 4/60
+Train Loss: 0.5503 | Eval Loss: 0.5551
+
+Epoch 5/60
+Train Loss: 0.5310 | Eval Loss: 0.5143
+
+Epoch 6/60
+Train Loss: 0.5088 | Eval Loss: 0.5035
+
+Epoch 7/60
+Train Loss: 0.5071 | Eval Loss: 0.5117
+
+Epoch 8/60
+Train Loss: 0.4960 | Eval Loss: 0.5122
+
+Epoch 9/60
+Train Loss: 0.4760 | Eval Loss: 0.4979
+
+Epoch 10/60
+Train Loss: 0.4713 | Eval Loss: 0.4976
+
+Epoch 11/60
+Train Loss: 0.4605 | Eval Loss: 0.4514
+
+Epoch 12/60
+Train Loss: 0.4568 | Eval Loss: 0.5097
+
+Epoch 13/60
+Train Loss: 0.4518 | Eval Loss: 0.4376
+
+Epoch 14/60
+Train Loss: 0.4315 | Eval Loss: 0.4170
+
+Epoch 15/60
+Train Loss: 0.4283 | Eval Loss: 0.4494
+
+Epoch 16/60
+Train Loss: 0.4190 | Eval Loss: 0.4237
+
+Epoch 17/60
+Train Loss: 0.4140 | Eval Loss: 0.4150
+
+Epoch 18/60
+Train Loss: 0.3971 | Eval Loss: 0.3894
+
+Epoch 19/60
+Train Loss: 0.4039 | Eval Loss: 0.3988
+
+Epoch 20/60
+Train Loss: 0.3985 | Eval Loss: 0.4062
+
+Epoch 21/60
+Train Loss: 0.3855 | Eval Loss: 0.3634
+
+Epoch 22/60
+Train Loss: 0.3702 | Eval Loss: 0.3757
+
+Epoch 23/60
+Train Loss: 0.3743 | Eval Loss: 0.3701
+
+Epoch 24/60
+Train Loss: 0.3716 | Eval Loss: 0.3963
+
+Epoch 25/60
+Train Loss: 0.3722 | Eval Loss: 0.3847
+
+Epoch 26/60
+Train Loss: 0.3536 | Eval Loss: 0.3522
+
+Epoch 27/60
+Train Loss: 0.3615 | Eval Loss: 0.3692
+
+Epoch 28/60
+Train Loss: 0.3508 | Eval Loss: 0.3914
+
+Epoch 29/60
+Train Loss: 0.3411 | Eval Loss: 0.3311
+
+Epoch 30/60
+Train Loss: 0.3477 | Eval Loss: 0.3790
+
+Epoch 31/60
+Train Loss: 0.3512 | Eval Loss: 0.3787
+
+Epoch 32/60
+Train Loss: 0.3569 | Eval Loss: 0.3926
+
+Epoch 33/60
+Train Loss: 0.3313 | Eval Loss: 0.4435
+
+Epoch 34/60
+Train Loss: 0.3574 | Eval Loss: 0.3179
+
+Epoch 35/60
+Train Loss: 0.3245 | Eval Loss: 0.3470
+
+Epoch 36/60
+Train Loss: 0.3192 | Eval Loss: 0.3215
+
+Epoch 37/60
+Train Loss: 0.3138 | Eval Loss: 0.3412
+
+Epoch 38/60
+Train Loss: 0.3030 | Eval Loss: 0.3042
+
+Epoch 39/60
+Train Loss: 0.3263 | Eval Loss: 0.3377
+
+Epoch 40/60
+Train Loss: 0.3120 | Eval Loss: 0.3671
+
+Epoch 41/60
+Train Loss: 0.3031 | Eval Loss: 0.3099
+
+Epoch 42/60
+Train Loss: 0.3083 | Eval Loss: 0.3049
+
+Epoch 43/60
+Train Loss: 0.2992 | Eval Loss: 0.3224
+Early stopping after 43 epochs.
+
+Best Eval Loss: 0.3042 | Best Train Loss: 0.3030
+[Fold 2] Final Accuracy: 0.8594 | F1: 0.8468
+
+========== Fold 3/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.6713 | Eval Loss: 0.6506
+
+Epoch 2/60
+Train Loss: 0.6072 | Eval Loss: 0.5803
+
+Epoch 3/60
+Train Loss: 0.5631 | Eval Loss: 0.5507
+
+Epoch 4/60
+Train Loss: 0.5452 | Eval Loss: 0.5324
+
+Epoch 5/60
+Train Loss: 0.5353 | Eval Loss: 0.5329
+
+Epoch 6/60
+Train Loss: 0.5179 | Eval Loss: 0.5033
+
+Epoch 7/60
+Train Loss: 0.5197 | Eval Loss: 0.4841
+
+Epoch 8/60
+Train Loss: 0.4748 | Eval Loss: 0.5327
+
+Epoch 9/60
+Train Loss: 0.4669 | Eval Loss: 0.4773
+
+Epoch 10/60
+Train Loss: 0.4563 | Eval Loss: 0.4913
+
+Epoch 11/60
+Train Loss: 0.4582 | Eval Loss: 0.4372
+
+Epoch 12/60
+Train Loss: 0.4323 | Eval Loss: 0.4440
+
+Epoch 13/60
+Train Loss: 0.4267 | Eval Loss: 0.4731
+
+Epoch 14/60
+Train Loss: 0.4207 | Eval Loss: 0.4056
+
+Epoch 15/60
+Train Loss: 0.4030 | Eval Loss: 0.3893
+
+Epoch 16/60
+Train Loss: 0.3980 | Eval Loss: 0.3882
+
+Epoch 17/60
+Train Loss: 0.4019 | Eval Loss: 0.5076
+
+Epoch 18/60
+Train Loss: 0.4012 | Eval Loss: 0.4104
+
+Epoch 19/60
+Train Loss: 0.3872 | Eval Loss: 0.3682
+
+Epoch 20/60
+Train Loss: 0.3840 | Eval Loss: 0.3745
+
+Epoch 21/60
+Train Loss: 0.3689 | Eval Loss: 0.3698
+
+Epoch 22/60
+Train Loss: 0.3793 | Eval Loss: 0.3557
+
+Epoch 23/60
+Train Loss: 0.3563 | Eval Loss: 0.4500
+
+Epoch 24/60
+Train Loss: 0.3577 | Eval Loss: 0.3461
+
+Epoch 25/60
+Train Loss: 0.3483 | Eval Loss: 0.3787
+
+Epoch 26/60
+Train Loss: 0.3521 | Eval Loss: 0.4045
+
+Epoch 27/60
+Train Loss: 0.3513 | Eval Loss: 0.3473
+
+Epoch 28/60
+Train Loss: 0.3454 | Eval Loss: 0.3576
+
+Epoch 29/60
+Train Loss: 0.3288 | Eval Loss: 0.3289
+
+Epoch 30/60
+Train Loss: 0.3256 | Eval Loss: 0.3183
+
+Epoch 31/60
+Train Loss: 0.3229 | Eval Loss: 0.3165
+
+Epoch 32/60
+Train Loss: 0.3153 | Eval Loss: 0.4604
+
+Epoch 33/60
+Train Loss: 0.3140 | Eval Loss: 0.4186
+
+Epoch 34/60
+Train Loss: 0.3232 | Eval Loss: 0.3763
+
+Epoch 35/60
+Train Loss: 0.3012 | Eval Loss: 0.3327
+
+Epoch 36/60
+Train Loss: 0.3059 | Eval Loss: 0.3821
+Early stopping after 36 epochs.
+
+Best Eval Loss: 0.3165 | Best Train Loss: 0.3229
+[Fold 3] Final Accuracy: 0.8396 | F1: 0.7735
+
+========== Fold 4/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.6773 | Eval Loss: 0.6543
+
+Epoch 2/60
+Train Loss: 0.6350 | Eval Loss: 0.6302
+
+Epoch 3/60
+Train Loss: 0.6182 | Eval Loss: 0.6277
+
+Epoch 4/60
+Train Loss: 0.5658 | Eval Loss: 0.5593
+
+Epoch 5/60
+Train Loss: 0.5384 | Eval Loss: 0.5558
+
+Epoch 6/60
+Train Loss: 0.5232 | Eval Loss: 0.5212
+
+Epoch 7/60
+Train Loss: 0.5165 | Eval Loss: 0.5211
+
+Epoch 8/60
+Train Loss: 0.5095 | Eval Loss: 0.5176
+
+Epoch 9/60
+Train Loss: 0.5000 | Eval Loss: 0.4858
+
+Epoch 10/60
+Train Loss: 0.5019 | Eval Loss: 0.4978
+
+Epoch 11/60
+Train Loss: 0.4801 | Eval Loss: 0.4898
+
+Epoch 12/60
+Train Loss: 0.4601 | Eval Loss: 0.5147
+
+Epoch 13/60
+Train Loss: 0.4470 | Eval Loss: 0.4764
+
+Epoch 14/60
+Train Loss: 0.4341 | Eval Loss: 0.4225
+
+Epoch 15/60
+Train Loss: 0.4324 | Eval Loss: 0.4407
+
+Epoch 16/60
+Train Loss: 0.4271 | Eval Loss: 0.4785
+
+Epoch 17/60
+Train Loss: 0.4040 | Eval Loss: 0.4236
+
+Epoch 18/60
+Train Loss: 0.3927 | Eval Loss: 0.4156
+
+Epoch 19/60
+Train Loss: 0.3955 | Eval Loss: 0.4458
+
+Epoch 20/60
+Train Loss: 0.3861 | Eval Loss: 0.4335
+
+Epoch 21/60
+Train Loss: 0.3869 | Eval Loss: 0.3874
+
+Epoch 22/60
+Train Loss: 0.3751 | Eval Loss: 0.3902
+
+Epoch 23/60
+Train Loss: 0.3789 | Eval Loss: 0.3620
+
+Epoch 24/60
+Train Loss: 0.3623 | Eval Loss: 0.3544
+
+Epoch 25/60
+Train Loss: 0.3818 | Eval Loss: 0.4109
+
+Epoch 26/60
+Train Loss: 0.3695 | Eval Loss: 0.4295
+
+Epoch 27/60
+Train Loss: 0.3629 | Eval Loss: 0.3477
+
+Epoch 28/60
+Train Loss: 0.3544 | Eval Loss: 0.3610
+
+Epoch 29/60
+Train Loss: 0.3477 | Eval Loss: 0.3393
+
+Epoch 30/60
+Train Loss: 0.3430 | Eval Loss: 0.3379
+
+Epoch 31/60
+Train Loss: 0.3350 | Eval Loss: 0.3263
+
+Epoch 32/60
+Train Loss: 0.3269 | Eval Loss: 0.3618
+
+Epoch 33/60
+Train Loss: 0.3313 | Eval Loss: 0.3250
+
+Epoch 34/60
+Train Loss: 0.3275 | Eval Loss: 0.3195
+
+Epoch 35/60
+Train Loss: 0.3210 | Eval Loss: 0.3130
+
+Epoch 36/60
+Train Loss: 0.3188 | Eval Loss: 0.3173
+
+Epoch 37/60
+Train Loss: 0.3128 | Eval Loss: 0.3616
+
+Epoch 38/60
+Train Loss: 0.3156 | Eval Loss: 0.3226
+
+Epoch 39/60
+Train Loss: 0.3036 | Eval Loss: 0.3083
+
+Epoch 40/60
+Train Loss: 0.3176 | Eval Loss: 0.3769
+
+Epoch 41/60
+Train Loss: 0.3037 | Eval Loss: 0.3297
+
+Epoch 42/60
+Train Loss: 0.3068 | Eval Loss: 0.2976
+
+Epoch 43/60
+Train Loss: 0.3063 | Eval Loss: 0.3038
+
+Epoch 44/60
+Train Loss: 0.3124 | Eval Loss: 0.3103
+
+Epoch 45/60
+Train Loss: 0.3024 | Eval Loss: 0.2935
+
+Epoch 46/60
+Train Loss: 0.2907 | Eval Loss: 0.3593
+
+Epoch 47/60
+Train Loss: 0.2881 | Eval Loss: 0.2958
+
+Epoch 48/60
+Train Loss: 0.2963 | Eval Loss: 0.2965
+
+Epoch 49/60
+Train Loss: 0.2921 | Eval Loss: 0.2859
+
+Epoch 50/60
+Train Loss: 0.2929 | Eval Loss: 0.2777
+
+Epoch 51/60
+Train Loss: 0.2994 | Eval Loss: 0.2845
+
+Epoch 52/60
+Train Loss: 0.2861 | Eval Loss: 0.2809
+
+Epoch 53/60
+Train Loss: 0.2835 | Eval Loss: 0.3881
+
+Epoch 54/60
+Train Loss: 0.2755 | Eval Loss: 0.2856
+
+Epoch 55/60
+Train Loss: 0.2758 | Eval Loss: 0.2852
+Early stopping after 55 epochs.
+
+Best Eval Loss: 0.2777 | Best Train Loss: 0.2929
+[Fold 4] Final Accuracy: 0.8788 | F1: 0.8470
+
+========== Fold 5/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.6776 | Eval Loss: 0.6686
+
+Epoch 2/60
+Train Loss: 0.6320 | Eval Loss: 0.5992
+
+Epoch 3/60
+Train Loss: 0.5863 | Eval Loss: 0.5702
+
+Epoch 4/60
+Train Loss: 0.5650 | Eval Loss: 0.5670
+
+Epoch 5/60
+Train Loss: 0.5470 | Eval Loss: 0.5442
+
+Epoch 6/60
+Train Loss: 0.5351 | Eval Loss: 0.5384
+
+Epoch 7/60
+Train Loss: 0.5265 | Eval Loss: 0.5379
+
+Epoch 8/60
+Train Loss: 0.5252 | Eval Loss: 0.5571
+
+Epoch 9/60
+Train Loss: 0.5139 | Eval Loss: 0.5039
+
+Epoch 10/60
+Train Loss: 0.5058 | Eval Loss: 0.4951
+
+Epoch 11/60
+Train Loss: 0.4874 | Eval Loss: 0.5034
+
+Epoch 12/60
+Train Loss: 0.4817 | Eval Loss: 0.4735
+
+Epoch 13/60
+Train Loss: 0.4647 | Eval Loss: 0.4676
+
+Epoch 14/60
+Train Loss: 0.4500 | Eval Loss: 0.4914
+
+Epoch 15/60
+Train Loss: 0.4424 | Eval Loss: 0.4298
+
+Epoch 16/60
+Train Loss: 0.4361 | Eval Loss: 0.4784
+
+Epoch 17/60
+Train Loss: 0.4308 | Eval Loss: 0.4334
+
+Epoch 18/60
+Train Loss: 0.4246 | Eval Loss: 0.4838
+
+Epoch 19/60
+Train Loss: 0.4116 | Eval Loss: 0.3937
+
+Epoch 20/60
+Train Loss: 0.3948 | Eval Loss: 0.4210
+
+Epoch 21/60
+Train Loss: 0.3953 | Eval Loss: 0.4108
+
+Epoch 22/60
+Train Loss: 0.3918 | Eval Loss: 0.3818
+
+Epoch 23/60
+Train Loss: 0.3820 | Eval Loss: 0.3674
+
+Epoch 24/60
+Train Loss: 0.3795 | Eval Loss: 0.3954
+
+Epoch 25/60
+Train Loss: 0.3724 | Eval Loss: 0.4319
+
+Epoch 26/60
+Train Loss: 0.3656 | Eval Loss: 0.4464
+
+Epoch 27/60
+Train Loss: 0.3601 | Eval Loss: 0.3750
+
+Epoch 28/60
+Train Loss: 0.3501 | Eval Loss: 0.3450
+
+Epoch 29/60
+Train Loss: 0.3474 | Eval Loss: 0.3482
+
+Epoch 30/60
+Train Loss: 0.3499 | Eval Loss: 0.3517
+
+Epoch 31/60
+Train Loss: 0.3434 | Eval Loss: 0.3305
+
+Epoch 32/60
+Train Loss: 0.3469 | Eval Loss: 0.3292
+
+Epoch 33/60
+Train Loss: 0.3517 | Eval Loss: 0.3335
+
+Epoch 34/60
+Train Loss: 0.3337 | Eval Loss: 0.3320
+
+Epoch 35/60
+Train Loss: 0.3335 | Eval Loss: 0.4157
+
+Epoch 36/60
+Train Loss: 0.3249 | Eval Loss: 0.3155
+
+Epoch 37/60
+Train Loss: 0.3348 | Eval Loss: 0.3588
+
+Epoch 38/60
+Train Loss: 0.3301 | Eval Loss: 0.3521
+
+Epoch 39/60
+Train Loss: 0.3293 | Eval Loss: 0.3157
+
+Epoch 40/60
+Train Loss: 0.3159 | Eval Loss: 0.3042
+
+Epoch 41/60
+Train Loss: 0.3185 | Eval Loss: 0.3060
+
+Epoch 42/60
+Train Loss: 0.3247 | Eval Loss: 0.3338
+
+Epoch 43/60
+Train Loss: 0.3080 | Eval Loss: 0.4230
+
+Epoch 44/60
+Train Loss: 0.3149 | Eval Loss: 0.3029
+
+Epoch 45/60
+Train Loss: 0.3064 | Eval Loss: 0.2958
+
+Epoch 46/60
+Train Loss: 0.3035 | Eval Loss: 0.3067
+
+Epoch 47/60
+Train Loss: 0.3145 | Eval Loss: 0.3655
+
+Epoch 48/60
+Train Loss: 0.2962 | Eval Loss: 0.2873
+
+Epoch 49/60
+Train Loss: 0.2887 | Eval Loss: 0.2907
+
+Epoch 50/60
+Train Loss: 0.2946 | Eval Loss: 0.2867
+
+Epoch 51/60
+Train Loss: 0.3119 | Eval Loss: 0.3014
+
+Epoch 52/60
+Train Loss: 0.2976 | Eval Loss: 0.2823
+
+Epoch 53/60
+Train Loss: 0.2865 | Eval Loss: 0.3937
+
+Epoch 54/60
+Train Loss: 0.2855 | Eval Loss: 0.3180
+
+Epoch 55/60
+Train Loss: 0.2841 | Eval Loss: 0.3145
+
+Epoch 56/60
+Train Loss: 0.2866 | Eval Loss: 0.3123
+
+Epoch 57/60
+Train Loss: 0.2820 | Eval Loss: 0.2820
+
+Epoch 58/60
+Train Loss: 0.2737 | Eval Loss: 0.2727
+
+Epoch 59/60
+Train Loss: 0.2850 | Eval Loss: 0.3048
+
+Epoch 60/60
+Train Loss: 0.2640 | Eval Loss: 0.2761
+
+Best Eval Loss: 0.2727 | Best Train Loss: 0.2737
+[Fold 5] Final Accuracy: 0.8819 | F1: 0.8598
+
+========== K-Fold Cross Validation Results ==========
+Fold 1: Accuracy = 0.8531, F1 = 0.8086
+Fold 2: Accuracy = 0.8594, F1 = 0.8468
+Fold 3: Accuracy = 0.8396, F1 = 0.7735
+Fold 4: Accuracy = 0.8788, F1 = 0.8470
+Fold 5: Accuracy = 0.8819, F1 = 0.8598
+
+Average Accuracy: 0.8626 | Average F1: 0.8271
+
+
+========== Test Evaluation of all K-Fold Cross Model ==========
+K-Fold 0: Test Accuracy = 0.8550, Test F1 = 0.8051
+K-Fold 1: Test Accuracy = 0.8579, Test F1 = 0.8458
+K-Fold 2: Test Accuracy = 0.8358, Test F1 = 0.7739
+K-Fold 3: Test Accuracy = 0.8802, Test F1 = 0.8498
+K-Fold 4: Test Accuracy = 0.8864, Test F1 = 0.8616
+Training on domain: student_essays
+Train Dataset Size: 57982
+Test Dataset Size: 14496
+
+========== Fold 1/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.5180 | Eval Loss: 0.4445
+
+Epoch 2/60
+Train Loss: 0.4202 | Eval Loss: 0.4510
+
+Epoch 3/60
+Train Loss: 0.3904 | Eval Loss: 0.3530
+
+Epoch 4/60
+Train Loss: 0.3743 | Eval Loss: 0.3726
+
+Epoch 5/60
+Train Loss: 0.3616 | Eval Loss: 0.4647
+
+Epoch 6/60
+Train Loss: 0.3353 | Eval Loss: 0.3398
+
+Epoch 7/60
+Train Loss: 0.3270 | Eval Loss: 0.2971
+
+Epoch 8/60
+Train Loss: 0.3201 | Eval Loss: 0.3235
+
+Epoch 9/60
+Train Loss: 0.3098 | Eval Loss: 0.2920
+
+Epoch 10/60
+Train Loss: 0.3025 | Eval Loss: 0.2725
+
+Epoch 11/60
+Train Loss: 0.2912 | Eval Loss: 0.2704
+
+Epoch 12/60
+Train Loss: 0.2844 | Eval Loss: 0.3200
+
+Epoch 13/60
+Train Loss: 0.2842 | Eval Loss: 0.2612
+
+Epoch 14/60
+Train Loss: 0.2731 | Eval Loss: 0.2831
+
+Epoch 15/60
+Train Loss: 0.2800 | Eval Loss: 0.4793
+
+Epoch 16/60
+Train Loss: 0.2688 | Eval Loss: 0.2622
+
+Epoch 17/60
+Train Loss: 0.2633 | Eval Loss: 0.3072
+
+Epoch 18/60
+Train Loss: 0.2542 | Eval Loss: 0.2624
+Early stopping after 18 epochs.
+
+Best Eval Loss: 0.2612 | Best Train Loss: 0.2842
+[Fold 1] Final Accuracy: 0.8851 | F1: 0.9007
+
+========== Fold 2/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.5097 | Eval Loss: 0.4175
+
+Epoch 2/60
+Train Loss: 0.4107 | Eval Loss: 0.4774
+
+Epoch 3/60
+Train Loss: 0.3632 | Eval Loss: 0.3511
+
+Epoch 4/60
+Train Loss: 0.3421 | Eval Loss: 0.3168
+
+Epoch 5/60
+Train Loss: 0.3346 | Eval Loss: 0.3741
+
+Epoch 6/60
+Train Loss: 0.3259 | Eval Loss: 0.3927
+
+Epoch 7/60
+Train Loss: 0.3099 | Eval Loss: 0.3118
+
+Epoch 8/60
+Train Loss: 0.3067 | Eval Loss: 0.2893
+
+Epoch 9/60
+Train Loss: 0.3028 | Eval Loss: 0.3280
+
+Epoch 10/60
+Train Loss: 0.2971 | Eval Loss: 0.2710
+
+Epoch 11/60
+Train Loss: 0.2871 | Eval Loss: 0.3046
+
+Epoch 12/60
+Train Loss: 0.2805 | Eval Loss: 0.3018
+
+Epoch 13/60
+Train Loss: 0.2773 | Eval Loss: 0.2593
+
+Epoch 14/60
+Train Loss: 0.2697 | Eval Loss: 0.2523
+
+Epoch 15/60
+Train Loss: 0.2658 | Eval Loss: 0.3031
+
+Epoch 16/60
+Train Loss: 0.2664 | Eval Loss: 0.2532
+
+Epoch 17/60
+Train Loss: 0.2594 | Eval Loss: 0.2552
+
+Epoch 18/60
+Train Loss: 0.2637 | Eval Loss: 0.2457
+
+Epoch 19/60
+Train Loss: 0.2532 | Eval Loss: 0.2411
+
+Epoch 20/60
+Train Loss: 0.2451 | Eval Loss: 0.2547
+
+Epoch 21/60
+Train Loss: 0.2449 | Eval Loss: 0.2407
+
+Epoch 22/60
+Train Loss: 0.2401 | Eval Loss: 0.2266
+
+Epoch 23/60
+Train Loss: 0.2382 | Eval Loss: 0.2265
+
+Epoch 24/60
+Train Loss: 0.2398 | Eval Loss: 0.2365
+
+Epoch 25/60
+Train Loss: 0.2368 | Eval Loss: 0.2319
+
+Epoch 26/60
+Train Loss: 0.2302 | Eval Loss: 0.2265
+
+Epoch 27/60
+Train Loss: 0.2316 | Eval Loss: 0.2413
+
+Epoch 28/60
+Train Loss: 0.2259 | Eval Loss: 0.2302
+Early stopping after 28 epochs.
+
+Best Eval Loss: 0.2265 | Best Train Loss: 0.2382
+[Fold 2] Final Accuracy: 0.8988 | F1: 0.9020
+
+========== Fold 3/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.5143 | Eval Loss: 0.4227
+
+Epoch 2/60
+Train Loss: 0.4247 | Eval Loss: 0.3840
+
+Epoch 3/60
+Train Loss: 0.3903 | Eval Loss: 0.5132
+
+Epoch 4/60
+Train Loss: 0.3689 | Eval Loss: 0.3433
+
+Epoch 5/60
+Train Loss: 0.3491 | Eval Loss: 0.3752
+
+Epoch 6/60
+Train Loss: 0.3375 | Eval Loss: 0.3157
+
+Epoch 7/60
+Train Loss: 0.3318 | Eval Loss: 0.3019
+
+Epoch 8/60
+Train Loss: 0.3237 | Eval Loss: 0.3265
+
+Epoch 9/60
+Train Loss: 0.3119 | Eval Loss: 0.2903
+
+Epoch 10/60
+Train Loss: 0.3069 | Eval Loss: 0.2853
+
+Epoch 11/60
+Train Loss: 0.3002 | Eval Loss: 0.2896
+
+Epoch 12/60
+Train Loss: 0.2939 | Eval Loss: 0.2887
+
+Epoch 13/60
+Train Loss: 0.2911 | Eval Loss: 0.2882
+
+Epoch 14/60
+Train Loss: 0.2901 | Eval Loss: 0.2813
+
+Epoch 15/60
+Train Loss: 0.2769 | Eval Loss: 0.2606
+
+Epoch 16/60
+Train Loss: 0.2829 | Eval Loss: 0.2581
+
+Epoch 17/60
+Train Loss: 0.2758 | Eval Loss: 0.2611
+
+Epoch 18/60
+Train Loss: 0.2696 | Eval Loss: 0.3490
+
+Epoch 19/60
+Train Loss: 0.2658 | Eval Loss: 0.2525
+
+Epoch 20/60
+Train Loss: 0.2638 | Eval Loss: 0.2685
+
+Epoch 21/60
+Train Loss: 0.2576 | Eval Loss: 0.2506
+
+Epoch 22/60
+Train Loss: 0.2536 | Eval Loss: 0.2424
+
+Epoch 23/60
+Train Loss: 0.2495 | Eval Loss: 0.2361
+
+Epoch 24/60
+Train Loss: 0.2492 | Eval Loss: 0.2516
+
+Epoch 25/60
+Train Loss: 0.2441 | Eval Loss: 0.2389
+
+Epoch 26/60
+Train Loss: 0.2397 | Eval Loss: 0.2302
+
+Epoch 27/60
+Train Loss: 0.2387 | Eval Loss: 0.2276
+
+Epoch 28/60
+Train Loss: 0.2395 | Eval Loss: 0.2234
+
+Epoch 29/60
+Train Loss: 0.2318 | Eval Loss: 0.2281
+
+Epoch 30/60
+Train Loss: 0.2311 | Eval Loss: 0.2205
+
+Epoch 31/60
+Train Loss: 0.2296 | Eval Loss: 0.2157
+
+Epoch 32/60
+Train Loss: 0.2264 | Eval Loss: 0.2348
+
+Epoch 33/60
+Train Loss: 0.2230 | Eval Loss: 0.2111
+
+Epoch 34/60
+Train Loss: 0.2221 | Eval Loss: 0.2108
+
+Epoch 35/60
+Train Loss: 0.2180 | Eval Loss: 0.2381
+
+Epoch 36/60
+Train Loss: 0.2166 | Eval Loss: 0.2266
+
+Epoch 37/60
+Train Loss: 0.2180 | Eval Loss: 0.2014
+
+Epoch 38/60
+Train Loss: 0.2117 | Eval Loss: 0.2080
+
+Epoch 39/60
+Train Loss: 0.2085 | Eval Loss: 0.2129
+
+Epoch 40/60
+Train Loss: 0.2123 | Eval Loss: 0.1987
+
+Epoch 41/60
+Train Loss: 0.2042 | Eval Loss: 0.2226
+
+Epoch 42/60
+Train Loss: 0.2024 | Eval Loss: 0.3014
+
+Epoch 43/60
+Train Loss: 0.2023 | Eval Loss: 0.1979
+
+Epoch 44/60
+Train Loss: 0.1976 | Eval Loss: 0.1996
+
+Epoch 45/60
+Train Loss: 0.1990 | Eval Loss: 0.1935
+
+Epoch 46/60
+Train Loss: 0.1938 | Eval Loss: 0.1969
+
+Epoch 47/60
+Train Loss: 0.1983 | Eval Loss: 0.1866
+
+Epoch 48/60
+Train Loss: 0.1927 | Eval Loss: 0.2072
+
+Epoch 49/60
+Train Loss: 0.1909 | Eval Loss: 0.2099
+
+Epoch 50/60
+Train Loss: 0.1875 | Eval Loss: 0.1863
+
+Epoch 51/60
+Train Loss: 0.1863 | Eval Loss: 0.1829
+
+Epoch 52/60
+Train Loss: 0.1851 | Eval Loss: 0.1833
+
+Epoch 53/60
+Train Loss: 0.1818 | Eval Loss: 0.1828
+
+Epoch 54/60
+Train Loss: 0.1799 | Eval Loss: 0.1773
+
+Epoch 55/60
+Train Loss: 0.1831 | Eval Loss: 0.2131
+
+Epoch 56/60
+Train Loss: 0.1772 | Eval Loss: 0.1745
+
+Epoch 57/60
+Train Loss: 0.1735 | Eval Loss: 0.1759
+
+Epoch 58/60
+Train Loss: 0.1771 | Eval Loss: 0.1731
+
+Epoch 59/60
+Train Loss: 0.1770 | Eval Loss: 0.2209
+
+Epoch 60/60
+Train Loss: 0.1743 | Eval Loss: 0.1739
+
+Best Eval Loss: 0.1731 | Best Train Loss: 0.1771
+[Fold 3] Final Accuracy: 0.9271 | F1: 0.9318
+
+========== Fold 4/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.5180 | Eval Loss: 0.4576
+
+Epoch 2/60
+Train Loss: 0.4233 | Eval Loss: 0.4098
+
+Epoch 3/60
+Train Loss: 0.3852 | Eval Loss: 0.3613
+
+Epoch 4/60
+Train Loss: 0.3624 | Eval Loss: 0.3528
+
+Epoch 5/60
+Train Loss: 0.3477 | Eval Loss: 0.3315
+
+Epoch 6/60
+Train Loss: 0.3427 | Eval Loss: 0.3131
+
+Epoch 7/60
+Train Loss: 0.3336 | Eval Loss: 0.3097
+
+Epoch 8/60
+Train Loss: 0.3264 | Eval Loss: 0.3553
+
+Epoch 9/60
+Train Loss: 0.3130 | Eval Loss: 0.3537
+
+Epoch 10/60
+Train Loss: 0.3110 | Eval Loss: 0.2842
+
+Epoch 11/60
+Train Loss: 0.3070 | Eval Loss: 0.2947
+
+Epoch 12/60
+Train Loss: 0.2986 | Eval Loss: 0.2919
+
+Epoch 13/60
+Train Loss: 0.2954 | Eval Loss: 0.2759
+
+Epoch 14/60
+Train Loss: 0.2947 | Eval Loss: 0.3087
+
+Epoch 15/60
+Train Loss: 0.2855 | Eval Loss: 0.2755
+
+Epoch 16/60
+Train Loss: 0.2822 | Eval Loss: 0.2601
+
+Epoch 17/60
+Train Loss: 0.2752 | Eval Loss: 0.2629
+
+Epoch 18/60
+Train Loss: 0.2689 | Eval Loss: 0.2765
+
+Epoch 19/60
+Train Loss: 0.2662 | Eval Loss: 0.2485
+
+Epoch 20/60
+Train Loss: 0.2612 | Eval Loss: 0.2625
+
+Epoch 21/60
+Train Loss: 0.2583 | Eval Loss: 0.2456
+
+Epoch 22/60
+Train Loss: 0.2531 | Eval Loss: 0.2367
+
+Epoch 23/60
+Train Loss: 0.2533 | Eval Loss: 0.2491
+
+Epoch 24/60
+Train Loss: 0.2522 | Eval Loss: 0.2520
+
+Epoch 25/60
+Train Loss: 0.2421 | Eval Loss: 0.2327
+
+Epoch 26/60
+Train Loss: 0.2419 | Eval Loss: 0.2270
+
+Epoch 27/60
+Train Loss: 0.2394 | Eval Loss: 0.2355
+
+Epoch 28/60
+Train Loss: 0.2417 | Eval Loss: 0.2419
+
+Epoch 29/60
+Train Loss: 0.2362 | Eval Loss: 0.2353
+
+Epoch 30/60
+Train Loss: 0.2342 | Eval Loss: 0.2210
+
+Epoch 31/60
+Train Loss: 0.2283 | Eval Loss: 0.2450
+
+Epoch 32/60
+Train Loss: 0.2257 | Eval Loss: 0.2143
+
+Epoch 33/60
+Train Loss: 0.2245 | Eval Loss: 0.2152
+
+Epoch 34/60
+Train Loss: 0.2199 | Eval Loss: 0.2102
+
+Epoch 35/60
+Train Loss: 0.2198 | Eval Loss: 0.2244
+
+Epoch 36/60
+Train Loss: 0.2186 | Eval Loss: 0.2106
+
+Epoch 37/60
+Train Loss: 0.2225 | Eval Loss: 0.2070
+
+Epoch 38/60
+Train Loss: 0.2138 | Eval Loss: 0.2221
+
+Epoch 39/60
+Train Loss: 0.2107 | Eval Loss: 0.1996
+
+Epoch 40/60
+Train Loss: 0.2070 | Eval Loss: 0.2051
+
+Epoch 41/60
+Train Loss: 0.2052 | Eval Loss: 0.2134
+
+Epoch 42/60
+Train Loss: 0.2036 | Eval Loss: 0.1982
+
+Epoch 43/60
+Train Loss: 0.2023 | Eval Loss: 0.1979
+
+Epoch 44/60
+Train Loss: 0.1990 | Eval Loss: 0.1994
+
+Epoch 45/60
+Train Loss: 0.2007 | Eval Loss: 0.1961
+
+Epoch 46/60
+Train Loss: 0.1977 | Eval Loss: 0.2278
+
+Epoch 47/60
+Train Loss: 0.2018 | Eval Loss: 0.1961
+
+Epoch 48/60
+Train Loss: 0.1988 | Eval Loss: 0.1944
+
+Epoch 49/60
+Train Loss: 0.1889 | Eval Loss: 0.1881
+
+Epoch 50/60
+Train Loss: 0.1922 | Eval Loss: 0.1967
+
+Epoch 51/60
+Train Loss: 0.1877 | Eval Loss: 0.2115
+
+Epoch 52/60
+Train Loss: 0.1887 | Eval Loss: 0.1996
+
+Epoch 53/60
+Train Loss: 0.1845 | Eval Loss: 0.1860
+
+Epoch 54/60
+Train Loss: 0.1888 | Eval Loss: 0.1844
+
+Epoch 55/60
+Train Loss: 0.1833 | Eval Loss: 0.1789
+
+Epoch 56/60
+Train Loss: 0.1793 | Eval Loss: 0.1812
+
+Epoch 57/60
+Train Loss: 0.1776 | Eval Loss: 0.1757
+
+Epoch 58/60
+Train Loss: 0.1781 | Eval Loss: 0.1825
+
+Epoch 59/60
+Train Loss: 0.1782 | Eval Loss: 0.1822
+
+Epoch 60/60
+Train Loss: 0.1737 | Eval Loss: 0.1721
+
+Best Eval Loss: 0.1721 | Best Train Loss: 0.1737
+[Fold 4] Final Accuracy: 0.9273 | F1: 0.9327
+
+========== Fold 5/5 ==========
+LuminarTrainingConfig(feature_dim=(512, 13), feature_type='intermediate_likelihoods', feature_selection='first', conv_layer_shapes=((32, 5, 1), (64, 5, 1), (32, 3, 1)), lstm_hidden_dim=64, lstm_layers=1, projection_dim=32, early_stopping_patience=3, learning_rate=0.0003, max_epochs=40, gradient_clip_val=1.0, train_batch_size=32, eval_batch_size=1024, warmup_ratio=1.0, seed=42, rescale_features=False, stack_spans=1)
+
+Epoch 1/60
+Train Loss: 0.5051 | Eval Loss: 0.4093
+
+Epoch 2/60
+Train Loss: 0.3964 | Eval Loss: 0.3884
+
+Epoch 3/60
+Train Loss: 0.3660 | Eval Loss: 0.4441
+
+Epoch 4/60
+Train Loss: 0.3418 | Eval Loss: 0.3671
+
+Epoch 5/60
+Train Loss: 0.3335 | Eval Loss: 0.3247
+
+Epoch 6/60
+Train Loss: 0.3157 | Eval Loss: 0.3178
+
+Epoch 7/60
+Train Loss: 0.3042 | Eval Loss: 0.2885
+
+Epoch 8/60
+Train Loss: 0.2979 | Eval Loss: 0.2803
+
+Epoch 9/60
+Train Loss: 0.2933 | Eval Loss: 0.2798
+
+Epoch 10/60
+Train Loss: 0.2828 | Eval Loss: 0.2987
+
+Epoch 11/60
+Train Loss: 0.2831 | Eval Loss: 0.2639
+
+Epoch 12/60
+Train Loss: 0.2693 | Eval Loss: 0.2738
+
+Epoch 13/60
+Train Loss: 0.2707 | Eval Loss: 0.2576
+
+Epoch 14/60
+Train Loss: 0.2646 | Eval Loss: 0.2722
+
+Epoch 15/60
+Train Loss: 0.2621 | Eval Loss: 0.3236
+
+Epoch 16/60
+Train Loss: 0.2533 | Eval Loss: 0.2927
+
+Epoch 17/60
+Train Loss: 0.2536 | Eval Loss: 0.2414
+
+Epoch 18/60
+Train Loss: 0.2524 | Eval Loss: 0.2420
+
+Epoch 19/60
+Train Loss: 0.2444 | Eval Loss: 0.2344
+
+Epoch 20/60
+Train Loss: 0.2413 | Eval Loss: 0.3162
+
+Epoch 21/60
+Train Loss: 0.2463 | Eval Loss: 0.2593
+
+Epoch 22/60
+Train Loss: 0.2343 | Eval Loss: 0.2233
+
+Epoch 23/60
+Train Loss: 0.2341 | Eval Loss: 0.2313
+
+Epoch 24/60
+Train Loss: 0.2299 | Eval Loss: 0.2200
+
+Epoch 25/60
+Train Loss: 0.2318 | Eval Loss: 0.2236
+
+Epoch 26/60
+Train Loss: 0.2220 | Eval Loss: 0.2416
+
+Epoch 27/60
+Train Loss: 0.2189 | Eval Loss: 0.2091
+
+Epoch 28/60
+Train Loss: 0.2158 | Eval Loss: 0.2120
+
+Epoch 29/60
+Train Loss: 0.2136 | Eval Loss: 0.2864
+
+Epoch 30/60
+Train Loss: 0.2164 | Eval Loss: 0.2067
+
+Epoch 31/60
+Train Loss: 0.2092 | Eval Loss: 0.2026
+
+Epoch 32/60
+Train Loss: 0.2082 | Eval Loss: 0.2025
+
+Epoch 33/60
+Train Loss: 0.2062 | Eval Loss: 0.2085
+
+Epoch 34/60
+Train Loss: 0.2055 | Eval Loss: 0.1950
+
+Epoch 35/60
+Train Loss: 0.1991 | Eval Loss: 0.2311
+
+Epoch 36/60
+Train Loss: 0.2001 | Eval Loss: 0.1980
+
+Epoch 37/60
+Train Loss: 0.1975 | Eval Loss: 0.1943
+
+Epoch 38/60
+Train Loss: 0.1919 | Eval Loss: 0.2128
+
+Epoch 39/60
+Train Loss: 0.1933 | Eval Loss: 0.2011
+
+Epoch 40/60
+Train Loss: 0.1952 | Eval Loss: 0.2184
+
+Epoch 41/60
+Train Loss: 0.1894 | Eval Loss: 0.2201
+
+Epoch 42/60
+Train Loss: 0.1898 | Eval Loss: 0.1891
+
+Epoch 43/60
+Train Loss: 0.1864 | Eval Loss: 0.1928
+
+Epoch 44/60
+Train Loss: 0.1895 | Eval Loss: 0.1937
+
+Epoch 45/60
+Train Loss: 0.1854 | Eval Loss: 0.2445
+
+Epoch 46/60
+Train Loss: 0.1841 | Eval Loss: 0.2173
+
+Epoch 47/60
+Train Loss: 0.1779 | Eval Loss: 0.2038
+Early stopping after 47 epochs.
+
+Best Eval Loss: 0.1891 | Best Train Loss: 0.1898
+[Fold 5] Final Accuracy: 0.9146 | F1: 0.9250
+
+========== K-Fold Cross Validation Results ==========
+Fold 1: Accuracy = 0.8851, F1 = 0.9007
+Fold 2: Accuracy = 0.8988, F1 = 0.9020
+Fold 3: Accuracy = 0.9271, F1 = 0.9318
+Fold 4: Accuracy = 0.9273, F1 = 0.9327
+Fold 5: Accuracy = 0.9146, F1 = 0.9250
+
+Average Accuracy: 0.9106 | Average F1: 0.9184
+
+
+========== Test Evaluation of all K-Fold Cross Model ==========
+K-Fold 0: Test Accuracy = 0.8858, Test F1 = 0.9007
+K-Fold 1: Test Accuracy = 0.8982, Test F1 = 0.9022
+K-Fold 2: Test Accuracy = 0.9271, Test F1 = 0.9318
+K-Fold 3: Test Accuracy = 0.9269, Test F1 = 0.9326
+K-Fold 4: Test Accuracy = 0.9161, Test F1 = 0.9261
