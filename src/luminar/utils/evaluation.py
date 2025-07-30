@@ -2,7 +2,6 @@ import numba as nb
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
-from transformers.trainer_utils import EvalPrediction
 
 
 @nb.jit(nopython=True)
@@ -19,7 +18,7 @@ def find_threshold_for_fpr(
     y_scores: NDArray,
     target_fpr: float = 0.05,
     epsilon: float = 0.0005,
-    greater: bool = True,
+    less_than: bool = False,
 ) -> Threshold:
     """
 
@@ -46,7 +45,7 @@ def find_threshold_for_fpr(
     for _ in range(50):
         # Calculate predictions as `greater-than-or-equal-to current threshold`
         # and flip them using XOR with `not greater` (i.e. the positive class is below the threshold)
-        y_pred = (y_scores >= threshold) ^ (not greater)
+        y_pred = (y_scores >= threshold) ^ less_than
 
         # Ground truth is 0 for human-written texts, so all predictions of 1 are false positives
         fpr = float(np.mean((y_pred) == 1))
@@ -93,11 +92,14 @@ def calculate_metrics(
     y_scores: NDArray,
     threshold: float,
     suffix="",
-    greater: bool = True,
+    less_than: bool = False,
+    y_preds: NDArray | None = None,
 ) -> dict[str, float]:
     # Calculate predictions as `greater-than-or-equal-to current threshold`
-    # and flip them using XOR with `not greater` (i.e. the positive class is below the threshold)
-    y_preds = ((y_scores >= threshold) ^ (not greater)).astype(int)
+    # and flip them using XOR with `less_than` (i.e. the positive class is below the threshold)
+    if y_preds is None:
+        y_preds = ((y_scores >= threshold) ^ less_than).astype(int)
+
     precision, recall, f1_score, _support = precision_recall_fscore_support(
         y_true, y_preds, average="weighted"
     )
@@ -109,9 +111,9 @@ def calculate_metrics(
         norm_scores = (y_scores - y_scores.min()) / (y_scores.max() - y_scores.min())
     else:
         norm_scores = y_scores
-    if not greater:
+    if less_than:
         norm_scores = 1 - norm_scores
-    roc_auc = roc_auc_score(y_true, y_preds, average="weighted")
+    roc_auc = roc_auc_score(y_true, norm_scores, average="weighted")
 
     calculated_metrics = {
         f"f1_score{suffix}": float(f1_score),  # type: ignore
@@ -137,11 +139,13 @@ def calculate_metrics(
     return calculated_metrics
 
 
-def compute_metrics(
-    eval_pred: EvalPrediction,
+def run_evaluation(
+    y_true: NDArray,
+    y_scores: NDArray,
     threshold: float = 0.5,
     sigmoid: bool = True,
-    greater: bool = True,
+    less_than: bool = False,
+    y_preds: NDArray | None = None,
 ) -> dict[str, float | int]:
     """Calculated weigthed and class-specific F1 scores, accuracy, ROC AUC, and class distribution for a threshold of 0.5.
     In addition, we compute best-guess thresholds based on the dataset balance:
@@ -153,15 +157,11 @@ def compute_metrics(
         eval_pred: Tuple of logits and labels from the model's predictions.
         threshold: The threshold to use for classification.
         sigmoid: Whether to apply the sigmoid function to the logits.
-        greater: Whether a higher score indicates a positive class (True) or a lower score (False).
+        less_than: Whether a higher score indicates a positive class (False, default) or a lower score (True).
 
     Returns:
         EvaluationMetrics: A dictionary containing calcualted metrics.
     """
-    logits, y_true = eval_pred  # type: ignore
-
-    y_true: NDArray = np.array(y_true)
-    y_scores: NDArray = np.array(logits)
     if sigmoid:
         # Convert logits to probabilities using the sigmoid function
         y_scores = 1 / (1 + np.exp(-y_scores))
@@ -170,13 +170,15 @@ def compute_metrics(
     n_samples_ai = int(np.sum(y_true == 1))
 
     metrics = {"n_samples": len(y_true)}
-    metrics |= calculate_metrics(y_true, y_scores, threshold, greater=greater)
+    metrics |= calculate_metrics(
+        y_true, y_scores, threshold, less_than=less_than, y_preds=y_preds
+    )
 
     if n_samples_human == n_samples_ai:
         # dataset is balanced, use the median of all scores as threshold
         threshold_median = float(np.median(y_scores))
         metrics_median = calculate_metrics(
-            y_true, y_scores, threshold_median, "_median", greater=greater
+            y_true, y_scores, threshold_median, "_median", less_than=less_than
         )
         metrics |= metrics_median | {"threshold_median": threshold_median}
 
@@ -186,17 +188,17 @@ def compute_metrics(
         float(y_scores[y_true == 0].mean() + y_scores[y_true == 1].mean()) / 2
     )
     metrics_mean = calculate_metrics(
-        y_true, y_scores, threshold_mean, "_mean", greater=greater
+        y_true, y_scores, threshold_mean, "_mean", less_than=less_than
     )
     metrics |= metrics_mean | {"threshold_mean": threshold_mean}
 
     # Use the midpoint between the means of the two class distributions as threshold
     # works if the dataset is unbalanced
     threshold_fpr = find_threshold_for_fpr(
-        y_scores[y_true == 0], target_fpr=0.05, epsilon=0.0005, greater=greater
+        y_scores[y_true == 0], target_fpr=0.05, epsilon=0.0005, less_than=less_than
     )
     metrics_fpr = calculate_metrics(
-        y_true, y_scores, threshold_fpr, "_fpr", greater=greater
+        y_true, y_scores, threshold_fpr, "_fpr", less_than=less_than
     )
     metrics |= metrics_fpr | {"threshold_fpr": threshold_fpr}
 
