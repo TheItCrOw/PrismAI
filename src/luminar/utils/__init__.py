@@ -18,10 +18,14 @@ from .training import (
     DEFAULT_CONV_LAYER_SHAPES,
     ConvolutionalLayerSpec,
     LuminarTrainingConfig,
+    LuminarSequenceDataset,
+    LuminarSequenceTrainingConfig,
     ProjectionDim,
     save_model,
 )
 from .visualization import visualize_features
+from .sequential_data import SequentialDataService
+from .cuda import get_best_device
 
 __all__ = [
     "DatasetDictTrainEvalTest",
@@ -39,7 +43,11 @@ __all__ = [
     "calculate_metrics",
     "DEFAULT_CONV_LAYER_SHAPES",
     "ConvolutionalLayerSpec",
+    "SequentialDataService",
     "LuminarTrainingConfig",
+    "LuminarSequenceDataset",
+    "get_best_device",
+    "LuminarSequenceTrainingConfig",
     "ProjectionDim",
     "save_model",
 ]
