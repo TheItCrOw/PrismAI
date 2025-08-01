@@ -1,5 +1,6 @@
-import dataclasses
 import json
+from argparse import Namespace
+from dataclasses import asdict as asdict_
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -110,7 +111,8 @@ class BaseConfig:
         return vars(self)
 
 
-class LuminarTrainingConfig(BaseConfig):
+@dataclass
+class LuminarTrainingConfig(Namespace):
     feature_len: int
     feature_dim: tuple[int, int]
     feature_type: Literal["intermediate_likelihoods"]
@@ -127,10 +129,6 @@ class LuminarTrainingConfig(BaseConfig):
     conv_layer_shapes: tuple[ConvolutionalLayerSpec, ...] = DEFAULT_CONV_LAYER_SHAPES
     feed_forward_dim: int | tuple[int, ...] | None = (1024, 32)
     rescale_features: bool = True
-
-    lstm_hidden_dim: int = 128
-    lstm_layers: int = 1
-    stack_spans: int = 0
 
     seed: int = 42
 
@@ -184,9 +182,7 @@ def save_model(
         config.dump(fp)
 
     with (path / "trainer_state.json").open("w") as fp:
-        json.dump(dataclasses.asdict(trainer.state), fp, indent=4)
-
-    return path
+        json.dump(asdict_(trainer.state), fp, indent=4)
 
 
 class LuminarSequenceDataset(Dataset):
@@ -208,7 +204,7 @@ class LuminarSequenceDataset(Dataset):
 
 
 @dataclass
-class LuminarSequenceTrainingConfig(argparse.Namespace):
+class LuminarSequenceTrainingConfig(Namespace):
     feature_len: int = 512
     num_intermediate_likelihoods: int = 13  # Default gpt2 with 13 hidden layers
 
@@ -256,7 +252,7 @@ class LuminarSequenceTrainingConfig(argparse.Namespace):
             (
                 self.domain,
                 self.agent,
-                self.feture_model,
+                self.feature_agent,
                 str(self.feature_len),
                 self.hash(10),
             )
