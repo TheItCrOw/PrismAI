@@ -47,6 +47,12 @@ class LuminarSequenceTrainer:
             fold_table_columns = ["fold"] + list(self._evaluate_test(LuminarSequence(self.config).to(self.device)).keys())
             fold_table = wandb.Table(columns=fold_table_columns)
 
+            # Also store relevant code files
+            code_artifact = wandb.Artifact(name="luminar_sequence_code", type="code")
+            code_artifact.add_dir("luminar")
+            code_artifact.add_file("training/train_luminar_sequence.py")
+            wandb.log_artifact(code_artifact)
+
         for fold, (train_idx, val_idx) in enumerate(kf.split(indices)):
             print(f"\n========== Fold {fold + 1}/{self.config.kfold} ==========")
 
@@ -78,7 +84,7 @@ class LuminarSequenceTrainer:
             for k, v in metrics.items():
                 print(f"  {k}: {v:.4f}")
 
-            # Add to wandb table 1612769
+            # Add to wandb table
             if self.log_to_wandb:
                 fold_table.add_data(fold, *metrics.values())
 

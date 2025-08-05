@@ -126,7 +126,7 @@ class SequentialDataService:
 
             if start >= self.feature_len:
                 break  # Stop if padding region or overflow
-            # Testing: only take spans of a minimal length
+            # Only take spans of a minimal length
             if end - start > span_min_length:
                 spans.append((start, end))
             current_token_idx = end

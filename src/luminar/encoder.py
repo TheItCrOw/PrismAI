@@ -5,6 +5,7 @@ from torch import Tensor, nn
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BatchEncoding
 )
 from transformers.modeling_utils import PreTrainedModel
 from transformers.tokenization_utils_base import (
@@ -127,21 +128,64 @@ class LuminarEncoder:
         self.device = device  # type: ignore
         return self
 
-    def tokenize(self, texts: str | list[str]) -> BatchEncoding:
+    def rolling_process(
+            self,
+            inputs,
+            max_chunks: int | None = None
+    ) -> dict[str, list[list[list[float]]]]:
+        """
+        Processes a batch of tokenized documents. Each document may be split into multiple chunks.
+        You can limit the number of chunks per document using `max_chunks`.
+
+        Args:
+            inputs (dict): Must contain 'input_ids' and 'attention_mask', each a list of lists (tokenized docs).
+            max_chunks (int | None): Maximum number of chunks to process per document. None means no limit.
+
+        Returns:
+            dict: {"features": list of length batch_size, each item is a list of token features (token_count x hidden_dim)}
+        """
+        all_features = []
+
+        for input_ids, attention_mask in zip(inputs["input_ids"], inputs["attention_mask"]):
+            doc_features = []
+
+            num_chunks = (len(input_ids) + self._max_len - 1) // self._max_len
+            chunk_limit = num_chunks if max_chunks is None else min(max_chunks, num_chunks)
+
+            for i in range(0, chunk_limit * self._max_len, self._max_len):
+                chunk_input_ids = input_ids[i:i + self._max_len]
+                chunk_attention_mask = attention_mask[i:i + self._max_len]
+
+                encoded = self.encode({
+                    "input_ids": [chunk_input_ids],
+                    "attention_mask": [chunk_attention_mask]
+                })  # shape: (1, chunk_len, hidden_dim)
+
+                chunk_features = encoded[0].tolist()
+                doc_features.extend(chunk_features)
+
+            all_features.append(doc_features)
+
+        return {"features": all_features}
+
+    def tokenize(self, texts: str | list[str], truncate : bool = True) -> BatchEncoding:
         """Convenience method to tokenize the input texts. This is a wrapper around the
         `transformers` tokenizer. It handles padding and truncation of the input sequences.
 
         Args:
             texts (str | list[str]): text or texts to tokenize.
+            truncate (bool, optional): Whether to truncate the input sequences to the maximum length.
 
         Returns:
             BatchEncoding: The resulting encoding object with the lengths of each input sequence.
         """
+        max_length = self._max_len if truncate else None
+
         return self.tokenizer(
             texts,
             padding=False,
-            truncation=True,
-            max_length=self._max_len,
+            truncation=truncate,
+            max_length=max_length,
             return_length=True,
             add_special_tokens=True,
         )

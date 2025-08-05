@@ -26,9 +26,8 @@ NAMED_CONV_LAYER_CONFIGS = {
         ConvolutionalLayerSpec(64, 3),
     ),
     "B": (
-        ConvolutionalLayerSpec(32, 3),
-        ConvolutionalLayerSpec(64, 3),
-        ConvolutionalLayerSpec(64, 3),
+        ConvolutionalLayerSpec(32, 5),
+        ConvolutionalLayerSpec(64, 5),
         ConvolutionalLayerSpec(32, 3),
     ),
     "C": (
@@ -73,7 +72,7 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
         config_dict["projection_dim"] = trial.suggest_categorical("projection_dim", [16, 32, 64, 128])
         config_dict["stack_spans"] = trial.suggest_categorical("stack_spans", [0, 1, 2, 3])
         config_dict["lstm_hidden_dim"] = trial.suggest_categorical("lstm_hidden_dim", [32, 64, 128, 256])
-        config_dict["learning_rate"] = trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True)
+        config_dict["learning_rate"] = trial.suggest_float("learning_rate", 6e-4, 4e-3, log=True)
 
         config = LuminarSequenceTrainingConfig(**config_dict)
 

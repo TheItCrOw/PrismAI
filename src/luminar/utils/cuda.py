@@ -1,4 +1,5 @@
 import torch
+import warnings
 
 def get_best_device():
     """
@@ -12,12 +13,19 @@ def get_best_device():
     max_free_mem = 0
 
     for i in range(torch.cuda.device_count()):
-        torch.cuda.empty_cache()
-        stats = torch.cuda.mem_get_info(i)  # (free, total)
-        free_mem = stats[0]
+        try:
+            free_mem, total_mem = torch.cuda.mem_get_info(i)
 
-        if free_mem > max_free_mem:
-            max_free_mem = free_mem
-            best_device = torch.device(f'cuda:{i}')
+            if free_mem > max_free_mem:
+                max_free_mem = free_mem
+                best_device = i
 
-    return best_device or torch.device('cpu')
+        except RuntimeError as e:
+            warnings.warn(f"Skipping cuda:{i} due to error: {e}")
+            continue
+
+    if best_device is not None:
+        return torch.device(f'cuda:{best_device}')
+    else:
+        warnings.warn("All CUDA devices failed memory check; falling back to CPU.")
+        return torch.device('cpu')

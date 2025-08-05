@@ -18,16 +18,26 @@ def flatten[T](outer: Iterable[Iterable[T]]) -> Generator[T, None, None]:
 
 def get_matched_ids(
     dataset: Dataset,
-    agent_set: set[str],
+    agent_set: set[str] | None,
     num_proc: int | None = None,
 ) -> set[str]:
-    ids_agent: set[str] = set(
-        dataset.filter(
-            lambda a: a in agent_set,
-            input_columns=["agent"],
-            num_proc=num_proc,
-        )["id_source"]
-    )
+    if agent_set is not None:
+        ids_agent: set[str] = set(
+            dataset.filter(
+                lambda a: a in agent_set,
+                input_columns=["agent"],
+                num_proc=num_proc,
+            )["id_source"]
+        )
+    else:
+        ids_agent: set[str] = set(
+            dataset.filter(
+                lambda a: a != "human",
+                input_columns=["agent"],
+                num_proc=num_proc,
+            )["id_source"]
+        )
+
     ids_human: set[str] = set(
         dataset.filter(
             lambda a: a == "human",
@@ -35,20 +45,24 @@ def get_matched_ids(
             num_proc=num_proc,
         )["id_source"]
     )
+
     return ids_agent.intersection(ids_human)
 
 
 def get_matched_datasets(
-    dataset: Dataset,
-    *agents: str,
-    eval_split: float = 0.1,
-    test_split: float = 0.2,
-    seed: int = 42,
-    num_proc: int | None = None,
+        dataset: Dataset,
+        *agents: str | None,
+        eval_split: float = 0.1,
+        test_split: float = 0.2,
+        seed: int = 42,
+        num_proc: int | None = None,
 ) -> tuple[DatasetDict, Dataset]:
     datasets.disable_progress_bars()
 
-    agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
+    if not agents or agents == (None,):
+        agent_set = None
+    else:
+        agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
     ids_matched_set = get_matched_ids(dataset, agent_set, num_proc=num_proc)
     agent_set.add("human")
 
@@ -63,11 +77,15 @@ def get_matched_datasets(
         set, np.array_split(ids_matched, [eval_offset, test_offset])
     )
 
-    ds_agent = dataset.filter(
-        lambda agent: agent in agent_set,
-        input_columns=["agent"],
-        num_proc=num_proc,
-    )
+    if agents is not None:
+        ds_agent = dataset.filter(
+            lambda agent: agent in agent_set,
+            input_columns=["agent"],
+            num_proc=num_proc,
+        )
+    else:
+        ds_agent = dataset  # use all agents
+
     dataset_matched = DatasetDict(
         {
             "train": ds_agent.filter(
@@ -98,12 +116,12 @@ def get_matched_datasets(
 
 
 def get_matched_cross_validation_datasets(
-    dataset: Dataset,
-    *agents: str,
-    num_splits: int = 10,
-    eval_splits: int = 1,
-    test_splits: int = 2,
-    seed: int = 42,
+        dataset: Dataset,
+        *agents: str,
+        num_splits: int = 10,
+        eval_splits: int = 1,
+        test_splits: int = 2,
+        seed: int = 42,
 ) -> tuple[list[DatasetDictTrainEvalTest], DatasetUnmatched]:
     assert eval_splits > 0 < test_splits, (
         "eval_splits & test_splits must be greater than 0"
@@ -127,9 +145,9 @@ def get_matched_cross_validation_datasets(
     for _ in range(num_splits):
         ids_eval = set(flatten(ids_matched_splits[:eval_splits]))
         ids_test = set(
-            flatten(ids_matched_splits[eval_splits : eval_splits + test_splits])
+            flatten(ids_matched_splits[eval_splits: eval_splits + test_splits])
         )
-        ids_train = set(flatten(ids_matched_splits[eval_splits + test_splits :]))
+        ids_train = set(flatten(ids_matched_splits[eval_splits + test_splits:]))
 
         dataset_splits.append(
             DatasetDict(

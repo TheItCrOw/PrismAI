@@ -95,7 +95,7 @@ class LuminarSequence(nn.Module):
             bidirectional=False,
         )
 
-        # Feed Forward Layer (optional, just Identity)
+        # Feed Forward Layer
         self.feed_forward = nn.Identity()
         ff_output_dim = self.lstm_hidden_dim
 
@@ -340,9 +340,7 @@ class LuminarSequenceAttention(nn.Module):
 
             x = self.rescale(padded)
             x = self.projection(x)
-            x = x.transpose(1, 2)
-            x = self.cnn(x) 
-            x = x.transpose(1, 2)
+            x = self.cnn(x.transpose(1, 2)).transpose(1, 2)
 
             # Insert CLS token
             cls_tokens = self.cls_token.expand(x.size(0), 1, -1)
@@ -350,24 +348,26 @@ class LuminarSequenceAttention(nn.Module):
             cls_mask = torch.zeros((x.size(0), 1), dtype=torch.bool, device=x.device)
             attn_mask = torch.cat([cls_mask, attn_mask], dim=1)
 
-            x = self.attention_encoder(x, src_key_padding_mask=attn_mask)  # (batch, seq_len+1, dim)
-
+            # Self-attention over tokens in each span
+            x, _ = self.self_attention(x, x, x, key_padding_mask=attn_mask)
+            # Extract CSL token embeddings
             span_cls_embeddings = x[:, 0, :]
 
-            # Self attention across [CLS] span embeddings
+            # Self-attention over [CLS] span embeddings (across all spans)
             span_cls_embeddings_attended, _ = self.cross_span_attn(
-                span_cls_embeddings.unsqueeze(0),  # q
-                span_cls_embeddings.unsqueeze(0),  # k
-                span_cls_embeddings.unsqueeze(0)   # v
+                span_cls_embeddings.unsqueeze(0), # q
+                span_cls_embeddings.unsqueeze(0), # k
+                span_cls_embeddings.unsqueeze(0), #
             )
             span_cls_embeddings_attended = span_cls_embeddings_attended.squeeze(0)
 
-            logits = self.classifier(self.feed_forward(span_cls_embeddings_attended))  # (batch, 1)
+            logits = self.classifier(self.feed_forward(span_cls_embeddings_attended))
 
             if span_labels is None:
                 return ModelOutput(logits=logits)
 
-            flat_labels = torch.cat([torch.tensor(label_seq, dtype=torch.float32) for label_seq in span_labels]).to(logits.device)
+            flat_labels = torch.cat([torch.tensor(label_seq, dtype=torch.float32) for label_seq in span_labels]).to(
+                logits.device)
             loss = self.criterion(logits.view(-1), flat_labels.view(-1))
             return ModelOutput(logits=logits, loss=loss)
     
