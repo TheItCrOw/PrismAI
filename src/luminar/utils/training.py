@@ -1,6 +1,7 @@
-import argparse
-import dataclasses
 import json
+from argparse import Namespace
+from dataclasses import asdict as asdict_
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from typing import (
@@ -13,9 +14,11 @@ from typing import (
 )
 
 import torch
-from transformers import Trainer  # type: ignore
 from torch.utils.data.dataset import Dataset
-from dataclasses import dataclass
+from transformers import Trainer, TrainingArguments  # type: ignore
+from ulid import ulid
+
+from luminar.utils.misc import docs
 
 
 class ConvolutionalLayerSpec(NamedTuple):
@@ -54,32 +57,43 @@ DEFAULT_CONV_LAYER_SHAPES: Final[tuple[ConvolutionalLayerSpec, ...]] = (
 type ProjectionDim = Optional[int | tuple[int, int] | tuple[int, int, int]]
 
 
-class LuminarTrainingConfig(argparse.Namespace):
-    feature_len: int
-    feature_dim: tuple[int, int]
-    feature_type: Literal["intermediate_likelihoods"]
-    feature_model: Literal["gpt2"]
-    feature_selection: Literal["first"]
+class BaseConfig:
+    def __init__(self, *args, **kwargs):
+        type_dict = type(self).__dict__
+        fields: tuple[str, ...] = tuple(type_dict["__annotations__"])
 
-    agent: str
-    domain: str
-    other_agents: tuple[str, ...] | None = None
-    datset_config_name: str
-    dataset_split_name: str
+        # find all arguments that are not in kwargs and set them from args (if any)
+        missing = [field for field in fields if field not in kwargs]
+        for key, value in zip(missing, args):
+            kwargs[key] = value
 
-    conv_layer_shapes: tuple[ConvolutionalLayerSpec, ...] = DEFAULT_CONV_LAYER_SHAPES
-    projection_dim: ProjectionDim = (1024, 32)
-    lstm_hidden_dim: int = 128
-    lstm_layers: int = 1
-    stack_spans : int = 0
+        # then set all fields in order, retaining defaults
+        for key in fields:
+            setattr(self, key, kwargs.pop(key, type_dict.get(key, None)))
 
-    max_epochs: int = 25
-    learning_rate: float = 5e-4
-    gradient_clip_val: float = 1.0
-    train_batch_size: int = 32
-    eval_batch_size: int = 1024
-    warmup_ratio: float = 1.0
-    seed: int = 42
+        # finally, set any additional values that were not in the fields
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        self.__post_init__()
+
+    def __post_init__(self):
+        pass
+
+    def __repr__(self):
+        return f"{type(self).__name__}({', '.join(f'{k}={v!r}' for k, v in vars(self).items())})"
+
+    def __contains__(self, key):
+        return key in vars(self)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def get[T](self, key: str, default: T | None = None) -> T | None:
+        return getattr(self, key, default)
 
     def json(self, /, **kwargs) -> str:
         kwargs.setdefault("sort_keys", True)
@@ -93,34 +107,71 @@ class LuminarTrainingConfig(argparse.Namespace):
         config_hash = sha256(self.json().encode()).hexdigest()
         return config_hash[:trim]
 
-    def name(self) -> str:
-        return "-".join(
-            (
-                self.domain,
-                self.agent,
-                self.feture_model,
-                str(self.feature_len),
-                self.hash(10),
-            )
-        )
-
     def asdict(self) -> dict[str, Any]:
         return vars(self)
 
 
+@dataclass
+class LuminarTrainingConfig(Namespace):
+    feature_len: int
+    feature_dim: tuple[int, int]
+    feature_type: Literal["intermediate_likelihoods"]
+    feature_model: Literal["gpt2"]
+    feature_selection: Literal["first"]
+
+    agent: str
+    domain: str
+    datset_config_name: str
+    dataset_split_name: str
+    other_agents: tuple[str, ...] | None = None
+
+    projection_dim: int | None = None
+    conv_layer_shapes: tuple[ConvolutionalLayerSpec, ...] = DEFAULT_CONV_LAYER_SHAPES
+    feed_forward_dim: int | tuple[int, ...] | None = (1024, 32)
+    rescale_features: bool = True
+
+    seed: int = 42
+
+    run_ulid: str = ulid()
+
+    @docs(TrainingArguments)
+    def training_arguments(
+        self,
+        train_dataset_size: int,
+        /,
+        **kwargs,
+    ) -> TrainingArguments:
+        kwargs.setdefault("output_dir", f"./logs//{ulid()}")
+        kwargs.setdefault("per_device_train_batch_size", 32)
+        kwargs.setdefault("per_device_eval_batch_size", 1024)
+        kwargs.setdefault("learning_rate", 5e-4)
+        kwargs.setdefault("num_train_epochs", 10)
+
+        train_batch_size = kwargs["per_device_train_batch_size"]
+        steps_per_epoch = train_dataset_size // train_batch_size
+        eval_steps = steps_per_epoch // 5
+
+        return TrainingArguments(
+            **kwargs,
+            warmup_steps=steps_per_epoch,
+            logging_steps=eval_steps,
+            load_best_model_at_end=True,
+            eval_strategy="steps",
+            eval_steps=eval_steps,
+            eval_delay=steps_per_epoch,
+            save_strategy="steps",
+            save_steps=eval_steps,
+            seed=self.seed,
+        )
+
+
 def save_model(
+    path: Path,
     trainer: Trainer,
     config: dict | LuminarTrainingConfig,
-    root: str | Path = Path.home() / "Projects/PrismAI/models/luminar_cnn",
-    infix: str = "",
-    suffix: str = "",
-) -> Path:
+):
     if isinstance(config, dict):
         config = LuminarTrainingConfig(**config)
-
-    config_str, config_hash = config.str_and_hash(10)
-
-    path = Path(root) / infix / config.name() / suffix
 
     trainer.save_model(str(path))
 
@@ -131,9 +182,7 @@ def save_model(
         config.dump(fp)
 
     with (path / "trainer_state.json").open("w") as fp:
-        json.dump(dataclasses.asdict(trainer.state), fp, indent=4)
-
-    return path
+        json.dump(asdict_(trainer.state), fp, indent=4)
 
 
 class LuminarSequenceDataset(Dataset):
@@ -143,11 +192,9 @@ class LuminarSequenceDataset(Dataset):
             spans = example["sentence_token_spans"]
             features = torch.tensor(example[feature_key])  # (seq_len, feature_dim)
             labels = example["span_labels"]
-            self.samples.append({
-                "features": features,
-                "sentence_spans": spans,
-                "span_labels": labels
-            })
+            self.samples.append(
+                {"features": features, "sentence_spans": spans, "span_labels": labels}
+            )
 
     def __len__(self):
         return len(self.samples)
@@ -155,33 +202,36 @@ class LuminarSequenceDataset(Dataset):
     def __getitem__(self, idx):
         return self.samples[idx]
 
-@dataclass    
-class LuminarSequenceTrainingConfig(argparse.Namespace):
-    feature_len : int = 512
-    num_intermediate_likelihoods : int = 13 # Default gpt2 with 13 hidden layers
 
-    apply_delta_augmentation : bool = False 
-    apply_product_augmentation : bool = False
+@dataclass
+class LuminarSequenceTrainingConfig(Namespace):
+    feature_len: int = 512
+    num_intermediate_likelihoods: int = 13  # Default gpt2 with 13 hidden layers
+
+    apply_delta_augmentation: bool = False
+    apply_product_augmentation: bool = False
 
     conv_layer_shapes: tuple[ConvolutionalLayerSpec, ...] = DEFAULT_CONV_LAYER_SHAPES
     projection_dim: int = 32
     lstm_hidden_dim: int = 64
     lstm_layers: int = 1
-    stack_spans : int = 0
+    stack_spans: int = 0
 
-    dataset_root_path : str = "/storage/projects/stoeckel/prismai/encoded/fulltext/"
-    models_root_path : str = "/storage/projects/boenisch/PrismAI/models/luminar_sequence/"
+    dataset_root_path: str = "/storage/projects/stoeckel/prismai/encoded/fulltext/"
+    models_root_path: str = (
+        "/storage/projects/boenisch/PrismAI/models/luminar_sequence/"
+    )
     # The domain (among others) decides over the dataset - if you want to merge domains to form
     # a larger dataset, use [DATASET_1]___[DATASET_2] etc.
-    domain : str = "student_essays"
+    domain: str = "student_essays"
     agent: str = "gpt_4o_mini_gemma2_9b"
     feature_agent: str = "gpt2_512"
 
     max_epochs: int = 100
-    batch_size : int = 128
-    early_stopping_patience : int = 16
-    rescale_features : bool = False
-    kfold : int = 5
+    batch_size: int = 128
+    early_stopping_patience: int = 16
+    rescale_features: bool = False
+    kfold: int = 5
     learning_rate: float = 6e-4
     seed: int = 42
 
@@ -202,7 +252,7 @@ class LuminarSequenceTrainingConfig(argparse.Namespace):
             (
                 self.domain,
                 self.agent,
-                self.feture_model,
+                self.feature_agent,
                 str(self.feature_len),
                 self.hash(10),
             )
