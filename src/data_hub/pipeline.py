@@ -14,7 +14,7 @@ from luminar.utils import get_best_device, get_matched_datasets
 
 class DataPiepline:
     """
-    Handles the processing, encoding and uploading of datasets to the Hugging Face Hub from the Datalake.
+    Handles the processing, encoding and uploading of datasets to the Hugging Face Hub from the Datalake (MongoDB).
     """
 
     def __init__(self, mongodb_uri: str):
@@ -105,16 +105,17 @@ class DataPiepline:
             agent: str,
             source : str,
             hf_token : str,
+            organization: str = "liberi-luminaris",
             upload_non_encoded: bool = True,
             upload_encoded: bool = True
     ):
         print(self.fetch(sources=[source]).dataset)
         if upload_non_encoded:
-            self.upload_to_hf(hf_token=hf_token, full_name=f"liberi-luminaris/{source}")
+            self.upload_to_hf(hf_token=hf_token, full_name=f"{organization}/{source}")
 
         print(self.encode(model=f"{agent}", max_len=512, batch_size=128).dataset)
         if upload_encoded:
-            self.upload_to_hf(hf_token=hf_token, full_name=f"liberi-luminaris/{source}-encoded-{agent}")
+            self.upload_to_hf(hf_token=hf_token, full_name=f"{organization}/{source}-encoded-{agent}")
         return self.dataset
 
 if __name__ == "__main__":
@@ -123,4 +124,7 @@ if __name__ == "__main__":
     pipeline = DataPiepline(mongodb_uri=os.getenv("MONGO_DB_CONNECTION"))
 
     # tiiuae/falcon-7b
-    pipeline.run(agent="gpt2", source="MAGE", hf_token=(Path.home() / ".hf_token").read_text().strip())
+    pipeline.run(agent="gpt2",
+                 source="PrismAI_v2",
+                 organization="TheItCrOw",
+                 hf_token=(Path.home() / ".hf_token").read_text().strip())

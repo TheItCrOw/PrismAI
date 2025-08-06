@@ -102,22 +102,31 @@ class LuminarSequence(nn.Module):
         self.classifier = nn.Linear(ff_output_dim, 1)
         self.criterion = nn.BCEWithLogitsLoss()
 
-    def _apply_layer_augmentation(self, features: torch.Tensor) -> torch.Tensor:
+    def _apply_layer_augmentation(self, features: list[torch.Tensor]) -> list[torch.Tensor]:
         """
-        Assumes input shape: (batch, seq_len, num_layers)
-        Returns: (batch, seq_len, 1 + (num_layers - 1) + (num_layers - 1)) = (batch, seq_len, 2*num_layers - 1)
+        Applies layer-wise delta or product augmentation to a list of [seq_len, num_layers] tensors.
+
+        Returns:
+            List of tensors with shape [seq_len, 2*num_layers - 1]
         """
-        layer_1 = features[:, :, 0].unsqueeze(-1)
-        other_layers = features[:, :, 1:]
+        augmented_features = []
 
-        if self.apply_delta_augmentation:
-            augmented = other_layers - layer_1 
-        elif self.apply_product_augmentation:
-            augmented = other_layers * layer_1
-        else:
-            return features
+        for feat in features:
+            layer_1 = feat[:, 0].unsqueeze(-1)  # [seq_len, 1]
+            other_layers = feat[:, 1:]  # [seq_len, num_layers - 1]
 
-        return torch.cat([layer_1, other_layers, augmented], dim=-1)  # (batch, seq_len, 2*num_layers - 1)
+            if self.apply_delta_augmentation:
+                augmented = other_layers - layer_1  # [seq_len, num_layers - 1]
+            elif self.apply_product_augmentation:
+                augmented = other_layers * layer_1
+            else:
+                augmented_features.append(feat)
+                continue
+
+            combined = torch.cat([layer_1, other_layers, augmented], dim=-1)
+            augmented_features.append(combined)
+
+        return augmented_features
 
     def forward(
             self, features, sentence_spans, span_labels=None
@@ -134,23 +143,22 @@ class LuminarSequence(nn.Module):
             features = self._apply_layer_augmentation(features)
 
         for i, spans in enumerate(sentence_spans):
+            feature = features[i]  # shape: [seq_len, feat_dim]
             for j, (start, end) in enumerate(spans):
                 if self.stack_spans > 0:
-                    # Stack spans if specified
                     if j > self.stack_spans - 1:
                         (prev_begin, _) = spans[j - self.stack_spans]
                         start = prev_begin
                     if j < len(spans) - 1 - self.stack_spans - 1:
                         (_, next_end) = spans[j + self.stack_spans]
                         end = next_end
-                span_feat = features[i, start:end, :]
+                span_feat = feature[start:end, :]
                 batch_sentence_features.append(span_feat)
                 batch_lengths.append(end - start)
 
         # Pad sequences to batch shape (pads to the longest span in the batch)
         # (total_spans, max_len, feature_dim)
-        padded = nn.utils.rnn.pad_sequence(batch_sentence_features,
-                                           batch_first=True)
+        padded = nn.utils.rnn.pad_sequence(batch_sentence_features, batch_first=True)
 
         x = self.rescale(padded)
         x = self.projection(x)
@@ -171,10 +179,9 @@ class LuminarSequence(nn.Module):
         # flatten labels to match logits
         flat_labels = torch.cat([torch.tensor(label_seq, dtype=torch.float32) for label_seq in span_labels]).to(
             logits.device)
-
         loss = self.criterion(logits.view(-1), flat_labels.view(-1))
         return ModelOutput(logits=logits, loss=loss)
-    
+
     def save(self, full_path: str):
         """
         Saves the model state_dict and config to the given path.
@@ -321,6 +328,7 @@ class LuminarSequenceAttention(nn.Module):
                 features = self._apply_layer_augmentation(features)
 
             for i, spans in enumerate(sentence_spans):
+                feature = features[i]  # shape: [seq_len, feat_dim]
                 for j, (start, end) in enumerate(spans):
                     if self.stack_spans > 0:
                         if j > self.stack_spans - 1:
@@ -329,7 +337,7 @@ class LuminarSequenceAttention(nn.Module):
                         if j < len(spans) - 1 - self.stack_spans - 1:
                             (_, next_end) = spans[j + self.stack_spans]
                             end = next_end
-                    span_feat = features[i, start:end, :]
+                    span_feat = feature[start:end, :]
                     batch_sentence_features.append(span_feat)
                     batch_lengths.append(end - start)
 

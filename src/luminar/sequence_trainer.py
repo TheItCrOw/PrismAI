@@ -3,10 +3,10 @@ import wandb
 import numpy as np
 
 from luminar.utils.training import (
-    ConvolutionalLayerSpec, 
-    DEFAULT_CONV_LAYER_SHAPES, 
-    LuminarSequenceDataset,
-    LuminarSequenceTrainingConfig
+    ConvolutionalLayerSpec,
+    DEFAULT_CONV_LAYER_SHAPES,
+    LuminarSequenceTrainingConfig,
+    LuminarSequenceDataset
 )
 from luminar.sequence_classifier import LuminarSequence, LuminarSequenceAttention
 from torch.utils.data import DataLoader, Subset, Dataset
@@ -21,7 +21,7 @@ class LuminarSequenceTrainer:
                  test_data_loader : DataLoader,
                  collate_fn : callable,
                  config : LuminarSequenceTrainingConfig,
-                 log_to_wandb : bool = False, 
+                 log_to_wandb : bool = False,
                  device : str = "",
                  use_experimental_attention : bool = False):
         self.config = config
@@ -50,6 +50,9 @@ class LuminarSequenceTrainer:
             # Also store relevant code files
             code_artifact = wandb.Artifact(name="luminar_sequence_code", type="code")
             code_artifact.add_dir("luminar")
+            code_artifact.add_file("data_hub/hub.py")
+            code_artifact.add_file("data_hub/pipeline.py")
+            code_artifact.add_file("data_hub/sequential_data_processor.py")
             code_artifact.add_file("training/train_luminar_sequence.py")
             wandb.log_artifact(code_artifact)
 
@@ -133,7 +136,7 @@ class LuminarSequenceTrainer:
             model.train()
             total_train_loss = 0
             for batch in train_loader:
-                features = batch["features"].to(self.device)
+                features = [f.to(self.device) for f in batch["features"]]
                 sentence_spans = batch["sentence_spans"]
                 span_labels = batch["span_labels"]
 
@@ -179,7 +182,7 @@ class LuminarSequenceTrainer:
         total_loss = 0
         with torch.no_grad():
             for batch in eval_loader:
-                features = batch["features"].to(self.device)
+                features = [f.to(self.device) for f in batch["features"]]
                 sentence_spans = batch["sentence_spans"]
                 span_labels = batch["span_labels"]
 
@@ -196,7 +199,7 @@ class LuminarSequenceTrainer:
 
         with torch.no_grad():
             for batch in self.test_data_loader:
-                features = batch["features"].to(self.device)
+                features = [f.to(self.device) for f in batch["features"]]
                 sentence_spans = batch["sentence_spans"]
                 span_labels = batch["span_labels"]
 

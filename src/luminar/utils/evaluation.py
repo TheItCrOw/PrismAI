@@ -101,7 +101,7 @@ def calculate_metrics(
         y_preds = ((y_scores >= threshold) ^ less_than).astype(int)
 
     precision, recall, f1_score, _support = precision_recall_fscore_support(
-        y_true, y_preds, average="weighted"
+        y_true, y_preds, average="weighted", zero_division=0
     )
     accuracy = np.mean(y_true == y_preds)
     fpr = np.mean(y_preds[y_true == 0] == 1)
@@ -126,7 +126,7 @@ def calculate_metrics(
     }
 
     _precision_each, _recall_each, f1_score_each, _support_each = (
-        precision_recall_fscore_support(y_true, y_preds, average=None)
+        precision_recall_fscore_support(y_true, y_preds, average=None, zero_division=0)
     )
     try:
         calculated_metrics |= {

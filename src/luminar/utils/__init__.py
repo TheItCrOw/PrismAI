@@ -18,10 +18,10 @@ from .training import (
     DEFAULT_CONV_LAYER_SHAPES,
     ConvolutionalLayerSpec,
     LuminarTrainingConfig,
-    LuminarSequenceDataset,
     LuminarSequenceTrainingConfig,
     ProjectionDim,
     save_model,
+    LuminarSequenceDataset,
 )
 from .visualization import visualize_features
 from .sequential_data import SequentialDataService
@@ -44,8 +44,8 @@ __all__ = [
     "DEFAULT_CONV_LAYER_SHAPES",
     "ConvolutionalLayerSpec",
     "SequentialDataService",
-    "LuminarTrainingConfig",
     "LuminarSequenceDataset",
+    "LuminarTrainingConfig",
     "get_best_device",
     "LuminarSequenceTrainingConfig",
     "ProjectionDim",

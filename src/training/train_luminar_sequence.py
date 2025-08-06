@@ -4,20 +4,23 @@ import optuna
 import wandb
 import traceback
 
+from datasets import DatasetDict
 from optuna.exceptions import TrialPruned
 from pathlib import Path
 from dataclasses import dataclass, fields
 from functools import partial
 
+from data_hub.hub import DataHub
+from data_hub.sequential_data_processor import SequentialDataProcessor
 from luminar.encoder import LuminarEncoder
 from luminar.sequence_trainer import LuminarSequenceTrainer
 from luminar.utils import (
     LuminarSequenceTrainingConfig,
     get_best_device,
-    SequentialDataService,
     ConvolutionalLayerSpec
 )
 
+HF_TOKEN : str = (Path.home() / ".hf_token").read_text().strip()
 # Different Convolution Configs we want to try
 NAMED_CONV_LAYER_CONFIGS = {
     "A": (
@@ -40,6 +43,46 @@ NAMED_CONV_LAYER_CONFIGS = {
         ConvolutionalLayerSpec(8, 2),
     ),
 }
+
+def print_sanity_check(dataset : DatasetDict):
+    splits_to_check = ["train", "eval", "test"]
+
+    total_invalid_label_count = 0
+    total_length_mismatch_count = 0
+
+    for split in splits_to_check:
+        if split not in dataset:
+            print(f"Split '{split}' not found in dataset. Skipping.")
+            continue
+
+        print(f"\nChecking split: {split}")
+        invalid_label_count = 0
+        length_mismatch_count = 0
+
+        for i, example in enumerate(dataset[split]):
+            labels = example["span_labels"]
+            spans = example["sentence_token_spans"]
+
+            # Check for invalid labels
+            if any(label not in (0, 1) for label in labels):
+                print(f"Invalid labels at {split}[{i}]: {labels}")
+                invalid_label_count += 1
+
+            # Check for length mismatch
+            if len(labels) != len(spans):
+                print(f"Length mismatch at {split}[{i}]: {len(labels)} labels vs {len(spans)} spans")
+                length_mismatch_count += 1
+
+        print(
+            f"✅ {split} summary: {invalid_label_count} invalid label entries, {length_mismatch_count} length mismatches")
+
+        total_invalid_label_count += invalid_label_count
+        total_length_mismatch_count += length_mismatch_count
+
+    # Overall summary
+    print("\nOverall Summary:")
+    print(f"Total entries with invalid labels: {total_invalid_label_count}")
+    print(f"Total entries with length mismatch: {total_length_mismatch_count}")
 
 def add_args_from_dataclass(parser: argparse.ArgumentParser, config_cls: type):
     for f in fields(config_cls):
@@ -76,13 +119,16 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
 
         config = LuminarSequenceTrainingConfig(**config_dict)
 
+        hf_dataset_names = [hf_dataset.split("/")[1] for hf_dataset in config.hf_dataset.split("___")]
+        tags = [tag for tag in ["optuna", "trial", *hf_dataset_names, config.domain] if tag is not None]#, config.agent, config.feature_agent]
+
         run = wandb.init(
             project="Luminar",
             config=config.__dict__,
             reinit=True,
             name=f"trial_{trial.number}",
-            group=f"{config.domain}_study",
-            tags=["optuna", "trial", config.domain, config.agent, config.feature_agent]
+            group=f"{'_'.join(hf_dataset_names)}_study",
+            tags=tags
         )
 
         trainer = LuminarSequenceTrainer(
@@ -136,27 +182,40 @@ if __name__ == "__main__":
     # Initialize encoder and data
     print("Loading and setting up the data...")
     luminar_encoder = LuminarEncoder(max_len=config.feature_len)
-    data_service = SequentialDataService(luminar_encoder, config.batch_size, config.feature_len)
+    data_hub = DataHub(HF_TOKEN)
 
-    domains = config.domain.split("___")
-    dataset_paths = []
-    for domain in domains:
-        dataset_paths.append(Path(config.dataset_root_path) / config.agent / config.feature_agent / domain)
-    dataset_dict = data_service.load_multiple_datasets(dataset_paths)
+    hf_datasets = config.hf_dataset.split("___") if config.hf_dataset else [config.hf_dataset]
+
+    # If we have domain filters, we apply them onto the datasets
+    domains = config.domain.split("___") if config.domain else None
+    filters = None
+    if domains is not None:
+        for domain in domains:
+            filters = {"domain": domain} if filters is None else {**filters, "domain": domain}
+
+    dataset_dict = DataHub.concat_splits(data_hub.get_many_splits(hf_datasets, filter_by=filters))
+    print(dataset_dict)
+
+    print("Processing the dataset for sequential training...")
+    data_processor = SequentialDataProcessor(dataset_dict, luminar_encoder)
+    dataset_dict = data_processor.process_for_sequential()
     print(dataset_dict)
 
     print("Transforming dataset to LuminarSequenceDataset")
-    train_dataset, test_dataset, test_loader = data_service.dataset_to_luminar_sequence_dataset(dataset_dict)
-    print("Loaded the data, initializing the training study...")
+    train_dataset, test_dataset, test_loader = data_processor.dataset_to_luminar_sequence_dataset(dataset_dict)
+    print("Sanity check...")
+    print_sanity_check(dataset_dict)
 
+    print("Loaded the data, initializing the training study...")
     # Partial application to pass shared variables into Optuna
     study = optuna.create_study(direction="maximize")
     objective_fn = partial(objective,
                            train_dataset=train_dataset,
                            test_loader=test_loader,
-                           collate_fn=data_service._collate_fn,
+                           collate_fn=data_processor.collate_fn,
                            device=device,
                            base_config=config)
+
     print("Running Optuna study:")
     study.optimize(objective_fn, n_trials=50)
 

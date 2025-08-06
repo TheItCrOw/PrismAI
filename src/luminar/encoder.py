@@ -187,6 +187,7 @@ class LuminarEncoder:
             truncation=truncate,
             max_length=max_length,
             return_length=True,
+            return_offsets_mapping=True,
             add_special_tokens=True,
         )
 

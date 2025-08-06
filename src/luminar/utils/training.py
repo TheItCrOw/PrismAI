@@ -185,24 +185,6 @@ def save_model(
         json.dump(asdict_(trainer.state), fp, indent=4)
 
 
-class LuminarSequenceDataset(Dataset):
-    def __init__(self, dataset, feature_key="features"):
-        self.samples = []
-        for example in dataset:
-            spans = example["sentence_token_spans"]
-            features = torch.tensor(example[feature_key])  # (seq_len, feature_dim)
-            labels = example["span_labels"]
-            self.samples.append(
-                {"features": features, "sentence_spans": spans, "span_labels": labels}
-            )
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        return self.samples[idx]
-
-
 @dataclass
 class LuminarSequenceTrainingConfig(Namespace):
     feature_len: int = 512
@@ -217,21 +199,23 @@ class LuminarSequenceTrainingConfig(Namespace):
     lstm_layers: int = 1
     stack_spans: int = 0
 
+    # If you want to merge two hf datasets to a larger dataset, use [DATASET_1]___[DATASET_2] etc.
+    hf_dataset : str = "liberi-luminaris/Ghostbuster-encoded-gpt2"
     dataset_root_path: str = "/storage/projects/stoeckel/prismai/encoded/fulltext/"
     models_root_path: str = (
         "/storage/projects/boenisch/PrismAI/models/luminar_sequence/"
     )
     # The domain (among others) decides over the dataset - if you want to merge domains to form
-    # a larger dataset, use [DATASET_1]___[DATASET_2] etc.
-    domain: str = "student_essays"
+    # a larger dataset, use [DOMAIN_1]___[DOMAIN_2] etc.
+    domain: str = None
     agent: str = "gpt_4o_mini_gemma2_9b"
     feature_agent: str = "gpt2_512"
 
     max_epochs: int = 100
     batch_size: int = 128
-    early_stopping_patience: int = 16
+    early_stopping_patience: int = 8
     rescale_features: bool = False
-    kfold: int = 5
+    kfold: int = 3
     learning_rate: float = 6e-4
     seed: int = 42
 
@@ -260,3 +244,21 @@ class LuminarSequenceTrainingConfig(Namespace):
 
     def asdict(self) -> dict[str, Any]:
         return vars(self)
+
+
+class LuminarSequenceDataset(Dataset):
+    def __init__(self, dataset, feature_key="features"):
+        self.samples = []
+        for example in dataset:
+            spans = example["sentence_token_spans"]
+            features = torch.tensor(example[feature_key])
+            labels = example["span_labels"]
+            self.samples.append(
+                {"features": features, "sentence_spans": spans, "span_labels": labels}
+            )
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
