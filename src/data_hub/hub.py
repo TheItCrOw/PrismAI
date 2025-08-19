@@ -59,15 +59,9 @@ class DataHub:
             datasets
             .load_dataset(hf_dataset, token=self.hf_token)
             .filter(
-                lambda text: len(text.strip()) > 0,
+                lambda text: 0 < len(text.strip()) < 125_000, # Filter out empty or too long texts
                 input_columns=["text"],
                 num_proc=num_proc
-            )
-            .map(
-                normalize_text,
-                batched=True,
-                num_proc=num_proc,
-                desc="Normalizing text"
             )
         )
 
@@ -81,6 +75,14 @@ class DataHub:
         if filter_by:
             for key, value in filter_by.items():
                 dataset = dataset.filter(lambda x: x[key] == value, num_proc=num_proc)
+
+        # Normalize text: remove extra spaces, normalize unicode
+        dataset = dataset.map(
+            normalize_text,
+            batched=True,
+            num_proc=num_proc,
+            desc="Normalizing text"
+        )
 
         # Convert label column to class label with fixed order
         label_order = ["human", "ai", "fusion"]
@@ -128,5 +130,5 @@ class DataHub:
 if __name__ == "__main__":
     # Example Usage
     hub = DataHub((Path.home() / ".hf_token").read_text().strip())
-    dataset = hub.get_splits("liberi-luminaris/Ghostbuster-encoded-gpt2")
+    dataset = hub.get_splits("TheItCrOw/Ghostbuster-encoded-gpt2")
     print(dataset)

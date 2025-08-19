@@ -37,9 +37,8 @@ class LuminarSequence(nn.Module):
             config : LuminarSequenceTrainingConfig,
     ):
         super().__init__()
-
-        print(config)
-
+        self.luminar_config = config
+        print(self.luminar_config)
         feature_len, feature_depth = config.feature_len, config.num_intermediate_likelihoods
 
         self.stack_spans = config.stack_spans if hasattr(config, "stack_spans") else 0
@@ -190,23 +189,18 @@ class LuminarSequence(nn.Module):
             full_path (str): Directory path to save model weights and config.
         """
         os.makedirs(full_path, exist_ok=True)
-
         weights_path = os.path.join(full_path, "pytorch_model.bin")
         torch.save(self.state_dict(), weights_path)
-
-        config_dict = self.config.__dict__ if hasattr(self, "config") else {}
+        config_dict = self.luminar_config.__dict__ if hasattr(self, "luminar_config") else {}
         config_path = os.path.join(full_path, "config.json")
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=4)
 
     @classmethod
-    def load(cls, full_path: str, device: torch.device = None):
+    def load(cls, full_path: str, device: str = ""):
         """
         Loads a LuminarSequence model and its config from the given path.
         """
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         config_path = os.path.join(full_path, "config.json")
         weights_path = os.path.join(full_path, "pytorch_model.bin")
 

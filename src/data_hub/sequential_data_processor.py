@@ -18,8 +18,7 @@ from luminar.utils import LuminarSequenceDataset
 
 class SequentialDataProcessor:
 
-    def __init__(self, dataset: DatasetDict, luminar_encoder: LuminarEncoder):
-        self.dataset = dataset
+    def __init__(self, luminar_encoder: LuminarEncoder):
         self.luminar_encoder = luminar_encoder
         nltk.download("punkt")
 
@@ -35,21 +34,19 @@ class SequentialDataProcessor:
         )
         return (train_dataset, test_dataset, test_loader)
 
-    def process_for_sequential(self, split_by: str | None = None) -> (
+    def process_for_training(self, dataset : DatasetDict, split_by: str | None = None) -> (
             DatasetDict | dict[str, DatasetDict]):
-        #pad_to_fixed_length: Callable[[NDArray], NDArray] = get_pad_to_fixed_length_fn(feature_len)
-
         if split_by is None:
-            return self._process(self.dataset)
+            return self._process(dataset)
 
         # If split_by is set: group datasets by unique values of `split_by`, e.g. "agent"
         unique_values = set()
-        for split_name in self.dataset.keys():
-            unique_values.update(set(self.dataset[split_name].unique(split_by)))
+        for split_name in dataset.keys():
+            unique_values.update(set(dataset[split_name].unique(split_by)))
 
         grouped_datasets: dict[str, dict[str, Dataset]] = {val: {} for val in unique_values}
 
-        for split_name, split_dataset in self.dataset.items():
+        for split_name, split_dataset in dataset.items():
             for val in unique_values:
                 filtered = split_dataset.filter(lambda ex: ex[split_by] == val)
                 if len(filtered) > 0:
@@ -61,6 +58,24 @@ class SequentialDataProcessor:
             result[val] = self._process(DatasetDict(splits))
 
         return result
+
+    def process_for_single_document(self, document : str, features_len: int):
+        """
+        Process a single document to prepare as LuminarSequence input.
+        """
+        return self._sentence_to_token_spans(document, features_len)
+
+    @classmethod
+    def map_token_spans_to_character_spans(cls, spans, offset_mapping):
+        char_spans = []
+        for start_token, end_token in spans:
+            if start_token >= len(offset_mapping) or end_token > len(offset_mapping) or start_token >= end_token:
+                continue  # skip invalid spans
+
+            start_char = offset_mapping[start_token][0]
+            end_char = offset_mapping[end_token - 1][1]
+            char_spans.append((start_char, end_char))
+        return char_spans
 
     def _process(self, dataset: DatasetDict) -> DatasetDict:
         return (dataset
@@ -197,8 +212,8 @@ if __name__ == "__main__":
     #    dataset[split] = dataset[split].select(range(min(len(dataset[split]), 1000)))
     print(dataset)
 
-    processor = SequentialDataProcessor(dataset, LuminarEncoder("gpt2"))
-    dataset = processor.process_for_sequential()
+    processor = SequentialDataProcessor(LuminarEncoder("gpt2"))
+    dataset = processor.process_for_training(dataset)
     print(dataset)
 
     train_dataset, test_dataset, test_loader = processor.dataset_to_luminar_sequence_dataset(dataset)

@@ -23,7 +23,7 @@ from .training import (
     save_model,
     LuminarSequenceDataset,
 )
-from .visualization import visualize_features
+from .visualization import visualize_features, visualize_detection
 from .sequential_data import SequentialDataService
 from .cuda import get_best_device
 
@@ -38,6 +38,7 @@ __all__ = [
     "get_matched_ids",
     "get_pad_to_fixed_length_fn",
     "visualize_features",
+    "visualize_detection",
     "find_threshold_for_fpr",
     "run_evaluation",
     "calculate_metrics",

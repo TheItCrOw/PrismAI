@@ -65,7 +65,7 @@ def print_sanity_check(dataset : DatasetDict):
 
             # Check for invalid labels
             if any(label not in (0, 1) for label in labels):
-                print(f"Invalid labels at {split}[{i}]: {labels}")
+                #print(f"Invalid labels at {split}[{i}]: {labels}")
                 invalid_label_count += 1
 
             # Check for length mismatch
@@ -112,14 +112,15 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
         ]
         config_dict["apply_delta_augmentation"] = apply_delta_augmentation
         config_dict["apply_product_augmentation"] = apply_product_augmentation
-        config_dict["projection_dim"] = trial.suggest_categorical("projection_dim", [16, 32, 64, 128])
-        config_dict["stack_spans"] = trial.suggest_categorical("stack_spans", [0, 1, 2, 3])
+        config_dict["projection_dim"] = trial.suggest_categorical("projection_dim", [64, 128, 256])
+        config_dict["stack_spans"] = trial.suggest_categorical("stack_spans", [1, 2, 3, 4])
         config_dict["lstm_hidden_dim"] = trial.suggest_categorical("lstm_hidden_dim", [32, 64, 128, 256])
-        config_dict["learning_rate"] = trial.suggest_float("learning_rate", 6e-4, 4e-3, log=True)
+        #config_dict["learning_rate"] = trial.suggest_float("learning_rate", 6e-4, 4e-3, log=True)
 
         config = LuminarSequenceTrainingConfig(**config_dict)
 
         hf_dataset_names = [hf_dataset.split("/")[1] for hf_dataset in config.hf_dataset.split("___")]
+        group_name = f"{'_'.join(hf_dataset_names)}{f":{config.domain}" if config.domain else ''}"
         tags = [tag for tag in ["optuna", "trial", *hf_dataset_names, config.domain] if tag is not None]#, config.agent, config.feature_agent]
 
         run = wandb.init(
@@ -127,7 +128,7 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
             config=config.__dict__,
             reinit=True,
             name=f"trial_{trial.number}",
-            group=f"{'_'.join(hf_dataset_names)}_study",
+            group=group_name + '_study',
             tags=tags
         )
 
@@ -145,11 +146,11 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
         wandb.log({"objective_f1": avg_f1})
 
         # Save model locally
-        model_store_path = Path(config.models_root_path) / config.domain / wandb.run.id
+        model_store_path = Path(config.models_root_path) / group_name / run.id
         best_model.save(model_store_path)
 
         # Upload to wandb as an artifact
-        artifact = wandb.Artifact(name=f"luminar-sequence-{wandb.run.id}", type="model")
+        artifact = wandb.Artifact(name=f"luminar-sequence-{run.id}", type="model")
         artifact.add_dir(str(model_store_path))
         wandb.log_artifact(artifact)
 
@@ -197,8 +198,8 @@ if __name__ == "__main__":
     print(dataset_dict)
 
     print("Processing the dataset for sequential training...")
-    data_processor = SequentialDataProcessor(dataset_dict, luminar_encoder)
-    dataset_dict = data_processor.process_for_sequential()
+    data_processor = SequentialDataProcessor(luminar_encoder)
+    dataset_dict = data_processor.process_for_training(dataset_dict)
     print(dataset_dict)
 
     print("Transforming dataset to LuminarSequenceDataset")

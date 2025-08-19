@@ -216,7 +216,7 @@ class LuminarSequenceTrainingConfig(Namespace):
     early_stopping_patience: int = 8
     rescale_features: bool = False
     kfold: int = 3
-    learning_rate: float = 6e-4
+    learning_rate: float = 4e-3
     seed: int = 42
 
     def json(self, /, **kwargs) -> str:
@@ -252,7 +252,8 @@ class LuminarSequenceDataset(Dataset):
         for example in dataset:
             spans = example["sentence_token_spans"]
             features = torch.tensor(example[feature_key])
-            labels = example["span_labels"]
+            # Right now, we don't handle fusion labels. We map them to being purely AI.
+            labels = [1 if x == 2 else x for x in example["span_labels"]]
             self.samples.append(
                 {"features": features, "sentence_spans": spans, "span_labels": labels}
             )

@@ -1,6 +1,7 @@
 import os
 
 from pathlib import Path
+from typing import Dict
 
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -21,12 +22,13 @@ class DataPiepline:
         self.mongodb_uri = mongodb_uri
         self.dataset = None
 
-    def fetch(self, sources: list[str], limit: int = 999999999, skip: int = 0):
+    def fetch(self, sources: list[str], limit: int = 999999999, skip: int = 0, mongo_filter: Dict = None):
         """
         Fetches the given sources from the MongoDB.
         :param sources: List of dataset names to be included in the pipeline as outlined in the mongodb.
         :param limit: Limit the number of documents to fetch from each source. Default is infinity.
         :param skip: Number of documents to skip from the start of each source. Default is 0.
+        :param mongo_filter: Optional filter to apply to the MongoDB query.
         """
         print("Fetching data from source: ", sources)
         client = MongoClient(self.mongodb_uri)
@@ -38,9 +40,9 @@ class DataPiepline:
                 collection = db.get_collection(f"dataset_{source}")
                 print(f"Fetching from collection: {source}")
 
-                total_docs = min(limit, collection.count_documents({}, session=session))
+                total_docs = min(limit, collection.count_documents(mongo_filter, session=session))
                 cursor = (collection
-                          .find({}, session=session, no_cursor_timeout=True, batch_size=100)
+                          .find(mongo_filter, session=session, no_cursor_timeout=True, batch_size=100)
                           .limit(limit)
                           .sort([("_id", -1)])
                           .skip(skip))
@@ -73,7 +75,7 @@ class DataPiepline:
             lambda inputs: encoder.tokenize(inputs, truncate=False),
             input_columns=["text"],
             batched=True,
-            batch_size=batch_size * 4,  # Use a larger batch size for tokenization
+            batch_size=1024,  # Use a larger batch size for tokenization
             desc="Tokenizing"
         )
 
@@ -83,7 +85,7 @@ class DataPiepline:
 
         # Encoding stage
         self.dataset = self.dataset.map(
-            lambda inputs: encoder.rolling_process(inputs, max_chunks=10),
+            lambda inputs: encoder.rolling_process(inputs, max_chunks=5),
             batched=True,
             batch_size=batch_size,
             desc="Encoding",
@@ -94,29 +96,45 @@ class DataPiepline:
 
         return self
 
-    def upload_to_hf(self, hf_token: str, full_name: str):
+    def upload_to_hf(self, hf_token: str, full_name: str, split_name: str = "train"):
         self.dataset.push_to_hub(
             repo_id=full_name,
             token=hf_token,
+            split=split_name,
             private=True,
         )
 
     def run(self,
             agent: str,
-            source : str,
-            hf_token : str,
+            source: str,
+            hf_token: str,
             organization: str = "liberi-luminaris",
+            fetch_filter: Dict = None,
             upload_non_encoded: bool = True,
-            upload_encoded: bool = True
-    ):
-        print(self.fetch(sources=[source]).dataset)
+            upload_encoded: bool = True,
+            hf_name_prefix: str = None,
+            split_name: str = "train"
+            ):
+        params = locals()
+        print("New pipeline run with parameters:")
+        for name, value in params.items():
+            print(f"  {name}: {value}")
+
+        print(self.fetch(sources=[source], mongo_filter=fetch_filter).dataset)
         if upload_non_encoded:
-            self.upload_to_hf(hf_token=hf_token, full_name=f"{organization}/{source}")
+            self.upload_to_hf(hf_token=hf_token,
+                              split_name=split_name,
+                              full_name=f"{organization}/{source}{f"-{hf_name_prefix}" if hf_name_prefix else ""}")
 
         print(self.encode(model=f"{agent}", max_len=512, batch_size=128).dataset)
         if upload_encoded:
-            self.upload_to_hf(hf_token=hf_token, full_name=f"{organization}/{source}-encoded-{agent}")
+            if "/" in agent:
+                agent = agent.split("/")[1]
+            self.upload_to_hf(hf_token=hf_token,
+                              split_name=split_name,
+                              full_name=f"{organization}/{source}{f"-{hf_name_prefix}" if hf_name_prefix else ""}-encoded-{agent}")
         return self.dataset
+
 
 if __name__ == "__main__":
     # Example usage:
@@ -124,7 +142,11 @@ if __name__ == "__main__":
     pipeline = DataPiepline(mongodb_uri=os.getenv("MONGO_DB_CONNECTION"))
 
     # tiiuae/falcon-7b
-    pipeline.run(agent="gpt2",
+    pipeline.run(agent="tiiuae/falcon-7b",
                  source="PrismAI_v2",
+                 upload_non_encoded=False,
+                 upload_encoded=True,
                  organization="TheItCrOw",
+                 fetch_filter={"domain": "arxiv_papers"},
+                 split_name="arxiv_papers",
                  hf_token=(Path.home() / ".hf_token").read_text().strip())
