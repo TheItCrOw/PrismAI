@@ -32,6 +32,7 @@ def visualize_detection(document: str, detection_result: dict, threshold: float 
     sorted_spans = sorted(zip(char_spans, probs), key=lambda x: x[0][0])
 
     def get_color(prob: float) -> str:
+        prob = prob / 100
         red = int(255 * prob)
         green = int(255 * (1 - prob))
         return f"rgba({red}, {green}, 100, 0.5)"  # soft gradient

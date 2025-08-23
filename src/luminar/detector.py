@@ -91,8 +91,8 @@ class LuminarSequenceDetector:
             all_char_spans.extend(char_spans)
 
         return {
-            "avg": statistics.mean(all_probs),
-            "probs": all_probs,
+            "avg": statistics.mean(all_probs).item() * 100,
+            "probs": [float(p) * 100 for p in all_probs],
             "token_spans": all_token_spans,
             "char_spans": all_char_spans
         }
