@@ -38,10 +38,15 @@ class LuminarSequenceDetector:
         :param chunk_size: Number of tokens per chunk (e.g. 256).
         :param stride: Overlap between chunks for continuity (e.g. stride = chunk_size = 256 => no overlap).
         :return: A dictionary with probabilities, token-level spans, and character-level spans.
+        TODO: This can be batch parallized way better to process a list of documents instead of a single one.
         """
         if not isinstance(document, str) or not document.strip():
             raise ValueError("Document must be a non-empty string.")
 
+        if len(document) < self.classifier.luminar_config.min_character_length:
+            raise ValueError(f"Document is too short for analysis. Minimum length is {self.classifier.luminar_config.min_character_length} characters.")
+
+        document = self.data_processor.normalize_text({"text": [document]})["text"][0]
         tokenized = self.encoder.tokenize(texts=document, truncate=False)
         input_ids = tokenized["input_ids"]
         attention_mask = tokenized["attention_mask"]
@@ -70,7 +75,7 @@ class LuminarSequenceDetector:
             features = torch.tensor(encoded["features"], device=self.device)
 
             # Compute spans within chunk length
-            spans = self.data_processor.process_for_single_document(document, features.shape[1])
+            spans = self.data_processor.process_for_detector(document, features.shape[1])
 
             # Adjust token spans by chunk offset
             adjusted_spans = [(s + start, e + start) for s, e in spans if e + start <= len(offset_mapping)]
@@ -80,6 +85,8 @@ class LuminarSequenceDetector:
 
             with torch.no_grad():
                 output = self.classifier(features, [spans])
+                #self.features = features
+                #self.spans = spans
                 probs = torch.sigmoid(output.logits).view(-1).cpu().numpy()
 
             char_spans = SequentialDataProcessor.map_token_spans_to_character_spans(
@@ -96,4 +103,3 @@ class LuminarSequenceDetector:
             "token_spans": all_token_spans,
             "char_spans": all_char_spans
         }
-

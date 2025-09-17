@@ -34,7 +34,8 @@ class DataHub:
 
         return DatasetDict(combined)
 
-    def get_many_splits(self, hf_datasets: list[str], num_proc: int = 32, seed: int = 42, filter_by: dict = None) -> list[
+    def get_many_splits(
+            self, hf_datasets: list[str], num_proc: int = 32, seed: int = 42, min_length : int = 0, filter_by: dict = None) -> list[
         DatasetDict]:
         """
         Given a list of Hugging Face dataset names, returns a list of train/eval/test splits for each dataset.
@@ -42,11 +43,11 @@ class DataHub:
         all_splits = []
         for hf_dataset in hf_datasets:
             print(f"\n📦 Processing dataset: {hf_dataset}")
-            splits = self.get_splits(hf_dataset=hf_dataset, num_proc=num_proc, seed=seed, filter_by=filter_by)
+            splits = self.get_splits(hf_dataset=hf_dataset, num_proc=num_proc, seed=seed, min_length=min_length, filter_by=filter_by)
             all_splits.append(splits)
         return all_splits
 
-    def get_splits(self, hf_dataset: str, num_proc: int = 32, seed: int = 42, filter_by: dict = None):
+    def get_splits(self, hf_dataset: str, num_proc: int = 32, seed: int = 42, min_length : int = 0, filter_by: dict = None):
         """
         Fetches the given sources from the Hugging Face Hub or local cache.
 
@@ -54,12 +55,13 @@ class DataHub:
         :param num_proc: Number of processes for parallel loading/filtering.
         :param seed: Random seed for reproducibility.
         :param filter_by: Optional dictionary to filter dataset by column values, e.g. {"domain": "bundestag"}.
+        :param min_length: Minimum length of text (in characters) to include in the dataset.
         """
         raw_dataset = (
             datasets
             .load_dataset(hf_dataset, token=self.hf_token)
             .filter(
-                lambda text: 0 < len(text.strip()) < 125_000, # Filter out empty or too long texts
+                lambda text: min_length < len(text.strip()) < 125_000, # Filter out empty or too long texts
                 input_columns=["text"],
                 num_proc=num_proc
             )
@@ -67,7 +69,7 @@ class DataHub:
 
         # Unwrap single split dataset (e.g., 'train') to flat dataset
         if isinstance(raw_dataset, DatasetDict):
-            dataset = raw_dataset[next(iter(raw_dataset))]
+            dataset = concatenate_datasets([split for split in raw_dataset.values()])
         else:
             dataset = raw_dataset
 
@@ -77,12 +79,12 @@ class DataHub:
                 dataset = dataset.filter(lambda x: x[key] == value, num_proc=num_proc)
 
         # Normalize text: remove extra spaces, normalize unicode
-        dataset = dataset.map(
-            normalize_text,
-            batched=True,
-            num_proc=num_proc,
-            desc="Normalizing text"
-        )
+        #dataset = dataset.map(
+        #    normalize_text,
+        #    batched=True,
+        #    num_proc=num_proc,
+        #    desc="Normalizing text"
+        #)
 
         # Convert label column to class label with fixed order
         label_order = ["human", "ai", "fusion"]

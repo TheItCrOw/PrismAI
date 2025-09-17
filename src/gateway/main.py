@@ -62,7 +62,8 @@ def get_detector(model_name: str) -> LuminarSequenceDetector:
         # /storage/projects/boenisch/PrismAI/models/luminar_sequence/de___en/trvaaa3c
         # tiiuae/falcon-7b
         # /storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/fa05u0tn
-        current_app.config[model_name] = LuminarSequenceDetector(model_path="/storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/fa05u0tn", 
+        # /storage/projects/boenisch/PrismAI/models/luminar_sequence/M4-encoded-gpt2/oi2ld9pf
+        current_app.config[model_name] = LuminarSequenceDetector(model_path="/storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/e1s2k2du",
                                                                  feature_agent="gpt2", 
                                                                  device=get_best_device())
     return current_app.config[model_name]

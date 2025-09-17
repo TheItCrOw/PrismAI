@@ -113,7 +113,7 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
         config_dict["apply_delta_augmentation"] = apply_delta_augmentation
         config_dict["apply_product_augmentation"] = apply_product_augmentation
         config_dict["projection_dim"] = trial.suggest_categorical("projection_dim", [64, 128, 256])
-        config_dict["stack_spans"] = trial.suggest_categorical("stack_spans", [1, 2, 3, 4])
+        config_dict["stack_spans"] = trial.suggest_categorical("stack_spans", [1, 2, 3, 4, 5])
         config_dict["lstm_hidden_dim"] = trial.suggest_categorical("lstm_hidden_dim", [32, 64, 128, 256])
         #config_dict["learning_rate"] = trial.suggest_float("learning_rate", 6e-4, 4e-3, log=True)
 
@@ -121,14 +121,14 @@ def objective(trial, train_dataset, test_loader, collate_fn, device, base_config
 
         hf_dataset_names = [hf_dataset.split("/")[1] for hf_dataset in config.hf_dataset.split("___")]
         group_name = f"{'_'.join(hf_dataset_names)}{f":{config.domain}" if config.domain else ''}"
-        tags = [tag for tag in ["optuna", "trial", *hf_dataset_names, config.domain] if tag is not None]#, config.agent, config.feature_agent]
+        tags = [tag for tag in ["optuna", "trial", *hf_dataset_names, config.domain, config.feature_agent] if tag is not None]#, config.agent, config.feature_agent]
 
         run = wandb.init(
-            project="Luminar",
+            project="LuminarSeq",
             config=config.__dict__,
             reinit=True,
             name=f"trial_{trial.number}",
-            group=group_name + '_study',
+            group=group_name,
             tags=tags
         )
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
     # Initialize encoder and data
     print("Loading and setting up the data...")
-    luminar_encoder = LuminarEncoder(max_len=config.feature_len)
+    luminar_encoder = LuminarEncoder(max_len=config.feature_len, model_name_or_path=config.feature_agent, device=device)
     data_hub = DataHub(HF_TOKEN)
 
     hf_datasets = config.hf_dataset.split("___") if config.hf_dataset else [config.hf_dataset]
@@ -194,7 +194,9 @@ if __name__ == "__main__":
         for domain in domains:
             filters = {"domain": domain} if filters is None else {**filters, "domain": domain}
 
-    dataset_dict = DataHub.concat_splits(data_hub.get_many_splits(hf_datasets, filter_by=filters))
+    dataset_dict = DataHub.concat_splits(data_hub.get_many_splits(hf_datasets,
+                                                                  min_length=config.min_character_length,
+                                                                  filter_by=filters))
     print(dataset_dict)
 
     print("Processing the dataset for sequential training...")
@@ -204,8 +206,6 @@ if __name__ == "__main__":
 
     print("Transforming dataset to LuminarSequenceDataset")
     train_dataset, test_dataset, test_loader = data_processor.dataset_to_luminar_sequence_dataset(dataset_dict)
-    print("Sanity check...")
-    print_sanity_check(dataset_dict)
 
     print("Loaded the data, initializing the training study...")
     # Partial application to pass shared variables into Optuna

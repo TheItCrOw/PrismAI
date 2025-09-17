@@ -6,12 +6,13 @@ from typing import Dict
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from tqdm import tqdm
+
+from data_hub.sequential_data_processor import SequentialDataProcessor
 from luminar.encoder import LuminarEncoder
 from datasets import Dataset, DatasetDict, ClassLabel
 from unicodedata import normalize
 
 from luminar.utils import get_best_device, get_matched_datasets
-
 
 class DataPiepline:
     """
@@ -22,7 +23,7 @@ class DataPiepline:
         self.mongodb_uri = mongodb_uri
         self.dataset = None
 
-    def fetch(self, sources: list[str], limit: int = 999999999, skip: int = 0, mongo_filter: Dict = None):
+    def fetch(self, sources: list[str], limit: int = 999999999, skip: int = 0, mongo_filter: Dict = {}):
         """
         Fetches the given sources from the MongoDB.
         :param sources: List of dataset names to be included in the pipeline as outlined in the mongodb.
@@ -59,6 +60,13 @@ class DataPiepline:
         # Convert to Hugging Face dataset
         print("Converting to Hugging Face dataset...")
         self.dataset = Dataset.from_list(collected_docs)
+        self.dataset = self.dataset.map(
+            SequentialDataProcessor.normalize_text,
+            batched=True,
+            num_proc=32,
+            desc="Normalizing text"
+        )
+
         return self
 
     def encode(self, model: str, max_len: int = 512, batch_size: int = 512):
@@ -85,7 +93,7 @@ class DataPiepline:
 
         # Encoding stage
         self.dataset = self.dataset.map(
-            lambda inputs: encoder.rolling_process(inputs, max_chunks=5),
+            lambda inputs: encoder.rolling_process(inputs, max_chunks=3),
             batched=True,
             batch_size=batch_size,
             desc="Encoding",
@@ -109,7 +117,7 @@ class DataPiepline:
             source: str,
             hf_token: str,
             organization: str = "liberi-luminaris",
-            fetch_filter: Dict = None,
+            fetch_filter: Dict = {},
             upload_non_encoded: bool = True,
             upload_encoded: bool = True,
             hf_name_prefix: str = None,
@@ -143,10 +151,10 @@ if __name__ == "__main__":
 
     # tiiuae/falcon-7b
     pipeline.run(agent="tiiuae/falcon-7b",
-                 source="PrismAI_v2",
+                 source="RAID_none",
                  upload_non_encoded=False,
                  upload_encoded=True,
                  organization="TheItCrOw",
-                 fetch_filter={"domain": "arxiv_papers"},
-                 split_name="arxiv_papers",
+                 #fetch_filter={"domain": "gutenberg"},
+                 #split_name="gutenberg",
                  hf_token=(Path.home() / ".hf_token").read_text().strip())

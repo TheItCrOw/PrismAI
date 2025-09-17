@@ -9,7 +9,7 @@ from datasets import DatasetDict
 from numpy._typing import NDArray
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, ConcatDataset
-
+from unicodedata import normalize
 from data_hub.hub import DataHub
 from nltk.tokenize import sent_tokenize
 from luminar.encoder import LuminarEncoder
@@ -59,7 +59,7 @@ class SequentialDataProcessor:
 
         return result
 
-    def process_for_single_document(self, document : str, features_len: int):
+    def process_for_detector(self, document : str, features_len: int):
         """
         Process a single document to prepare as LuminarSequence input.
         """
@@ -77,8 +77,28 @@ class SequentialDataProcessor:
             char_spans.append((start_char, end_char))
         return char_spans
 
+    @classmethod
+    def normalize_text(cls, batch: dict) -> dict:
+        return {
+            "text": [
+                " ".join(
+                    normalize("NFC", text)  # Unicode NFC normalization
+                    .replace("\n", " ")
+                    .strip()
+                    .split()
+                )
+                for text in batch["text"]
+            ]
+        }
+
     def _process(self, dataset: DatasetDict) -> DatasetDict:
         return (dataset
+            #.map(
+            #    self.normalize_text,
+            #    batched=True,
+            #    desc="Normalizing text",
+            #    num_proc=32
+            #)
             .map(
                 self._tokenize_batch,
                 batched=True,

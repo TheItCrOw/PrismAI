@@ -9,33 +9,158 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Mozilla+Headline:wght@200..700&display=swap"
-        rel="stylesheet">
+            href="https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Mozilla+Headline:wght@200..700&display=swap"
+            rel="stylesheet">
     <title>Gateway</title>
 </head>
 
 <body>
-    <nav class="bg-prime p-4 card-shadow">
-        <div class="container h-100">
-            <div class="w-100 flexed justify-content-between align-items-center">
-                <h3 class="mb-0"><i class="color-secondary far fa-gem me-1"></i> <span>PrismAI</span> <span
-                        class="text">Gateway</span></h3>
-                <div class="flexed">
-                    <button class="btn btn-dark card-shadow rounded-0 me-2">About <i
-                            class="far fa-gem ms-1"></i></button>
-                    <button class="btn btn-dark card-shadow rounded-0 ms-2 me-2">Datasets <i
-                            class="ms-1 fas fa-database"></i></button>
-                    <button class="btn btn-secondary card-shadow rounded-0 ms-2 me-2">Detector <i
-                            class="ms-1 fas fa-fingerprint"></i></button>
-                </div>
+
+<nav class="bg-dark p-4 card-shadow">
+    <div class="container h-100">
+        <div class="w-100 flexed justify-content-between align-items-center">
+            <h3 class="mb-0"><i class="color-primary far fa-gem me-1"></i> <span class="text-light">PrismAI</span> <span
+                    class="text">Gateway</span></h3>
+            <div class="flexed nav-buttons">
+                <button class="btn btn-secondary card-shadow rounded-0 me-2" data-id="about">About <i
+                        class="far fa-gem ms-1"></i></button>
+                <!--<button class="btn btn-secondary card-shadow rounded-0 ms-2 me-2" data-id="datasets">Datasets <i
+                        class="ms-1 fas fa-database"></i></button>-->
+                <button class="btn btn-primary card-shadow rounded-0 ms-2 me-2" data-id="detection">Detector <i
+                        class="ms-1 fas fa-fingerprint"></i></button>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <!-- Main content -->
+
+<div class="view" data-id="about">
+    <div class="container">
+        <div class="row m-0 p-0 mt-5 mb-5">
+
+            <div class="col-md-12 p-1">
+                <div class="card-shadow">
+                    <h1 class="mb-0 color-primary text-center font-weight-bold bg-dark p-3 card-shadow">
+                        A Toolbox for AI-generated Text Detection
+                    </h1>
+                    <div class="mt-2 p-3">
+                        <h5 class="text-center mb-4 color-secondary">PrismAI is an environment for the automatic
+                            detection
+                            of
+                            AI-generated content.</h5>
+                        <p class="text justify-text">
+                            This includes a collection of datasets, trained models, and an interactive demo for users to
+                            test out
+                            the
+                            detection of AI-generated text. The goal of this project is to provide a comprehensive and
+                            user-friendly
+                            platform for researchers, developers, and anyone interested in the field of AI-generated
+                            content
+                            detection.
+                        </p>
+                        <div class="mt-4 mb-4 flexed align-items-center justify-content-between bg-prime p-2 card-shadow">
+                            <h5 class="w-100 mb-0">
+                                Everything within PrismAI is open-source.
+                            </h5>
+                            <a href="https://github.com/TheItCrOw/PrismAI" target="_blank"><i
+                                    class="color-secondary larger-font fab fa-github"></i></a>
+                        </div>
+                        <div>
+                            <div class="light-border p-3 bg-lightgray">
+                                <div class="flexed align-items-center mb-2 justify-content-between">
+                                    <h5 class="text-dark mb-0"><i class="fas fa-fingerprint me-2"></i> Luminar</h5>
+                                    <a onclick="switchToView('detection')"
+                                       class="btn rounded-0 btn-light light-border">
+                                        <i class="fas fa-chevron-right color-secondary"></i>
+                                    </a>
+                                </div>
+                                <p class="mb-0">
+                                    With PrismAI, we present Luminar, a state-of-the-art AI text detection model that
+                                    leverages hidden likelihood spaces and CNNs to identify AI-generated content with
+                                    high accuracy and tiny footprints. In this model family, we provide
+                                    <b class="color-secondary">LuminarSeq</b> as a free-to-use web demo for users to
+                                    test out the
+                                    detection of AI-generated text.
+                                    LuminarSeq is designed to be fast and efficient, making it suitable for real-time
+                                    applications and is based on <b>sequential classification of AIGT</b>, unlike other
+                                    AIGT detectors.
+                                </p>
+                            </div>
+                            <div class="light-border p-3 mt-4 bg-lightgray">
+                                <div class="flexed align-items-center mb-2 justify-content-between">
+                                    <h5 class="text-dark mb-0"><i class="fas fa-database me-2"></i> PrismAI Dataset</h5>
+                                    <a href="https://huggingface.co/TheItCrOw" target="_blank"
+                                       class="btn rounded-0 btn-light light-border">
+                                        <i class="fas fa-chevron-right color-secondary"></i>
+                                    </a>
+                                </div>
+                                <p class="mb-0">
+                                    In addition to Luminar, we also provide the PrismAI Dataset, a new dataset for
+                                    training and evaluating AI text detection models.
+                                    The PrismAI Dataset is a large-scale dataset that includes both human-written and
+                                    AI-generated text, allowing for comprehensive evaluation of detection models. The
+                                    data is gathered from a multitude of domains while using a variety of AI generators
+                                    for the synthetization of the AI-generated text. The dataset is designed to be
+                                    diverse and representative of real-world scenarios, making it suitable for training
+                                    and evaluating AI text detection models. The PrismAI dataset covers the English
+                                    and <b class="color-secondary">German</b> languages.
+                                </p>
+                            </div>
+                            <div class="bg-lightgray light-border p-3 mt-4">
+                                <div class="flexed align-items-center mb-2 justify-content-between">
+                                    <h5 class="text-dark mb-0"><i class="fas fa-server me-2"></i> Uniform Datasets</h5>
+                                    <a href="https://huggingface.co/TheItCrOw" target="_blank"
+                                       class="btn rounded-0 btn-light light-border">
+                                        <i class="fas fa-chevron-right color-secondary"></i>
+                                    </a>
+                                </div>
+                                <p class="mb-0">
+                                    PrismAI contains a collection of datasets that have been standardized to a common
+                                    format.
+                                    These datasets include both human-written and AI-generated text, allowing for easy
+                                    comparison and analysis.
+                                    The datasets are sourced from various papers and prior efforts and cover a wide
+                                    range of topics and styles.
+                                    These datasets were projected to a common format to allow for easy usage and
+                                    comparison.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flexed align-items-center mt-4">
+                            <p class="text justify-text me-3">
+                                PrismAI was developed by <a class="color-secondary" target="_blank"
+                                                            href="https://www.texttechnologylab.org/team/kevin-boenisch/">Kevin
+                                Bönisch</a>
+                                and <a class="color-secondary" target="_blank"
+                                       href="https://www.texttechnologylab.org/team/manuel-schaaf/">Manuel Schaaf</a>
+                                under the
+                                supervision of <a class="color-secondary"
+                                                  href="https://www.texttechnologylab.org/team/alexander-mehler/"
+                                                  target="_blank">Prof. Dr. Mehler</a>
+                                as part of the Text Technology Lab at the Goethe-University Frankfurt.
+                            </p>
+                            <a href="https://www.texttechnologylab.org" target="_blank">
+                                <img class="w-100 text-center" style="max-width: 200px"
+                                     src="{{ url_for('static', filename='img/ttlab.png') }}"/>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- detection page -->
+<div class="view display-none" data-id="detection">
     <div class="sun-dark main-content">
-
-        <!-- detection page -->
         <div class="container-fluid stretch pt-4 pb-4 flexed align-items-center justify-content-center">
             <div>
                 <div class="container-fluid w-100 flexed align-items-center justify-content-center">
@@ -44,16 +169,16 @@
                     <div class="detection-container luminar-container p-3">
                         <div class="flexed align-items-center justify-content-between mb-3 w-100">
                             <h4 class="mb-0 color-secondary"><i class="fas fa-fingerprint me-1"></i> Luminar AI
-                                Detection</h5>
-                                <div class="flexed">
-                                    <button class="btn btn-dark rounded-0 me-1 small-font">Example 1</button>
-                                    <button class="btn btn-dark rounded-0 ms-1 me-1 small-font">Example 2</button>
-                                    <button class="btn btn-dark rounded-0 ms-1 me-1 small-font">Example 3</button>
-                                </div>
+                                Detection</h4>
+                            <div class="flexed">
+                                <button class="btn btn-dark rounded-0 me-1 small-font">Example 1</button>
+                                <button class="btn btn-dark rounded-0 ms-1 me-1 small-font">Example 2</button>
+                                <button class="btn btn-dark rounded-0 ms-1 me-1 small-font">Example 3</button>
+                            </div>
                         </div>
                         <div class="flex-grow-1 h-100 position-relative">
                             <div class="loader-div">
-                                <h3 class="me-3 font-weight-bold">Detecting</h5>
+                                <h3 class="me-3 font-weight-bold mb-0">Detecting</h3>
                                 <div class="loader"></div>
                             </div>
                             <textarea class="form-control text-input h-100" placeholder="Text..."></textarea>
@@ -61,7 +186,7 @@
                         <div class="flexed align-items-center justify-content-between mt-2">
                             <div><!-- more buttons and upload options? --></div>
                             <button id="scan-btn"
-                                class="btn btn-primary mt-1 mb-0 color-secondary rounded-0 ps-3 pe-3 pt-2 pb-2 border-0">
+                                    class="btn btn-primary mt-1 mb-0 color-secondary rounded-0 ps-3 pe-3 pt-2 pb-2 border-0">
                                 <h5 class="mb-0"><i class="fas fa-eye me-1"></i> Scan</h5>
                             </button>
                         </div>
@@ -85,11 +210,16 @@
                                 <div>
                                     <h5 class="text-center"><i class="fas fa-fingerprint me-1"></i> Detection
                                         Results</h5>
-                                    <hr  class="mt-3 mb-3"/>
+                                    <hr class="mt-3 mb-3"/>
                                     <p class="pl-1 pr-1 text mb-3 text-center">Predicted AI traces per sequence - red
                                         indicates AI, green indicates Human.</p>
                                     <div class="line-chart"></div>
-                                    <h3 class="mt-4 mb-4 color-secondary text-center">Average: <span id="ai-avg">0</span>% AI</h3>
+                                    <h3 class="mt-4 mb-4 color-secondary text-center">Average: <span
+                                            id="ai-avg">0</span>%
+                                        AI</h3>
+                                    <div class="alert alert-info bg-dark ms-2 border-0 border-left-1 card-shadow">
+                                        <p class="mb-0 color-primary explanation-text text-center"></p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -98,8 +228,8 @@
                 </div>
             </div>
         </div>
-
     </div>
+</div>
 
 </body>
 
@@ -108,5 +238,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
 <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+<script src="{{ url_for('static', filename='js/detection.js') }}"></script>
 
 </html>

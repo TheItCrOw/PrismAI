@@ -17,7 +17,7 @@
 }
 
 .display-none {
-    display: none !important;
+    display: none;
 }
 
 .bg-black {
@@ -29,7 +29,9 @@
 }
 
 .btn-primary {
-    background-color: var(--primary)
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: black;
 }
 
 .btn-secondary {
@@ -42,6 +44,10 @@
 
 .text {
     color: rgba(125, 125, 125, 1);
+}
+
+.bg-lightgray{
+    background-color: rgba(125, 125, 125, 0.15);
 }
 
 .bg-prime {
@@ -65,6 +71,10 @@
     font-size: large;
 }
 
+.light-border{
+    border: 1px solid lightgray;
+}
+
 .larger-font {
     font-size: x-large;
 }
@@ -77,9 +87,13 @@
     font-size: small;
 }
 
+.justify-text{
+    text-align: justify;
+}
+
 nav {
     position: relative;
-    height: 86px;
+    /*height: 86px;*/
 }
 
 .sun-dark {

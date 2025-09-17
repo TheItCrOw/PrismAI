@@ -189,6 +189,7 @@ def save_model(
 class LuminarSequenceTrainingConfig(Namespace):
     feature_len: int = 512
     num_intermediate_likelihoods: int = 13  # Default gpt2 with 13 hidden layers
+    min_character_length = 150
 
     apply_delta_augmentation: bool = False
     apply_product_augmentation: bool = False
@@ -209,7 +210,7 @@ class LuminarSequenceTrainingConfig(Namespace):
     # a larger dataset, use [DOMAIN_1]___[DOMAIN_2] etc.
     domain: str = None
     agent: str = "gpt_4o_mini_gemma2_9b"
-    feature_agent: str = "gpt2_512"
+    feature_agent: str = "gpt2"
 
     max_epochs: int = 100
     batch_size: int = 128

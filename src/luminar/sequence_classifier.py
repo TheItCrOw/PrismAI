@@ -109,22 +109,22 @@ class LuminarSequence(nn.Module):
             List of tensors with shape [seq_len, 2*num_layers - 1]
         """
         augmented_features = []
-
         for feat in features:
-            layer_1 = feat[:, 0].unsqueeze(-1)  # [seq_len, 1]
-            other_layers = feat[:, 1:]  # [seq_len, num_layers - 1]
+            # ensure 2D: [seq_len] -> [seq_len, 1]
+            if feat.dim() == 1:
+                feat = feat.unsqueeze(-1)
+
+            layer_1 = feat[:, :1]  # [seq_len, 1]
+            other_layers = feat[:, 1:]  # [seq_len, num_layers-1]
 
             if self.apply_delta_augmentation:
-                augmented = other_layers - layer_1  # [seq_len, num_layers - 1]
+                aug = other_layers - layer_1
+                augmented_features.append(torch.cat([layer_1, other_layers, aug], dim=-1))
             elif self.apply_product_augmentation:
-                augmented = other_layers * layer_1
+                aug = other_layers * layer_1
+                augmented_features.append(torch.cat([layer_1, other_layers, aug], dim=-1))
             else:
                 augmented_features.append(feat)
-                continue
-
-            combined = torch.cat([layer_1, other_layers, augmented], dim=-1)
-            augmented_features.append(combined)
-
         return augmented_features
 
     def forward(
@@ -143,17 +143,18 @@ class LuminarSequence(nn.Module):
 
         for i, spans in enumerate(sentence_spans):
             feature = features[i]  # shape: [seq_len, feat_dim]
+            if isinstance(feature, torch.Tensor) and feature.dim() == 1:
+                feature = feature.unsqueeze(-1)
+
             for j, (start, end) in enumerate(spans):
                 if self.stack_spans > 0:
-                    if j > self.stack_spans - 1:
-                        (prev_begin, _) = spans[j - self.stack_spans]
-                        start = prev_begin
-                    if j < len(spans) - 1 - self.stack_spans - 1:
-                        (_, next_end) = spans[j + self.stack_spans]
-                        end = next_end
+                    if j - self.stack_spans >= 0:
+                        start = spans[j - self.stack_spans][0]
+                    if j + self.stack_spans < len(spans):
+                        end = spans[j + self.stack_spans][1]
                 span_feat = feature[start:end, :]
                 batch_sentence_features.append(span_feat)
-                batch_lengths.append(end - start)
+                batch_lengths.append(span_feat.size(0))
 
         # Pad sequences to batch shape (pads to the longest span in the batch)
         # (total_spans, max_len, feature_dim)
