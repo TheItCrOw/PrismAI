@@ -193,6 +193,7 @@ class LuminarSequenceTrainingConfig(Namespace):
 
     apply_delta_augmentation: bool = False
     apply_product_augmentation: bool = False
+    weighted_sampling : bool = False
 
     conv_layer_shapes: tuple[ConvolutionalLayerSpec, ...] = DEFAULT_CONV_LAYER_SHAPES
     projection_dim: int = 32

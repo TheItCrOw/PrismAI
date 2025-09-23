@@ -1,6 +1,7 @@
 import sys
 import os
 import traceback
+import argparse
 
 from flask import (
     Flask,
@@ -24,11 +25,11 @@ app = Flask(
     static_url_path="/static",
 )
 
+
 @app.route("/")
 def index():
-    return render_template(
-        "html/index.html", instances=['test', 'test2']
-    )
+    return render_template("html/index.html", instances=['test', 'test2'])
+
 
 @app.route("/api/detect", methods=["POST"])
 def post_new_detection():
@@ -39,10 +40,10 @@ def post_new_detection():
             response["payload"] = "The request needs to be in JSON format."
         else:
             data = request.get_json()
-            print("Payload: ", data) 
+            print("Payload: ", data)
             document = data["document"]
 
-            detector = get_detector("")
+            detector = get_detector("default_model")
             result = detector.detect(document)
             html_output = visualize_detection(document, result)
             result["visualization"] = html_output
@@ -56,21 +57,55 @@ def post_new_detection():
 
     return jsonify(response)
 
+
 def get_detector(model_name: str) -> LuminarSequenceDetector:
     if model_name not in current_app.config:
-        # TODO: Hardcoded Model path for now!
-        # /storage/projects/boenisch/PrismAI/models/luminar_sequence/de___en/trvaaa3c
-        # tiiuae/falcon-7b
-        # /storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/fa05u0tn
-        # /storage/projects/boenisch/PrismAI/models/luminar_sequence/M4-encoded-gpt2/oi2ld9pf
-        current_app.config[model_name] = LuminarSequenceDetector(model_path="/storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/e1s2k2du",
-                                                                 feature_agent="gpt2", 
-                                                                 device=get_best_device())
+        current_app.config[model_name] = LuminarSequenceDetector(
+            model_path=current_app.config["model_path"],
+            feature_agent=current_app.config["feature_agent"],
+            device=get_best_device()
+        )
     return current_app.config[model_name]
 
+
 def main():
-    # TODO: make this configurable
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    parser = argparse.ArgumentParser(description="Run Luminar Flask API")
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default="/storage/projects/boenisch/PrismAI/models/luminar_sequence/PrismAI_v2-encoded-gpt2/e1s2k2du",
+        help="Path to the LuminarSequenceDetector model (default: old hardcoded path)"
+    )
+    parser.add_argument(
+        "--feature-agent",
+        type=str,
+        default="gpt2",
+        help="Feature agent to use (default: gpt2)"
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to run the Flask app (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port to run the Flask app (default: 8080)"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=True,
+        help="Enable debug mode"
+    )
+
+    args = parser.parse_args()
+    app.config["model_path"] = args.model_path
+    app.config["feature_agent"] = args.feature_agent
+    app.run(host=args.host, port=args.port, debug=args.debug)
+
 
 if __name__ == "__main__":
     main()

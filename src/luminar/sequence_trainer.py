@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader, Subset, Dataset
 from luminar.utils.evaluation import calculate_metrics
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import KFold
+from collections import Counter
+from torch.utils.data import WeightedRandomSampler
 
 class LuminarSequenceTrainer:
 
@@ -62,13 +64,57 @@ class LuminarSequenceTrainer:
             train_subset = Subset(self.train_dataset, train_idx)
             val_subset = Subset(self.train_dataset, val_idx)
 
-            train_loader = DataLoader(train_subset, batch_size=self.config.batch_size, shuffle=True, collate_fn=self.collate_fn)
+            # If we have a class imbalance, we use weighted sampling and build a specific train
+            # data loader for it.
+            if getattr(self.config, "weighted_sampling", True):
+                print("Applying weighted_sampling to this fold.")
+                sample_weights, stats = self._compute_sampling_and_class_weights(train_subset)
+
+                sampler = WeightedRandomSampler(
+                    weights=sample_weights,
+                    num_samples=len(train_subset),  # epoch length = train fold size
+                    replacement=True
+                )
+                train_loader = DataLoader(
+                    train_subset,
+                    batch_size=self.config.batch_size,
+                    sampler=sampler,
+                    shuffle=False,  # must be False when sampler is set
+                    drop_last=True,  # keep batch size stable
+                    collate_fn=self.collate_fn
+                )
+
+                # Log the balance for visibility
+                print(f"[Fold {fold + 1}] Weighted sampling ON | samples pos/neg = "
+                      f"{stats['num_pos_samples']}/{stats['num_neg_samples']} | spans pos/neg = "
+                      f"{stats['total_pos_spans']}/{stats['total_neg_spans']}")
+                if self.log_to_wandb:
+                    wandb.log({
+                        f"fold_{fold}_num_pos_samples": stats["num_pos_samples"],
+                        f"fold_{fold}_num_neg_samples": stats["num_neg_samples"],
+                        f"fold_{fold}_total_pos_spans": stats["total_pos_spans"],
+                        f"fold_{fold}_total_neg_spans": stats["total_neg_spans"],
+                    })
+            else:
+                train_loader = DataLoader(
+                    train_subset,
+                    batch_size=self.config.batch_size,
+                    shuffle=True,
+                    collate_fn=self.collate_fn
+                )
             eval_loader = DataLoader(val_subset, batch_size=self.config.batch_size, shuffle=False, collate_fn=self.collate_fn)
 
             if self.use_experimental_attention:
                 model = LuminarSequenceAttention(self.config).to(self.device)
             else:
                 model = LuminarSequence(self.config).to(self.device)
+
+            # (Optional) if the model/loss supports a pos_weight at span level, supply it:
+            if getattr(self.config, "weighted_sampling", False):
+                if hasattr(model, "set_pos_weight"):
+                    _ = model.set_pos_weight(stats["pos_weight_spans"].to(self.device))
+                elif hasattr(model, "pos_weight"):
+                    model.pos_weight = stats["pos_weight_spans"].to(self.device)
 
             optimizer = torch.optim.Adam(model.parameters(), lr=self.config.learning_rate)
 
@@ -215,3 +261,54 @@ class LuminarSequenceTrainer:
 
         metrics = calculate_metrics(all_labels, all_scores, threshold=0.5)
         return metrics
+
+    def _compute_sampling_and_class_weights(self, subset: Subset):
+        """
+        Returns:
+          sample_weights: torch.FloatTensor of len(subset) for WeightedRandomSampler
+          stats: dict with counts and pos_weight tensors at both sample-level and span-level
+        """
+        sample_labels = []      # 1 if any span positive in the sample, else 0
+        total_pos_spans = 0
+        total_neg_spans = 0
+
+        for i in range(len(subset)):
+            item = subset[i]  # expects keys: "span_labels"
+            span_labels = item["span_labels"]
+            if not isinstance(span_labels, torch.Tensor):
+                span_labels = torch.tensor(span_labels)
+
+            pos_spans = (span_labels > 0.5).sum().item()
+            neg_spans = (span_labels <= 0.5).sum().item()
+            total_pos_spans += pos_spans
+            total_neg_spans += neg_spans
+
+            has_pos = 1 if pos_spans > 0 else 0
+            sample_labels.append(has_pos)
+
+        c = Counter(sample_labels)
+        num_pos_samples = c.get(1, 0)
+        num_neg_samples = c.get(0, 0)
+        # avoid division by zero
+        num_pos_samples = max(1, num_pos_samples)
+        num_neg_samples = max(1, num_neg_samples)
+        total_pos_spans = max(1, total_pos_spans)
+        total_neg_spans = max(1, total_neg_spans)
+
+        # inverse-frequency weights at sample level
+        class_weight_samples = torch.tensor([1.0/num_neg_samples, 1.0/num_pos_samples], dtype=torch.float)
+        sample_weights = torch.tensor([class_weight_samples[l] for l in sample_labels], dtype=torch.float)
+
+        # pos_weight for BCEWithLogitsLoss at span level: N_neg / N_pos
+        pos_weight_spans = torch.tensor([total_neg_spans / total_pos_spans], dtype=torch.float)
+        pos_weight_samples = torch.tensor([num_neg_samples / num_pos_samples], dtype=torch.float)
+
+        stats = {
+            "num_pos_samples": int(c.get(1, 0)),
+            "num_neg_samples": int(c.get(0, 0)),
+            "total_pos_spans": int(total_pos_spans),
+            "total_neg_spans": int(total_neg_spans),
+            "pos_weight_spans": pos_weight_spans,
+            "pos_weight_samples": pos_weight_samples,
+        }
+        return sample_weights, stats
