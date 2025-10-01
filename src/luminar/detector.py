@@ -17,9 +17,6 @@ class LuminarSequenceDetector:
                  model_path: str,
                  feature_agent: Literal["gpt2", "tiiuae/falcon-7b"] = "gpt2",
                  device: str = "cpu"):
-        if not model_path or not os.path.exists(model_path):
-            raise ValueError("Valid and existing model path must be provided for LuminarSequenceDetector.")
-
         print(f"Loading LuminarSequenceDetector from {model_path} to device {device}")
         self.classifier = LuminarSequence.load(model_path, device=device)
         if not self.classifier:
