@@ -1,12 +1,14 @@
 import torch
 import json
 import os
+import re
 
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 from transformers.utils.generic import ModelOutput
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, MultiheadAttention
 from luminar.utils import ConvolutionalLayerSpec, LuminarSequenceTrainingConfig
+from huggingface_hub import hf_hub_download
 
 
 class FeatureRescaler(nn.Module):
@@ -196,21 +198,41 @@ class LuminarSequence(nn.Module):
         config_path = os.path.join(full_path, "config.json")
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=4)
-
+    
     @classmethod
     def load(cls, full_path: str, device: str = ""):
         """
-        Loads a LuminarSequence model and its config from the given path.
+        Loads a LuminarSequence model and its config from either:
+        - a local directory (containing config.json & pytorch_model.bin), or
+        - a Hugging Face Hub repo_id in the form 'username/repo'.
+
+        Args:
+            full_path: local dir OR repo_id like 'user/model'
+            device: torch device string ('', 'cpu', 'cuda', 'cuda:0', ...)
         """
-        config_path = os.path.join(full_path, "config.json")
-        weights_path = os.path.join(full_path, "pytorch_model.bin")
+        device = device or "cpu"
 
-        if not os.path.isfile(config_path):
-            raise FileNotFoundError(f"Config file not found at {config_path}")
-        if not os.path.isfile(weights_path):
-            raise FileNotFoundError(f"Model weights not found at {weights_path}")
+        # Local path wins if it exists
+        if os.path.isdir(full_path):
+            config_path = os.path.join(full_path, "config.json")
+            weights_path = os.path.join(full_path, "pytorch_model.bin")
+            if not os.path.isfile(config_path):
+                raise FileNotFoundError(f"Config file not found at {config_path}")
+            if not os.path.isfile(weights_path):
+                raise FileNotFoundError(f"Model weights not found at {weights_path}")
 
-        with open(config_path, "r") as f:
+        else:
+            # If not a local dir, treat as HF repo_id
+            repo_id_pattern = re.compile(r"^[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+$")
+            if not repo_id_pattern.match(full_path):
+                raise ValueError(
+                    "Invalid path or repo_id. Provide a local directory or a repo_id like 'username/repo'."
+                )
+            repo_id = full_path
+            config_path = hf_hub_download(repo_id, "config.json")
+            weights_path = hf_hub_download(repo_id, "pytorch_model.bin")
+
+        with open(config_path, "r", encoding="utf-8") as f:
             config_dict = json.load(f)
         config = LuminarSequenceTrainingConfig(**config_dict)
 
