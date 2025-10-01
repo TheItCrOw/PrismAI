@@ -21,6 +21,7 @@ class SequentialDataProcessor:
     def __init__(self, luminar_encoder: LuminarEncoder):
         self.luminar_encoder = luminar_encoder
         nltk.download("punkt")
+        nltk.download("punkt_tab")
 
     def dataset_to_luminar_sequence_dataset(self, dataset: Dataset, batch_size: int = 256) -> tuple[
         LuminarSequenceDataset, LuminarSequenceDataset, DataLoader]:
