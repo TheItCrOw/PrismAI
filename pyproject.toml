@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "prismai"
 version = "0.1.0"
@@ -28,7 +32,7 @@ dependencies = [
     "ulid>=1.1",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "basedpyright>=1.28.3",
     "ipykernel>=6.29.5",
@@ -53,6 +57,27 @@ conversion = [
     "pandas>=2.2.3",
     "pymupdf>=1.25.3",
     "spiegel-scraper>=1.1.1",
+]
+
+[tool.setuptools]
+# Pull package data files (see package-data below)
+include-package-data = true
+
+# Use standard (non-src) layout; if you use src/, see note below.
+package-dir = { "" = "." }
+
+# Find all importable packages (i.e., folders with __init__.py), but skip common non-package dirs.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "docs*", "examples*", "notebooks*", "scripts*"]
+
+# Include common non-Python assets inside packages in wheels
+[tool.setuptools.package-data]
+"*" = [
+  "*.json", "*.yaml", "*.yml", "*.ini", "*.cfg", "*.txt", "*.md",
+  "*.csv", "*.tsv",
+  "*.pt", "*.bin", "*.model", "*.dict", "*.spacy", "*.pkl", "*.joblib"
 ]
 
 [tool.basedpyright]
