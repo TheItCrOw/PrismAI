@@ -60,24 +60,22 @@ conversion = [
 ]
 
 [tool.setuptools]
-# Pull package data files (see package-data below)
+# Tell setuptools that code lives under src/
+package-dir = { "" = "src" }
 include-package-data = true
 
-# Use standard (non-src) layout; if you use src/, see note below.
-package-dir = { "" = "." }
-
-# Find all importable packages (i.e., folders with __init__.py), but skip common non-package dirs.
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["*"]
 exclude = ["tests*", "docs*", "examples*", "notebooks*", "scripts*"]
 
-# Include common non-Python assets inside packages in wheels
+# Include common data files inside packages (adjust as needed)
 [tool.setuptools.package-data]
 "*" = [
   "*.json", "*.yaml", "*.yml", "*.ini", "*.cfg", "*.txt", "*.md",
   "*.csv", "*.tsv",
-  "*.pt", "*.bin", "*.model", "*.dict", "*.spacy", "*.pkl", "*.joblib"
+  "*.pt", "*.bin", "*.model", "*.dict", "*.spacy", "*.pkl", "*.joblib",
+  "static/**/*", "templates/**/*"
 ]
 
 [tool.basedpyright]
