@@ -69,7 +69,7 @@ where = ["src"]
 include = ["*"]
 exclude = ["tests*", "docs*", "examples*", "notebooks*", "scripts*"]
 
-# Include common data files inside packages (adjust as needed)
+# Include common data files inside packages
 [tool.setuptools.package-data]
 "*" = [
   "*.json", "*.yaml", "*.yml", "*.ini", "*.cfg", "*.txt", "*.md",
