@@ -1,4 +1,5 @@
-from typing import Callable, Generator, Iterable
+from collections import defaultdict
+from typing import Callable, Generator, Iterable, Sequence
 
 import datasets
 import numpy as np
@@ -237,3 +238,84 @@ def get_pad_to_fixed_length_fn(feature_len: int) -> Callable[[NDArray], NDArray]
             return x[:feature_len]
 
     return pad_to_fixed_length
+
+
+def transpose_batch[K, V](batch: Sequence[dict[K, V]]) -> dict[K, list[V]]:
+    """Transpose a batch of items &mdash; sequence of dictionaries &mdash; into a single dictionary of lists.
+    All items **must** have the same keys!
+
+    Returns:
+        dict[K, list[V]]: The transposed batch as a dictionary.
+
+    Raises:
+        ValueError: If the items in the batch do not all have the same keys.
+    """
+    result = defaultdict(list)
+    for item in batch:
+        if result.keys() and result.keys() != item.keys():
+            raise ValueError(
+                f"Expected all items to have the same keys {result.keys()}, but got an item with keys {item.keys()}!"
+            )
+
+        for k, v in item.items():
+            result[k].append(v)
+
+    return dict(result)
+
+
+def max_times_len(ll: list[int]) -> int:
+    return max(ll) * len(ll)
+
+
+def batched_dynamic[K, V](
+    dataset: Iterable[dict[K, V]],
+    max_effective_length: int,
+    key: K | Callable[[dict[K, V]], int],
+    len_fn: Callable[[list[int]], int] = max_times_len,
+    max_batch_size: int | None = None,
+) -> Generator[tuple[dict[K, V]], None, None]:
+    """Create a Generator of batches that conform to an upper bound on the maximum effective length of the contained items.
+
+    For the intended purpose &mdash; obtaining *padded* batches of input sequences that are smaller than the `max_effective_length` &mdash; pass the data *sorted by length* for best results.
+
+    Args:
+        dataset (Sequence[dict[K, V]]): A dataset of input sequences as a sequence of items (=dicts). Each item **must** have the same keys (not verified).
+        max_effective_length (int): The total maximum effective length of a batch.
+        key_fn (str | Callable[[dict[K, V]], int]): The key to retrieve the length of one item by. Can be a key in the item's dictionary or a callable that accepts an item as input.
+        len_fn (Callable[[list[int]], int], optional): A function that calculates the effective length of a batch from their individual lengths, given as a list. Defaults to `max_times_len = lambda lengths: max(lengths) * len(lengths)`.
+        max_batch_size (int | None, optional): If given, restrict the maximum number of items in a batch to this upper bound. Defaults to None.
+
+    Yields:
+        items (tuple[dict[K, V]]): Yields tuples of items that form a batch.
+    """
+    if callable(key):
+        key_fn = key  # type: ignore
+    else:
+
+        def default_key_fn(item: dict[K, V]) -> int:
+            return item[key]  # type: ignore
+
+        key_fn = default_key_fn
+
+    batch = []
+    batch_lengths = []
+    for item in dataset:
+        # If the extended batch would exceed the max_effective_length, yield the current batch and start a new one
+        item_len = key_fn(item)
+        extended_length = len_fn(batch_lengths + [item_len])
+        if (
+            batch
+            and extended_length > max_effective_length
+            or max_batch_size
+            and len(batch_lengths) + 1 > max_batch_size
+        ):
+            yield tuple(batch)
+
+            batch.clear()
+            batch_lengths.clear()
+
+        batch.append(item)
+        batch_lengths.append(item_len)
+
+    if batch:
+        yield tuple(batch)
