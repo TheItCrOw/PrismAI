@@ -18,9 +18,9 @@ from ulid import ulid
 
 from luminar.classifier import LuminarCNN
 from luminar.utils import (
-    compute_metrics,
     get_matched_cross_validation_datasets,
     get_pad_to_fixed_length_fn,
+    run_evaluation,
     save_model,
 )
 from luminar.utils.data import DatasetDictTrainEvalTest, DatasetUnmatched
@@ -101,7 +101,7 @@ def luminar_cv_start_run(config: LuminarTrainingConfig):
     return results
 
 
-@ray.remote(num_gpus=0.25)
+@ray.remote(num_gpus=0.125)
 def luminar_cv_train(
     config: LuminarTrainingConfig,
     cv_idx: int,
@@ -113,17 +113,17 @@ def luminar_cv_train(
         f"[Exp::{experiment_ulid}] Starting Cross Validation Experiment {config.domain}-{config.agent}-cv_idx_{cv_idx} on {os.uname().nodename}"
     )
 
-    train_batch_size = config["train_batch_size"]
+    train_batch_size = 32
     steps_per_epoch = len(dataset_matched["train"]) // train_batch_size
     eval_steps = steps_per_epoch // 5
 
     training_args = TrainingArguments(
         output_dir=f"./logs/{config.datset_config_name}/{experiment_ulid}",
-        per_device_train_batch_size=config["train_batch_size"],
-        per_device_eval_batch_size=config["eval_batch_size"],
-        learning_rate=config["learning_rate"],
-        num_train_epochs=config["max_epochs"],
-        warmup_steps=int(config["warmup_ratio"] * steps_per_epoch),
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=1024,
+        learning_rate=5e-4,
+        num_train_epochs=25,
+        warmup_steps=int(1.0 * steps_per_epoch),
         logging_steps=eval_steps,
         load_best_model_at_end=True,
         metric_for_best_model="loss",
@@ -135,6 +135,7 @@ def luminar_cv_train(
         torch_compile=True,
         disable_tqdm=True,
     )
+    config["training_args"] = training_args.to_dict()
 
     print(f"[Exp::{experiment_ulid}] Initializing Model")
     classifier = LuminarCNN(**config.asdict())
@@ -143,12 +144,12 @@ def luminar_cv_train(
     config["num_params"] = {
         "conv_layers": sum(
             param.numel()
-            for param in classifier.conv_layers.parameters()
+            for param in classifier.cnn.parameters()
             if param.requires_grad
         ),
         "projection": sum(
             param.numel()
-            for param in classifier.projection.parameters()
+            for param in classifier.feed_forward.parameters()
             if param.requires_grad
         ),
         "classifier": sum(
@@ -171,7 +172,7 @@ def luminar_cv_train(
         args=training_args,
         train_dataset=dataset_matched["train"],
         eval_dataset=dataset_matched["eval"],
-        compute_metrics=compute_metrics,  # type: ignore
+        compute_metrics=run_evaluation,  # type: ignore
         callbacks=[EarlyStoppingCallback(10)],
     )
     print(f"[Exp::{experiment_ulid}] Training Model")
@@ -234,18 +235,18 @@ def luminar_cv_train(
 
 
 DOMAINS: Final[tuple[str, ...]] = (
-    "blog_authorship_corpus",
-    "student_essays",
-    "cnn_news",
+    # "blog_authorship_corpus",
+    # "student_essays",
+    # "cnn_news",
     "euro_court_cases",
-    "house_of_commons",
-    "arxiv_papers",
-    "gutenberg_en",
-    "bundestag",
-    "spiegel_articles",
-    # "gutenberg_de",
-    "en",
-    "de",
+    # "house_of_commons",
+    # "arxiv_papers",
+    # "gutenberg_en",
+    # "bundestag",
+    # "spiegel_articles",
+    # # "gutenberg_de",
+    # "en",
+    # "de",
 )
 FEATURE_MODEL: Final[str] = "gpt2"
 FEATURE_TYPE: Final[str] = "intermediate_likelihoods"
@@ -276,15 +277,30 @@ if __name__ == "__main__":
                 ConvolutionalLayerSpec(32, 3),
             ),
             projection_dim=(1024, 32),
-            max_epochs=25,
-            learning_rate=5e-4,
-            gradient_clip_val=1.0,
-            train_batch_size=32,
-            eval_batch_size=1024,
-            warmup_ratio=1.0,
             seed=42,
             run_ulid=RUN_ULID,
         )
+        # agents = ("gpt_4o_mini", "gemma2_9b")
+        # config = LuminarTrainingConfig(
+        #     feature_len=256,
+        #     feature_dim=(256, NUM_INTERMEDIATE_LIKELIHOODS),
+        #     feature_type=FEATURE_TYPE,
+        #     feature_model=FEATURE_MODEL,
+        #     feature_selection=FEATURE_SELECTION,
+        #     agent=agents,
+        #     domain=domain,
+        #     datset_config_name=f"{domain}-fulltext",
+        #     dataset_split_name="+".join(("human", *agents)),
+        #     conv_layer_shapes=(
+        #         ConvolutionalLayerSpec(32, 5),
+        #         ConvolutionalLayerSpec(64, 5),
+        #         ConvolutionalLayerSpec(32, 3),
+        #     ),
+        #     projection_dim=(1024, 32),
+        #     seed=42,
+        #     run_ulid=RUN_ULID,
+        # )
+
         references.append(luminar_cv_start_run.remote(config))
 
     while references:

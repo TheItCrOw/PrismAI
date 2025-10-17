@@ -1,4 +1,7 @@
 import json
+import sys
+import traceback
+from collections import defaultdict
 from pathlib import Path
 
 import ray
@@ -9,29 +12,28 @@ from transformers.training_args import TrainingArguments
 
 from luminar.baselines.core import run_detector_tokenized
 from luminar.baselines.trainable import AutoClassifier
+from luminar.baselines.trainable.roberta import RoBERTaClassifier
 from luminar.baselines.trainable.gpt2 import GPT2Classifier
-from luminar.utils import get_matched_datasets
+from luminar.utils import get_matched_cross_validation_datasets
 
 HF_TOKEN = (Path.home() / ".hf_token").read_text().strip()
 
 
-ray.init()
-
-
-@ray.remote(num_gpus=0.5)
+@ray.remote(num_gpus=1)
 def run_training_ray(
     config: str,
     dataset: DatasetDict,
     model_class: type[AutoClassifier],
     model_name: str,
     model_args: dict,
-    output_dir: Path,
+    output_path: Path,
+    logs_path: Path,
     eval_dataset: dict[str, DatasetDict],
 ):
     model = model_class(model_name, **model_args)
 
     training_args = TrainingArguments(
-        output_dir=str(output_dir),
+        output_dir=str(output_path),
         seed=42,
         #
         learning_rate=1e-5,
@@ -51,14 +53,20 @@ def run_training_ray(
     model.train(
         dataset,
         training_args,
-        save_path=str(output_dir / "final"),
+        save_path=str(output_path / "final"),
     )
 
-    return config, run_detector_tokenized(
+    scores = run_detector_tokenized(
         model,
         eval_dataset,
         sigmoid=False,
     )
+
+    logs_path.mkdir(parents=True, exist_ok=True)
+    with (logs_path / "scores.json").open("w") as fp:
+        json.dump(scores, fp, indent=4)
+
+    return config, scores
 
 
 @ray.remote(num_gpus=0.5)
@@ -83,123 +91,53 @@ def run_eval_ray(
     )
 
 
+DOMAINS = [
+    "blog_authorship_corpus",
+    "student_essays",
+    "cnn_news",
+    "euro_court_cases",
+    "house_of_commons",
+    "arxiv_papers",
+    "gutenberg_en",
+    "bundestag",
+    "spiegel_articles",
+    # "gutenberg_de",
+    "en",
+    "de",
+]
+
+AGENT = "gpt_4o_mini"
+OTHER_AGENTS = "gemma2_9b"
+NUM_PROC = 32
+NUM_SPLITS = 10
+
+ROOT: Path = Path.home() / "Projects/PrismAI"
+MAX_TASKS = 6
+
+
+@ray.remote
 def run_finetuning_ray(
-    datasets: dict[str, DatasetDict],
     model_class: type[AutoClassifier],
     model_name: str,
     model_args: dict,
-    only_eval: bool = False,
     cross_eval: bool = False,
 ):
-    root: Path = Path.home() / "PrismAI"
-
     model_str = model_name.replace("/", "--").replace(":", "--")
     if model_args.get("freeze_lm"):
         model_str += "-frozen"
 
-    output_path = root / "models/finetuning/" / model_str
+    model_path = ROOT / "models/finetuning/cross_validation" / model_str
+    model_path.mkdir(parents=True, exist_ok=True)
 
-    logs_path = root / "logs/finetuning/" / model_str
+    logs_path = ROOT / "logs/finetuning/cross_validation" / model_str
     logs_path.mkdir(parents=True, exist_ok=True)
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
 
-    datasets_tokenized = {
-        config: dataset.map(
-            lambda texts: tokenizer(
-                texts,
-                padding=False,
-                truncation=True,
-                max_length=512,
-                return_length=True,
-            ),
-            input_columns=["text"],
-            batched=True,
-            batch_size=1024,
-            desc="Tokenizing",
-            keep_in_memory=True,
-            num_proc=8,
-        ).sort("length")
-        for config, dataset in (
-            datasets.items()
-            if not only_eval
-            else (
-                # We can omit training & dev splits if we are only evaluating
-                (config, DatasetDict({"test": dataset["test"]}))
-                for config, dataset in datasets.items()
-            )
-        )
-    }
-
-    if not only_eval:
-        futures = [
-            run_training_ray.remote(
-                config,
-                dataset,
-                model_class,
-                model_name,
-                model_args,
-                output_path / config,
-                datasets_tokenized if cross_eval else {config: dataset},
-            )
-            for config, dataset in datasets_tokenized.items()
-        ]
-    else:
-        futures = [
-            run_eval_ray.remote(
-                config,
-                datasets_tokenized if cross_eval else {config: dataset},
-                model_class,
-                model_name,
-                model_args,
-                output_path / config / "final",
-            )
-            for config, dataset in datasets_tokenized.items()
-        ]
-
-    tq = tqdm(
-        total=len(futures),
-        desc="Evaluating" if only_eval else "Finetuning",
-    )
-    scores_fine_tuning = {}
-    while futures:
-        ready, futures = ray.wait(futures)
-        for ref in ready:
-            try:
-                tq.update(1)
-                config, results = ray.get(ref)
-                scores_fine_tuning[config] = results
-                with (logs_path / f"{config}.json").open("w") as fp:
-                    json.dump(scores_fine_tuning[config], fp, indent=4)
-            except Exception:
-                print("Caught exception while getting results")
-
-    return scores_fine_tuning
-
-
-if __name__ == "__main__":
-    agent = "gpt_4o_mini"
-    other_agents = "gemma2_9b"
-    datasets = {}
-    num_proc = 32
-    for domain in tqdm(
-        [
-            "blog_authorship_corpus",
-            "student_essays",
-            "cnn_news",
-            "euro_court_cases",
-            "house_of_commons",
-            "arxiv_papers",
-            "gutenberg_en",
-            "bundestag",
-            "spiegel_articles",
-            # "gutenberg_de",
-            "en",
-            "de",
-        ]
-    ):
+    dataset_splits = [{} for _ in range(NUM_SPLITS)]
+    for domain in tqdm(DOMAINS):
         datset_config_name = f"{domain}-fulltext"
-        dataset_split_name = f"human+{agent}+{other_agents}"
+        dataset_split_name = f"human+{AGENT}+{OTHER_AGENTS}"
         dataset: Dataset = (
             load_dataset(
                 "liberi-luminaris/PrismAI",
@@ -211,25 +149,88 @@ if __name__ == "__main__":
             .filter(
                 lambda text: len(text.strip()) > 0,
                 input_columns=["text"],
-                num_proc=num_proc,  # type: ignore
+                num_proc=NUM_PROC,  # type: ignore
+            )
+            .map(
+                lambda texts: tokenizer(
+                    texts,
+                    padding=False,
+                    truncation=True,
+                    max_length=512,
+                    return_length=True,
+                ),
+                input_columns=["text"],
+                remove_columns=["text"],
+                batched=True,
+                batch_size=1024,
+                desc="Tokenizing",
+                keep_in_memory=True,
+                num_proc=8,
             )
         )
-        datasets_matched, dataset_unmatched = get_matched_datasets(
-            dataset, agent, num_proc=num_proc
+        datasets, dataset_unmatched = get_matched_cross_validation_datasets(
+            dataset, AGENT, num_proc=NUM_PROC, num_splits=NUM_SPLITS
         )
-        datasets_matched["unmatched"] = dataset_unmatched
-        datasets[domain] = datasets_matched
-        del dataset
 
-    scores_gpt2_ft = run_finetuning_ray(
-        datasets,
-        GPT2Classifier,
-        "gpt2",
-        dict(freeze_lm=True),
-        only_eval=False,
-        cross_eval=True,
+        for i, dataset in enumerate(datasets):
+            dataset_splits[i][domain] = dataset
+            dataset_splits[i][domain]["unmatched"] = dataset_unmatched
+
+    futures = []
+    for i, dataset_split in enumerate(dataset_splits):
+        for domain in DOMAINS:
+            dataset = dataset_split[domain]
+
+            for config, dataset in dataset_split.items():
+                if len(futures) > MAX_TASKS:
+                    ready_refs, result_refs = ray.wait(futures, num_returns=1)
+                    ray.get(ready_refs)
+
+                futures.append(
+                    run_training_ray.remote(
+                        config,
+                        dataset,
+                        model_class,
+                        model_name,
+                        model_args,
+                        model_path / config / f"cv-{i}",
+                        logs_path / config / f"cv-{i}",
+                        dataset_split if cross_eval else {config: dataset},
+                    )
+                )
+
+    tq = tqdm(
+        total=len(futures),
+        desc="Running Cross Validation",
     )
+    scores_fine_tuning = defaultdict(list)
+    while futures:
+        ready, futures = ray.wait(futures)
+        for ref in ready:
+            try:
+                tq.update(1)
+                config, results = ray.get(ref)
+                scores_fine_tuning[config].append(results)
+                with (logs_path / f"{config}.json").open("w") as fp:
+                    json.dump(scores_fine_tuning[config], fp, indent=4)
+            except Exception:
+                print("Caught exception while getting results")
 
-    print(json.dumps(scores_gpt2_ft, indent=4))
-    with open("../logs/finetuning/gpt2-ft-frozen.json", "w") as fp:
-        json.dump(scores_gpt2_ft, fp, indent=4)
+    with open(logs_path / f"{model_name}-ft-frozen.json", "w") as fp:
+        json.dump(scores_fine_tuning, fp, indent=4)
+
+
+if __name__ == "__main__":
+    futures = []
+    for model_class, model_name, model_args in [
+        (GPT2Classifier, "gpt2", dict(freeze_lm=True)),
+        (RoBERTaClassifier, "roberta-base", dict(freeze_lm=False)),
+    ]:
+        ray.get(
+            run_finetuning_ray.remote(
+                model_class,
+                model_name,
+                model_args,
+                True,  # cross_eval
+            )
+        )
