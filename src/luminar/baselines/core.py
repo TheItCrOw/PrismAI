@@ -1,7 +1,7 @@
 # Modified from: RAID, Dugan et al. 2024
 # > https://github.com/liamdugan/raid/blob/main/detectors/models/chatgpt_roberta_detector/chatgpt_detector.py
 from abc import ABC, abstractmethod
-from typing import TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import numpy as np
 import torch
@@ -10,6 +10,18 @@ from tqdm.auto import tqdm
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+
+if TYPE_CHECKING:
+    from transformers.modeling_utils import PreTrainedModel as _PreTrainedModel
+    from transformers.utils.generic import ModelOutput
+
+    class _ModelOutputWithLogits(ModelOutput):
+        logits: torch.Tensor
+
+    class PreTrainedModel(_PreTrainedModel):
+        def __call__(self, *args, **kwargs) -> _ModelOutputWithLogits: ...
+else:
+    from transformers.modeling_utils import PreTrainedModel  # noqa: F401
 
 from luminar.utils import run_evaluation
 
@@ -26,17 +38,28 @@ class DetectorABC(ABC):
         device: str | torch.device = ("cuda" if torch.cuda.is_available() else "cpu"),
     ) -> None:
         super().__init__()
-        self.device = torch.device(device)
+        self.device = device
         self.tokenizer = tokenizer
 
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
+    @property
+    def device(self) -> torch.device:
+        return self._device
+
+    @device.setter
+    def device(self, device: str | torch.device):
+        self._device = torch.device(device)
 
     @abstractmethod
     def tokenize(self, texts: list[str]) -> BatchEncoding: ...
 
     @abstractmethod
     def process(self, inputs: dict) -> PredictionResults: ...
+
+    @abstractmethod
+    def to(self, device: str | torch.device) -> Self: ...
 
 
 def run_detector(

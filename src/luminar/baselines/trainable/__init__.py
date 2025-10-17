@@ -4,6 +4,7 @@
 import traceback
 from abc import abstractmethod
 from pathlib import Path
+from typing import Self
 
 import evaluate
 import numpy as np
@@ -46,6 +47,11 @@ class AutoClassifier(DetectorABC):
         self.freeze_lm = freeze_lm
         if self.freeze_lm:
             self._freeze_lm()
+
+    def to(self, device: str | torch.device) -> Self:
+        self.device = device
+        self.model.to(self.device)  # type: ignore
+        return self
 
     @property
     def model_name_or_path(self) -> str:
