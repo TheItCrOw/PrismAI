@@ -106,6 +106,8 @@ def calculate_metrics(
     accuracy = np.mean(y_true == y_preds)
     fpr = np.mean(y_preds[y_true == 0] == 1)
     tpr = np.mean(y_preds[y_true == 1] == 1)
+    tnr = np.mean(y_preds[y_true == 0] == 0)
+    fnr = np.mean(y_preds[y_true == 1] == 0)
 
     if y_scores.min() < 0 or y_scores.max() > 1:
         norm_scores = (y_scores - y_scores.min()) / (y_scores.max() - y_scores.min())
@@ -123,6 +125,8 @@ def calculate_metrics(
         f"roc_auc{suffix}": float(roc_auc),  # type: ignore
         f"fpr{suffix}": float(fpr),  # type: ignore
         f"tpr{suffix}": float(tpr),  # type: ignore
+        f"tnr{suffix}": float(tnr),  # type: ignore
+        f"fnr{suffix}": float(fnr),  # type: ignore
     }
 
     _precision_each, _recall_each, f1_score_each, _support_each = (
