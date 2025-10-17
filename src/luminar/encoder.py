@@ -73,6 +73,24 @@ class LuminarEncoder:
         )
         self._model.eval()
 
+        try:
+            self._model = torch.compile(
+                self._model, mode="reduce-overhead", fullgraph=True
+            )  # type: ignore
+            print("Compiled model in mode=reduce-overhead with fullgraph=True.")
+        except Exception:
+            try:
+                self._model = torch.compile(self._model, mode="reduce-overhead")
+                print("Compiled model in mode=reduce-overhead.")
+            except Exception:
+                try:
+                    self._model = torch.compile(self._model)
+                    print("Compiled model in default mode.")
+                except Exception:
+                    pass
+                else:
+                    print("Failed to compile model")
+
         self._lm_head: nn.Linear = (
             get_lm_head_from_model_fn(self._model)
             if get_lm_head_from_model_fn
