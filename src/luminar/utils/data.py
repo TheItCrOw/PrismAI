@@ -50,19 +50,21 @@ def get_matched_ids(
 
 
 def get_matched_datasets(
-        dataset: Dataset,
-        *agents: str | None,
-        eval_split: float = 0.1,
-        test_split: float = 0.2,
-        seed: int = 42,
-        num_proc: int | None = None,
+    dataset: Dataset,
+    *agents: str | None,
+    eval_split: float = 0.1,
+    test_split: float = 0.2,
+    seed: int = 42,
+    num_proc: int | None = None,
 ) -> tuple[DatasetDict, Dataset]:
     datasets.disable_progress_bars()
 
     if not agents or agents == (None,):
         agent_set = None
     else:
-        agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
+        agent_set: set[str] = (
+            set(agents) if isinstance(agents[0], str) else set(agents[0])
+        )
     ids_matched_set = get_matched_ids(dataset, agent_set, num_proc=num_proc)
     agent_set.add("human")
 
@@ -116,12 +118,13 @@ def get_matched_datasets(
 
 
 def get_matched_cross_validation_datasets(
-        dataset: Dataset,
-        *agents: str,
-        num_splits: int = 10,
-        eval_splits: int = 1,
-        test_splits: int = 2,
-        seed: int = 42,
+    dataset: Dataset,
+    *agents: str,
+    num_splits: int = 10,
+    eval_splits: int = 1,
+    test_splits: int = 2,
+    seed: int = 42,
+    num_proc: int | None = None,
 ) -> tuple[list[DatasetDictTrainEvalTest], DatasetUnmatched]:
     assert eval_splits > 0 < test_splits, (
         "eval_splits & test_splits must be greater than 0"
@@ -132,9 +135,15 @@ def get_matched_cross_validation_datasets(
 
     agent_set: set[str] = set(agents) if isinstance(agents[0], str) else set(agents[0])
     ids_matched_set = get_matched_ids(dataset, agent_set)
-    ids_matched = np.array(list(ids_matched_set), dtype=str)
     agent_set.add("human")
 
+    ds_agent = dataset.filter(
+        lambda agent: agent in agent_set,
+        input_columns=["agent"],
+        num_proc=num_proc,
+    )
+
+    ids_matched = np.array(list(ids_matched_set), dtype=str)
     ids_matched.sort()
     np.random.seed(seed)
     np.random.shuffle(ids_matched)
@@ -143,26 +152,26 @@ def get_matched_cross_validation_datasets(
 
     dataset_splits = []
     for _ in range(num_splits):
-        ids_eval = set(flatten(ids_matched_splits[:eval_splits]))
-        ids_test = set(
-            flatten(ids_matched_splits[eval_splits: eval_splits + test_splits])
+        ids_test = set(flatten(ids_matched_splits[:test_splits]))
+        ids_eval = set(
+            flatten(ids_matched_splits[test_splits : test_splits + eval_splits])
         )
-        ids_train = set(flatten(ids_matched_splits[eval_splits + test_splits:]))
+        ids_train = set(flatten(ids_matched_splits[test_splits + eval_splits :]))
 
         dataset_splits.append(
             DatasetDict(
                 {
-                    "train": dataset.filter(
-                        lambda agent, _id: agent in agent_set and _id in ids_train,
-                        input_columns=["agent", "id_source"],
+                    "train": ds_agent.filter(
+                        lambda _id: _id in ids_train,
+                        input_columns=["id_source"],
                     ).shuffle(seed=seed),
-                    "eval": dataset.filter(
-                        lambda agent, _id: agent in agent_set and _id in ids_eval,
-                        input_columns=["agent", "id_source"],
+                    "eval": ds_agent.filter(
+                        lambda _id: _id in ids_eval,
+                        input_columns=["id_source"],
                     ),
-                    "test": dataset.filter(
-                        lambda agent, _id: agent in agent_set and _id in ids_test,
-                        input_columns=["agent", "id_source"],
+                    "test": ds_agent.filter(
+                        lambda _id: _id in ids_test,
+                        input_columns=["id_source"],
                     ),
                 }
             )
