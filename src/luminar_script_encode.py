@@ -1,10 +1,13 @@
 import argparse
 from pathlib import Path
 
+import torch
 from datasets import DatasetDict, load_dataset
 from tqdm import tqdm
 
 from luminar.encoder import LuminarEncoder
+
+torch.set_float32_matmul_precision("high")
 
 HF_TOKEN = (Path.home() / ".hf_token").read_text().strip()
 
@@ -65,11 +68,23 @@ if __name__ == "__main__":
         "-b",
         "--batch_size",
         type=int,
-        default=256,
+        default=64,
         help="Batch size for encoding",
     )
+    parser.add_argument(
+        "-l",
+        "--max_len",
+        type=int,
+        default=1024,
+        help="Maximum sequence length for encoding",
+    )
+
+    parser.add_argument("-m", "--model", type=str)
 
     args = parser.parse_args()
+
+    model_name: str = args.model
+    model_stem = Path("-".join(model_name.split()).replace(":", "_")).stem
 
     devices = args.devices.split(",")
     if len(devices) == 1:
@@ -77,7 +92,7 @@ if __name__ == "__main__":
     else:
         devices = tuple(devices)
 
-    encoder = LuminarEncoder("gpt2", max_len=1024, device=devices)
+    encoder = LuminarEncoder(model_name, max_len=args.max_len, device=devices)
 
     tq = tqdm(
         [f"{domain}-fulltext" for domain in args.domains], desc="Encoding Datasets"
@@ -103,7 +118,7 @@ if __name__ == "__main__":
             remove_columns=["input_ids", "attention_mask"],
         )
         dataset.push_to_hub(
-            "liberi-luminaris/PrismAI-encoded-gpt2",
+            f"liberi-luminaris/PrismAI-encoded-{model_stem}",
             config_name,
             token=HF_TOKEN,
             private=True,
